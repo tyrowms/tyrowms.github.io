@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80">
+  <text x="28" y="42" font-family="Arial,sans-serif" font-size="38" font-weight="bold" fill="#1a3a6b">T</text>
+  <text x="48" y="42" font-family="Arial,sans-serif" font-size="32" font-weight="bold" fill="#1a3a6b">tech</text>
+  <rect x="28" y="4" width="6" height="6" rx="1" fill="#3bb54a"/>
+  <rect x="37" y="4" width="4" height="4" rx="1" fill="#3b82f6"/>
+  <rect x="37" y="11" width="4" height="4" rx="1" fill="#6dc8e8"/>
+  <text x="28" y="60" font-family="Arial,sans-serif" font-size="14" font-weight="600" fill="#1a5276">Business Solutions</text>
+</svg>
