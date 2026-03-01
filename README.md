@@ -44,7 +44,13 @@ npm run build
 npm run build
 npx gh-pages -d dist
 ```
+---
+git clone https://github.com/djeanker34/TyroWhAgent.git
+cd TyroWhAgent
+npm install
+npm run dev
 
+Sonra tarayıcıda http://localhost:5173 açılacak. Tek gereksinim: Node.js (v18+) yüklü olması.
 ## Data
 
 Built-in sample data with 25 inventory records across Tiryaki Agro facilities.
