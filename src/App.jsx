@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { Factory, Warehouse, Package, Clock, MapPin, X, BarChart3, TrendingUp, Building2, Ship, Truck, Container, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity } from "lucide-react";
-import TurkeyMap3D from './TurkeyMap3D';
+import { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from "react";
+import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut } from "lucide-react";
+const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
+import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
-const INIT=[["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","TRKYEM00138","DKM","M1",1040,"GZT-DTS","Gaziantep Dış Tesisi","GZTD-001","TMO PINARBAŞI DEPO","C59323DANE-030418","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",13.3,0.3118,133.83,128,136,0,0,0,136],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000000900","DKM","M1",76859,"KON-DTS","Konya Dış Tesisler","KON-008","Konya Besyem 1 Nolu De","C23106DANE-032190","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",12.17,0.2875,80.87,75,89,0,0,0,89],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000000900","DKM","M1",47840,"KON-DTS","Konya Dış Tesisler","KON-008","Konya Besyem 1 Nolu De","C61753DANE-032992","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",12.17,0.2875,83.0,83,83,0,0,0,83],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000000900","DKM","M1",51840,"KON-DTS","Konya Dış Tesisler","KON-008","Konya Besyem 1 Nolu De","C59733DANE-033235","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",12.17,0.2875,75.0,75,75,0,0,0,75],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000001490","DKM","M1",6140,"GZT-FSN","Gaziantep Fason Tesisl","GZTF-010","Vatan Fason Depo","C22341DANE-033730","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.15,0.33,44.0,44,44,0,0,0,44],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000000900","DKM","M1",47220,"KON-DTS","Konya Dış Tesisler","KON-008","Konya Besyem 1 Nolu De","C59733DANE-034211","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",12.17,0.2875,44.0,44,44,0,0,0,44],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",81500,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C51506DANE-034612","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,21.0,21,21,0,0,0,21],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",34000,"GZT-FSN","Gaziantep Fason Tesisl","GZTF-010","Vatan Fason Depo","C28867DANE-034700","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,18.0,18,18,0,0,0,18],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000001277","DKM","M1",80,"ADP-FSN","Adapazarı Fason Tesis","ADP-FSN-FR","Adapazarı Fark Ambarı","C17343DANE-034701","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",12.65,0.3012,18.81,18,20,0,0,0,11],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",70340,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C28867DANE-034668","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,15.68,6,20,0,0,0,18],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",85520,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C59733DANE-034772","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,19.0,19,19,0,0,0,15],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",100560,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C28867DANE-034202","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,33.0,33,33,0,0,0,33],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",53880,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C51506DANE-034691","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,20.0,20,20,0,0,0,20],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",82939,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C59733DANE-034037","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,44.0,44,44,0,0,0,44],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",48380,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C59733DANE-034117","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,44.0,44,44,0,0,0,44],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",20,"TRY-GZT","Gaziantep Tesisi","GZT-ORG-FR","Depolararası Fark Amba","C59733DANE-034772","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,19.0,19,19,0,0,0,15],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002490","DKM","M1",92980,"ADP-FSN","Adapazarı Fason Tesis","ADPF-001","Avrasya Yağ Fason Amba","C17343DANE-034701","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.24,0.3272,18.81,18,20,0,0,0,11],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002490","DKM","M1",19989,"ADP-FSN","Adapazarı Fason Tesis","ADPF-001","Avrasya Yağ Fason Amba","C54288DANE-034463","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.24,0.3272,26.0,26,26,0,0,0,26],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002490","DKM","M1",1848,"ADP-FSN","Adapazarı Fason Tesis","ADPF-001","Avrasya Yağ Fason Amba","C28341DTHY-027441","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.24,0.3272,212.0,212,212,0,0,0,212],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",76200,"TRY-GZT","Gaziantep Tesisi","GPLT-005","Gaziantep Pellet Hamma","C59733DANE-034891","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,19.0,19,19,0,0,0,12],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",50,"TRY-GZT","Gaziantep Tesisi","GZT-ORG-FR","Depolararası Fark Amba","C59733DANE-034891","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,19.0,19,19,0,0,0,12],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002489","DKM","M1",5370,"GZT-DTS","Gaziantep Dış Tesisi","GZTD-002","Gaziantep TMO Deposu","C59733DANE-034891","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.25,0.3272,19.0,19,19,0,0,0,12],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002491","DKM","M1",111400,"TRY-GYM","Güç Yem Tesisi","CGYD-001","Güç Yem Yatay Depo","C59733DANE-033851","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.24,0.3272,39.5,39,40,0,0,0,40],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002491","DKM","M1",123960,"TRY-GYM","Güç Yem Tesisi","CGYD-001","Güç Yem Yatay Depo","C59733DANE-034718","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.24,0.3272,19.0,19,19,0,0,0,19],["dane","TİRYAKİ TAHIL VE YEM TİCARET A","101001","ARPA - BÜTÜN","TR","PRJ000002491","DKM","M1",26000,"TRY-GYM","Güç Yem Tesisi","CGYD-001","Güç Yem Yatay Depo","C63799DANE-034719","TCR","Ticari","THL","Tahıl","ARP","Arpa","BEY","Beyaz","BTN","Bütün",14.24,0.3272,55.13,53,58,0,0,0,58]];
+const INIT=[];
 const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","YLD-KON":"Konya","YLD-MUS":"Muş"};
@@ -12,7 +13,7 @@ const fN=n=>new Intl.NumberFormat('tr-TR').format(Math.round(n));
 const ac=d=>d<60?'#0d6e4f':d<90?'#16a34a':d<180?'#f5a623':d<365?'#ea580c':'#e5484d';
 const acBg=d=>d<60?'rgba(45,212,160,.1)':d<90?'rgba(22,163,74,.08)':d<180?'rgba(245,166,35,.08)':d<365?'rgba(234,88,12,.08)':'rgba(229,72,77,.08)';
 const TI={own:{color:'#0d6e4f',label:'Öz Tesis'},fason:{color:'#8b5cf6',label:'Fason'},dis:{color:'#3b82f6',label:'Dış Tesis'},disticaret:{color:'#f5a623',label:'Dış Ticaret'}};
-const gC=c=>{if(CTM[c])return CTM[c];const p=c.split('-')[0];return CTM[p]||Object.entries(CTM).find(([k])=>c.includes(k))?.[1]||'Diğer';};
+const gC=c=>{if(CTM[c])return CTM[c];const p=c.split('-')[0];return CTM[p]||Object.entries(CTM).find(([k])=>c.includes(k))?.[1]||'Yurtdışı';};
 const gT=c=>{if(!c)return'dis';const u=c.toUpperCase();if(u.includes('FSN'))return'fason';if(u==='DISTICARET'||u.includes('DTC'))return'disticaret';if(u.startsWith('TRY-')||u.startsWith('YLD-'))return'own';return'dis';};
 const BK=[{k:'0-30',c:'#0d6e4f'},{k:'31-60',c:'#16a34a'},{k:'61-90',c:'#65a30d'},{k:'91-120',c:'#f5a623'},{k:'121-180',c:'#ea580c'},{k:'181-365',c:'#e5484d'},{k:'365+',c:'#991b1b'}];
 
@@ -108,6 +109,68 @@ export default function App(){
   const [repSC,setRepSC]=useState('total'); // sort column: n, total, avg, or bucket key
   const [repSD,setRepSD]=useState(-1); // sort direction
 
+  // ─── MSAL Auth State ───
+  const [msalReady,setMsalReady]=useState(false);
+  const [msalAccount,setMsalAccount]=useState(null);
+  const [authLoading,setAuthLoading]=useState(false);
+  const [profileOpen,setProfileOpen]=useState(false);
+  const [erpLoading,setErpLoading]=useState(false);
+  const [erpStatus,setErpStatus]=useState('');
+  const [erpError,setErpError]=useState('');
+  const [erpRaw,setErpRaw]=useState([]);  // raw Dataverse records
+  const [erpFields,setErpFields]=useState([]);  // actual field names
+  const [erpSearch,setErpSearch]=useState('');
+  const [rawPage,setRawPage]=useState(0);
+  const [erpPage,setErpPage]=useState(0);
+  const [pageSize,setPageSize]=useState(100);
+  const ERP_KEEP=useMemo(()=>new Set(['mserp_inventcolorid','mserp_closingpricemst','mserp_purchlifo','mserp_purchpricemst','mserp_amountmst','mserp_qty','mserp_itemname','mserp_headerreportdate','mserp_companyid','mserp_etgproductlevel03name','mserp_sfilotid','mserp_purchweav','mserp_amountsec','mserp_itemid','mserp_inventsizeid','mserp_inventdimension1','mserp_etgproductlevel02name','mserp_inventlocationid','mserp_prodweav','mserp_purchfifo','mserp_purchpricesec','mserp_prodfifo','mserp_prodlifo','mserp_vesselassignmentid','mserp_etgproductlevel01name','mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname','mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name','mserp_inventbatchid','mserp_inventdimension2','versionnumber','mserp_inventlocationname']),[]);
+
+  // ─── MSAL Init ───
+  useEffect(()=>{
+    if(!MSAL_ENABLED)return;
+    let mounted=true;
+    initMsal().then(inst=>{
+      if(!mounted||!inst)return;
+      setMsalReady(true);
+      const acc=inst.getAllAccounts()[0]||null;
+      if(acc)setMsalAccount(acc);
+    }).catch(()=>{if(mounted)setMsalReady(true);});
+    return()=>{mounted=false;};
+  },[]);
+
+  const handleLogin=useCallback(async()=>{
+    if(!msalReady)return;
+    setAuthLoading(true);
+    try{await loginRedirect();}
+    catch(err){if(err.errorCode!=='user_cancelled')setErpError('Giriş başarısız');setAuthLoading(false);}
+  },[msalReady]);
+
+  const handleLogout=useCallback(async()=>{
+    try{await logout(msalAccount);}catch(_){/* silent */}
+    setMsalAccount(null);setProfileOpen(false);
+  },[msalAccount]);
+
+  const handleErpFetch=useCallback(async()=>{
+    if(!msalAccount)return;
+    setErpLoading(true);setErpError('');setErpStatus('Bağlanılıyor...');
+    try{
+      const{rows:newRows,rawRecords}=await fetchErpData(msalAccount,s=>setErpStatus(s));
+      setRows(newRows);setSearch('');setSelRows(new Set());
+      // Store raw records for ERP Verileri page — only approved fields
+      if(rawRecords&&rawRecords.length>0){
+        const fields=Object.keys(rawRecords[0]).filter(k=>!k.includes('@')&&!k.startsWith('_')&&ERP_KEEP.has(k));
+        setErpFields(fields);
+        setErpRaw(rawRecords);
+      }
+      setErpStatus(`${newRows.length} satır başarıyla yüklendi`);
+      setTimeout(()=>setErpStatus(''),4000);
+    }catch(err){
+      setErpError(err.message||'Veri çekilemedi');
+      setErpStatus('');
+    }finally{setErpLoading(false);}
+  },[msalAccount]);
+
+
   const l2Data=useMemo(()=>{
     if(drillWh)return getL2(rows,r=>r[11]===drillWh);
     if(drillFac)return getL2(rows,r=>r[9]===drillFac);
@@ -118,6 +181,8 @@ export default function App(){
 
   const filtered=useMemo(()=>{if(!search.trim())return rows;const s=search.toLowerCase();return rows.filter(r=>r.some(v=>String(v).toLowerCase().includes(s)));},[rows,search]);
   const sorted=useMemo(()=>[...filtered].sort((a,b)=>{const x=a[rC],y=b[rC];return(typeof x==='number'?(x-y):String(x).localeCompare(String(y)))*rD;}),[filtered,rC,rD]);
+  useEffect(()=>{setRawPage(0);},[search,rC,rD]);
+  useEffect(()=>{setErpPage(0);},[erpSearch]);
 
   const handleDelete=()=>{if(selRows.size===0)return;setRows(prev=>prev.filter((_,i)=>!selRows.has(i)));setSelRows(new Set());};
   const handleImport=(e)=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=(evt)=>{try{
@@ -142,23 +207,123 @@ export default function App(){
 
   const clr=(cls)=>({blu:{c:$.blu,bg:$.bluB},grn:{c:'#0d6e4f',bg:$.grnB},pur:{c:$.pur,bg:$.purB},org:{c:$.org,bg:$.orgB},red:{c:$.red,bg:$.redB},tel:{c:$.tel,bg:$.telB}}[cls]);
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // LOGIN SCREEN — Apple iOS Glassmorphism
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if(MSAL_ENABLED&&!msalAccount){
+    return(
+      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#f5f7fa',position:'relative',overflow:'hidden'}}>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+        <style>{`
+          @keyframes liquidA{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(40px,-50px) scale(1.1) rotate(10deg)}66%{transform:translate(-20px,30px) scale(.95) rotate(-5deg)}}
+          @keyframes liquidB{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(-50px,40px) scale(1.15) rotate(-8deg)}66%{transform:translate(30px,-20px) scale(.9) rotate(12deg)}}
+          @keyframes liquidC{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,35px) scale(1.08)}}
+          @keyframes splashFadeUp{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+          .login-btn:hover{transform:scale(1.02)!important;box-shadow:0 8px 30px rgba(13,110,79,.25)!important}
+          .login-btn:active{transform:scale(.98)!important}
+        `}</style>
+
+        {/* Liquid gradient blobs */}
+        <div style={{position:'absolute',width:500,height:500,borderRadius:'40% 60% 70% 30%/40% 50% 60% 50%',background:'linear-gradient(135deg,rgba(13,110,79,.2),rgba(45,212,160,.15))',top:'-15%',right:'-10%',animation:'liquidA 15s ease-in-out infinite',filter:'blur(60px)'}}/>
+        <div style={{position:'absolute',width:450,height:450,borderRadius:'60% 40% 30% 70%/50% 60% 40% 50%',background:'linear-gradient(135deg,rgba(59,130,246,.15),rgba(139,92,246,.1))',bottom:'-12%',left:'-8%',animation:'liquidB 18s ease-in-out infinite',filter:'blur(60px)'}}/>
+        <div style={{position:'absolute',width:300,height:300,borderRadius:'50% 60% 40% 70%/60% 40% 60% 40%',background:'linear-gradient(135deg,rgba(13,110,79,.06),rgba(45,212,160,.08))',top:'50%',left:'50%',marginLeft:-150,marginTop:-150,animation:'liquidC 12s ease-in-out infinite',filter:'blur(50px)'}}/>
+
+        {/* Main glass card */}
+        <div style={{textAlign:'center',padding:'2.5rem 2.5rem 2rem',background:'rgba(255,255,255,.55)',borderRadius:28,maxWidth:420,width:'88%',border:'1px solid rgba(255,255,255,.6)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',boxShadow:'0 20px 60px rgba(13,110,79,.08),0 1px 3px rgba(13,110,79,.05)',animation:'splashFadeUp .7s cubic-bezier(.4,0,.2,1)',position:'relative',zIndex:2}}>
+
+          {/* 3D Warehouse Icon */}
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{marginBottom:8}}>
+            <defs>
+              <linearGradient id="wg1" x1="8" y1="56" x2="56" y2="8"><stop offset="0%" stopColor="#0d6e4f"/><stop offset="100%" stopColor="#2dd4a0"/></linearGradient>
+              <linearGradient id="wg2" x1="16" y1="48" x2="48" y2="16"><stop offset="0%" stopColor="#0a5a40"/><stop offset="100%" stopColor="#16a34a"/></linearGradient>
+              <linearGradient id="wg3" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stopColor="#134E5E" stopOpacity=".15"/><stop offset="100%" stopColor="#2dd4a0" stopOpacity=".08"/></linearGradient>
+            </defs>
+            {/* Floor / base shadow */}
+            <ellipse cx="32" cy="58" rx="24" ry="4" fill="url(#wg3)"/>
+            {/* Back wall */}
+            <path d="M12 22 L32 12 L52 22 L52 48 L32 56 L12 48Z" fill="url(#wg1)" opacity=".12"/>
+            {/* Left wall */}
+            <path d="M12 22 L32 32 L32 56 L12 48Z" fill="url(#wg1)" opacity=".85"/>
+            {/* Right wall */}
+            <path d="M52 22 L32 32 L32 56 L52 48Z" fill="url(#wg2)" opacity=".65"/>
+            {/* Roof */}
+            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="#2dd4a0" opacity=".9"/>
+            {/* Roof highlight */}
+            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="url(#wg3)" opacity=".5"/>
+            {/* Door */}
+            <path d="M27 56 L27 42 Q27 40 29 40 L35 40 Q37 40 37 42 L37 56Z" fill="#134E5E" opacity=".7"/>
+            <circle cx="35" cy="48" r="1" fill="#2dd4a0"/>
+            {/* Left shelf lines */}
+            <line x1="15" y1="32" x2="30" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".35"/>
+            <line x1="15" y1="37" x2="30" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
+            {/* Right shelf lines */}
+            <line x1="49" y1="32" x2="34" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
+            <line x1="49" y1="37" x2="34" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".18"/>
+            {/* Small boxes on left */}
+            <rect x="16" y="29" width="4" height="3" rx="0.5" fill="#fff" opacity=".3" transform="skewY(25) translate(0,-12)"/>
+            <rect x="21" y="29" width="3" height="3" rx="0.5" fill="#2dd4a0" opacity=".35" transform="skewY(25) translate(0,-12)"/>
+          </svg>
+
+          {/* Title */}
+          <div style={{marginBottom:6}}>
+            <div style={{color:'#1a2332',fontWeight:800,fontSize:26,letterSpacing:.3,lineHeight:1.1}}>TYRO</div>
+            <div style={{color:'#0d6e4f',fontSize:10.5,fontWeight:700,letterSpacing:3,textTransform:'uppercase',marginTop:3}}>WMS AGENT</div>
+          </div>
+
+          <p style={{fontSize:12.5,color:'#5a6b7f',margin:'.4rem 0 2rem',fontWeight:500,lineHeight:1.5}}>Dijital Depo Yönetimi Ajanı</p>
+
+          {/* Microsoft Login Button */}
+          <button className="login-btn" onClick={handleLogin} disabled={authLoading||!msalReady} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'14px 24px',borderRadius:14,border:'none',cursor:(authLoading||!msalReady)?'wait':'pointer',background:'linear-gradient(135deg,#0d6e4f,#0a5a40)',color:'#fff',fontSize:14,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",transition:'all .25s cubic-bezier(.4,0,.2,1)',boxShadow:'0 4px 16px rgba(13,110,79,.3)',opacity:(authLoading||!msalReady)?0.6:1}}>
+            <svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+            {authLoading?'Giriş yapılıyor...':'Microsoft ile Giriş Yap'}
+          </button>
+
+          <p style={{fontSize:11.5,color:'#6b7a8d',marginTop:16,fontWeight:500}}>Tiryaki kurumsal hesabınız ile giriş yapın</p>
+        </div>
+
+        {/* TTECH Footer */}
+        <div style={{marginTop:'2rem',textAlign:'center',position:'relative',zIndex:2}}>
+          <p style={{fontSize:11.5,fontWeight:700,color:'rgba(13,110,79,.6)',fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:2.5,margin:'0 0 .4rem'}}>TTECH BUSINESS SOLUTIONS</p>
+          <p style={{fontSize:10.5,color:'rgba(26,35,50,.45)',margin:0,fontWeight:500}}>{'© 2026 Tiryaki Agro — Tüm hakları saklıdır.'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return(
     <div style={{display:'flex',height:'100vh',fontFamily:$.f,background:$.bg,color:$.t1,overflow:'hidden',WebkitFontSmoothing:'antialiased',fontSize:13}}>
       <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
-      <style>{`@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes sbIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}.ks{animation:slideIn .3s cubic-bezier(.16,1,.3,1)}.fu{animation:fadeUp .35s ease both}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c8cdd5;border-radius:10px}.rh:hover{background:#f0f3f8!important}.kp{transition:all .2s}.kp:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-2px)}input.fi{border:1px solid rgba(226,231,238,.6);border-radius:8px;padding:5px 8px;font-size:11px;font-family:inherit;outline:none;width:100%;background:rgba(255,255,255,.7);backdrop-filter:blur(6px)}input.fi:focus{border-color:#0d6e4f;background:#fff}.tb-b{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid rgba(226,231,238,.5);background:rgba(255,255,255,.7);backdrop-filter:blur(6px);color:#5a6b7f;font-size:11.5px;font-family:inherit;font-weight:500;cursor:pointer;transition:all .15s}.tb-b:hover{background:rgba(255,255,255,.95);border-color:#d0d6df}.tb-b.pr{background:#0d6e4f;color:#fff;border-color:#0d6e4f}.tb-b.pr:hover{background:#0a5a40}.sg:hover{opacity:1!important}.sg:hover .sgt{opacity:1!important}.sbn:hover{background:rgba(13,110,79,.04)!important}.mob-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;backdrop-filter:blur(2px)}.mob-sb{animation:sbIn .25s ease}`}</style>
+      <style>{`@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes sbIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}.ks{animation:slideIn .3s cubic-bezier(.16,1,.3,1)}.fu{animation:fadeUp .35s ease both}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c8cdd5;border-radius:10px}.rh:hover{background:#f0f3f8!important}.kp{transition:all .2s}.kp:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-2px)}input.fi{border:1px solid rgba(226,231,238,.6);border-radius:8px;padding:5px 8px;font-size:11px;font-family:inherit;outline:none;width:100%;background:rgba(255,255,255,.7);backdrop-filter:blur(6px)}input.fi:focus{border-color:#0d6e4f;background:#fff}.tb-b{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid rgba(226,231,238,.5);background:rgba(255,255,255,.7);backdrop-filter:blur(6px);color:#5a6b7f;font-size:11.5px;font-family:inherit;font-weight:500;cursor:pointer;transition:all .15s}.tb-b:hover{background:rgba(255,255,255,.95);border-color:#d0d6df}.tb-b.pr{background:#0d6e4f;color:#fff;border-color:#0d6e4f}.tb-b.pr:hover{background:#0a5a40}.sg:hover{opacity:1!important}.sg:hover .sgt{opacity:1!important}.sbn:hover{background:rgba(13,110,79,.04)!important}.mob-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;backdrop-filter:blur(2px)}.mob-sb{animation:sbIn .25s ease}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <input ref={fR} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{display:'none'}}/>
 
       {/* SIDEBAR */}
       {mob&&sbOpen&&<div className="mob-ov" onClick={()=>setSbOpen(false)}/>}
       <div className={mob?'mob-sb':''} style={{width:250,background:'rgba(255,255,255,.95)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',display:mob&&!sbOpen?'none':'flex',flexDirection:'column',flexShrink:0,borderRight:'1px solid rgba(226,231,238,.4)',...(mob?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'4px 0 24px rgba(0,0,0,.15)'}:{})}}>
         <div style={{padding:'20px 20px 16px',display:'flex',alignItems:'center',gap:12}}>
-          <div style={{width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,#134E5E 0%,#0d7a5f 50%,#2dd4a0 100%)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 18px rgba(13,122,95,.2)',position:'relative',overflow:'hidden',flexShrink:0}}>
-            <div style={{position:'absolute',top:'-40%',right:'-40%',width:'80%',height:'80%',background:'radial-gradient(circle,rgba(255,255,255,.22),transparent 70%)',borderRadius:'50%'}}/>
-            <Warehouse size={18} color="#fff" style={{position:'relative',zIndex:1}}/>
-          </div>
+          <svg width="38" height="38" viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
+            <defs>
+              <linearGradient id="sbwg1" x1="8" y1="56" x2="56" y2="8"><stop offset="0%" stopColor="#0d6e4f"/><stop offset="100%" stopColor="#2dd4a0"/></linearGradient>
+              <linearGradient id="sbwg2" x1="16" y1="48" x2="48" y2="16"><stop offset="0%" stopColor="#0a5a40"/><stop offset="100%" stopColor="#16a34a"/></linearGradient>
+              <linearGradient id="sbwg3" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stopColor="#134E5E" stopOpacity=".15"/><stop offset="100%" stopColor="#2dd4a0" stopOpacity=".08"/></linearGradient>
+            </defs>
+            <ellipse cx="32" cy="58" rx="24" ry="4" fill="url(#sbwg3)"/>
+            <path d="M12 22 L32 12 L52 22 L52 48 L32 56 L12 48Z" fill="url(#sbwg1)" opacity=".12"/>
+            <path d="M12 22 L32 32 L32 56 L12 48Z" fill="url(#sbwg1)" opacity=".85"/>
+            <path d="M52 22 L32 32 L32 56 L52 48Z" fill="url(#sbwg2)" opacity=".65"/>
+            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="#2dd4a0" opacity=".9"/>
+            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="url(#sbwg3)" opacity=".5"/>
+            <path d="M27 56 L27 42 Q27 40 29 40 L35 40 Q37 40 37 42 L37 56Z" fill="#134E5E" opacity=".7"/>
+            <circle cx="35" cy="48" r="1" fill="#2dd4a0"/>
+            <line x1="15" y1="32" x2="30" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".35"/>
+            <line x1="15" y1="37" x2="30" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
+            <line x1="49" y1="32" x2="34" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
+            <line x1="49" y1="37" x2="34" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".18"/>
+            <rect x="16" y="29" width="4" height="3" rx="0.5" fill="#fff" opacity=".3" transform="skewY(25) translate(0,-12)"/>
+            <rect x="21" y="29" width="3" height="3" rx="0.5" fill="#2dd4a0" opacity=".35" transform="skewY(25) translate(0,-12)"/>
+          </svg>
           <div>
             <div style={{color:$.t1,fontWeight:800,fontSize:16,letterSpacing:.3,lineHeight:1.1}}>TYRO</div>
-            <div style={{color:$.ac,fontSize:9.5,fontWeight:700,letterSpacing:2.5,textTransform:'uppercase',marginTop:2}}>WH AGENT</div>
+            <div style={{color:$.ac,fontSize:9.5,fontWeight:700,letterSpacing:2.5,textTransform:'uppercase',marginTop:2}}>WMS AGENT</div>
           </div>
         </div>
         <div style={{padding:'0 12px',flex:1,overflowY:'auto'}}>
@@ -169,11 +334,12 @@ export default function App(){
               <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
             </div>);})}
           <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>
-          {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Ham Veri'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
               {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
               {p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
+              {p.id==='erp'&&erpRaw.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.ac,color:'#fff',minWidth:18,textAlign:'center'}}>{erpRaw.length}</span>}
             </div>);})}
           <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Sistem'}</div>
           {(()=>{const isA=pg==='set';return(
@@ -182,17 +348,28 @@ export default function App(){
               <Settings size={16} strokeWidth={isA?2.2:1.8}/>Ayarlar
             </div>);})()}
         </div>
-        <div style={{padding:'14px 16px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
-            <div style={{width:24,height:24,borderRadius:6,background:'linear-gradient(135deg,#1a3a6b,#3b82f6)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-              <span style={{color:'#fff',fontSize:9,fontWeight:900}}>T</span>
+        {/* Profile */}
+        {MSAL_ENABLED&&msalAccount&&(
+          <div style={{padding:'10px 12px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
+            <div onClick={()=>setProfileOpen(p=>!p)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:10,cursor:'pointer',background:profileOpen?'rgba(13,110,79,.06)':'transparent',transition:'all .2s'}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(13,110,79,.25)',flexShrink:0}}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:11.5,fontWeight:600,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2}}>{msalAccount.name||msalAccount.username}</div>
+                <div style={{fontSize:9.5,color:$.t3,marginTop:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{msalAccount.username}</div>
+              </div>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{flexShrink:0,transition:'transform .2s',transform:profileOpen?'rotate(180deg)':'rotate(0)'}}><path d="M1 1L5 5L9 1" stroke={$.t3} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <div>
-              <div style={{fontSize:8,color:$.t3,fontWeight:500,lineHeight:1}}>Powered by</div>
-              <div style={{fontSize:10,fontWeight:700,color:'#1a3a6b',letterSpacing:.2,lineHeight:1.3}}>TTECH <span style={{fontWeight:400,color:$.t3,fontSize:8.5}}>Business Solutions</span></div>
-            </div>
+            {profileOpen&&<div style={{marginTop:6,padding:'4px 0'}}>
+              <div onClick={()=>{handleLogout();setProfileOpen(false);}} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',borderRadius:8,cursor:'pointer',fontSize:11.5,fontWeight:500,color:'#e5484d',transition:'all .15s'}} className="sbn">
+                <LogOut size={14} strokeWidth={2}/> Çıkış Yap
+              </div>
+            </div>}
           </div>
-          <div style={{fontSize:7.5,color:$.t3,opacity:.5}}>© {new Date().getFullYear()} Tüm hakları saklıdır.</div>
+        )}
+        {/* Copyright */}
+        <div style={{padding:'10px 16px 14px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
+          <div style={{fontSize:9,fontWeight:700,color:'rgba(13,110,79,.5)',letterSpacing:2,textAlign:'center',marginBottom:3}}>TTECH BUSINESS SOLUTIONS</div>
+          <div style={{fontSize:8,color:$.t3,opacity:.45,textAlign:'center',fontWeight:500}}>{'© '}{new Date().getFullYear()}{' Tiryaki Agro — Tüm hakları saklıdır.'}</div>
         </div>
       </div>
 
@@ -205,14 +382,24 @@ export default function App(){
           </div>}
           <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
             {!mob&&<div style={{width:32,height:32,borderRadius:9,background:'rgba(13,110,79,.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {pg==='dash'?<BarChart3 size={15} color={$.ac}/>:pg==='ana'?<Activity size={15} color={$.ac}/>:pg==='rep'?<FileBarChart size={15} color={$.ac}/>:pg==='raw'?<Database size={15} color={$.ac}/>:<Settings size={15} color={$.ac}/>}
+              {pg==='dash'?<BarChart3 size={15} color={$.ac}/>:pg==='ana'?<Activity size={15} color={$.ac}/>:pg==='rep'?<FileBarChart size={15} color={$.ac}/>:pg==='raw'?<Database size={15} color={$.ac}/>:pg==='erp'?<Globe size={15} color={$.ac}/>:<Settings size={15} color={$.ac}/>}
             </div>}
             <div style={{minWidth:0}}>
-              <div style={{fontSize:mob?13:15,fontWeight:700,color:$.t1,lineHeight:1.2}}>{{'dash':'Dashboard','ana':'Analiz & Risk','raw':'Ham Veri','rep':'Raporlar','set':'Ayarlar'}[pg]}</div>
-              {!mob&&<div style={{fontSize:10,color:$.t3,fontWeight:400}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','set':'Uygulama Tercihleri'}[pg]}</div>}
+              <div style={{fontSize:mob?13:15,fontWeight:700,color:$.t1,lineHeight:1.2}}>{{'dash':'Dashboard','ana':'Analiz & Risk','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
+              {!mob&&<div style={{fontSize:10,color:$.t3,fontWeight:400}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
             </div>
           </div>
+          {/* ERP Status */}
+          {erpStatus&&<div style={{padding:'4px 10px',borderRadius:7,background:$.grnB,fontSize:10,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
+          {erpError&&<div style={{padding:'4px 10px',borderRadius:7,background:$.redB,fontSize:10,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
           {!mob&&<div style={{padding:'4px 10px',borderRadius:7,background:'rgba(226,231,238,.06)',fontSize:10,fontFamily:$.mo,fontWeight:500,color:$.t3}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>}
+          {/* Verileri Güncelle */}
+          {MSAL_ENABLED&&msalAccount&&(
+            <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:5,fontSize:11,padding:'6px 14px',borderRadius:8}}>
+              {erpLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={13}/>}
+              {erpLoading?'Güncelleniyor...':'Verileri Güncelle'}
+            </button>
+          )}
         </div>
         <div style={{flex:1,overflow:'auto',display:'flex'}}>
           <div style={{flex:1,overflow:'auto',padding:mob?12:22}}>
@@ -262,17 +449,20 @@ export default function App(){
                       <span style={{fontSize:9,fontWeight:600,color:$.ac,background:$.acL,padding:'2px 8px',borderRadius:6,marginLeft:4}}>3D</span>
                     </div>
                   </div>
-                  <TurkeyMap3D
-                    cities={D.ct}
-                    maxQty={mQ}
-                    sel={sel}
-                    hov={hov}
-                    onSelect={(name)=>{setSel(sel===name?null:name);setDrillFac(null);setDrillWh(null);}}
-                    onHover={setHov}
-                    onHoverEnd={()=>setHov(null)}
-                    acFn={ac}
-                    fmt={fmt}
-                  />
+                  <Suspense fallback={<div style={{height:450,display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#f0f4f8,#f5f7fa)',borderRadius:'0 0 16px 16px'}}><span style={{fontSize:12,color:'#5a6b7f'}}>Harita yükleniyor...</span></div>}>
+                    <TurkeyMap3D
+                      cities={D.ct.filter(c=>c.n!=='Yurtdışı')}
+                      maxQty={mQ}
+                      sel={sel}
+                      hov={hov}
+                      onSelect={(name)=>{setSel(sel===name?null:name);setDrillFac(null);setDrillWh(null);}}
+                      onHover={setHov}
+                      onHoverEnd={()=>setHov(null)}
+                      acFn={ac}
+                      fmt={fmt}
+                      yurtdisi={D.ct.find(c=>c.n==='Yurtdışı')||null}
+                    />
+                  </Suspense>
                 </div>
 
                 {/* Charts below map */}
@@ -453,14 +643,24 @@ export default function App(){
             {/* ===== RAW DATA ===== */}
             {pg==='raw'&&(
               <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,overflow:'hidden',boxShadow:$.sh}}>
-                <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                  <div style={{fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}><div style={{width:26,height:26,borderRadius:7,background:$.bluB,color:$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Database size={14}/></div>Ham Veri</div>
-                  <span style={{fontSize:11,color:$.t3}}>{filtered.length}/{rows.length}</span>
-                  <div style={{flex:1}}/>
-                  <div style={{position:'relative',width:220}}><Search size={14} color={$.t3} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}}/><input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara..." style={{paddingLeft:30,height:32}}/></div>
-                  <button className="tb-b pr" onClick={()=>{setAddMode(true);setNewRow(HDR.map((_,i)=>NC.has(i)?0:''));}}><Plus size={13}/>Yeni</button>
-                  <button className="tb-b" onClick={()=>fR.current?.click()}><Upload size={13}/>İçeri Aktar</button>
-                  {selRows.size>0&&<button className="tb-b" onClick={handleDelete} style={{color:$.red,borderColor:$.red}}><Trash2 size={13}/>Sil ({selRows.size})</button>}
+                <div style={{padding:'12px 16px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:200}}>
+                    <Database size={16} color={$.blu}/>
+                    <span style={{fontSize:13,fontWeight:700,color:$.t1}}>Rapor Satırları</span>
+                    {rows.length>0&&<span style={{fontSize:11,color:$.t3,fontWeight:500}}>{filtered.length}/{rows.length} kayıt</span>}
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{position:'relative'}}>
+                      <Search size={13} style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',color:$.t3}}/>
+                      <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara..." style={{paddingLeft:28,width:180}}/>
+                    </div>
+                    <button className="tb-b" onClick={()=>fR.current?.click()} style={{gap:6}}><Upload size={13}/>İçeri Aktar</button>
+                    {rows.length>0&&<button className="tb-b" onClick={()=>{
+                      const doIt=()=>{const ws=window.XLSX.utils.aoa_to_sheet([HDR,...rows]);const wb=window.XLSX.utils.book_new();window.XLSX.utils.book_append_sheet(wb,ws,'Rapor');window.XLSX.writeFile(wb,'TYRO_RaporSatirlari_'+new Date().toISOString().slice(0,10)+'.xlsx');};
+                      if(window.XLSX)doIt();else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
+                    }} style={{gap:6}}><Download size={13}/>Dışarı Aktar</button>}
+                    {selRows.size>0&&<button className="tb-b" onClick={handleDelete} style={{color:$.red,borderColor:$.red,gap:6}}><Trash2 size={13}/>Sil ({selRows.size})</button>}
+                  </div>
                 </div>
                 {addMode&&newRow&&(
                   <div style={{padding:'10px 18px',background:$.acL,borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
@@ -482,7 +682,7 @@ export default function App(){
                         <th key={ci} onClick={()=>{if(rC===ci)setRD(d=>d*-1);else{setRC(ci);setRD(-1);}}} style={{padding:'9px 10px',textAlign:NC.has(ci)?'right':'left',color:$.t3,fontWeight:700,fontSize:9,textTransform:'uppercase',borderBottom:'2px solid '+$.bd,cursor:'pointer',whiteSpace:'nowrap',background:$.bg,minWidth:ci===1||ci===3||ci===10||ci===12?130:60,letterSpacing:.5}}>{h}{rC===ci?<ArrowUpDown size={8} style={{marginLeft:2,verticalAlign:'middle'}} color={$.blu}/>:null}</th>))}
                       <th style={{padding:'9px 6px',borderBottom:'2px solid '+$.bd,background:$.bg,width:36}}/>
                     </tr></thead>
-                    <tbody>{sorted.map((r,i)=>{const oi=rows.indexOf(r);return(
+                    <tbody>{sorted.slice(rawPage*pageSize,(rawPage+1)*pageSize).map((r,i)=>{const oi=rows.indexOf(r);return(
                       <tr key={i} className="rh" style={{borderBottom:'1px solid '+$.bdL,background:selRows.has(oi)?$.acL:i%2?'#fafbfc':'#fff'}}>
                         <td style={{padding:'7px 10px'}}><input type="checkbox" checked={selRows.has(oi)} onChange={e=>{const n=new Set(selRows);e.target.checked?n.add(oi):n.delete(oi);setSelRows(n);}}/></td>
                         {r.map((v,ci)=>(
@@ -493,6 +693,16 @@ export default function App(){
                       </tr>);})}</tbody>
                   </table>
                 </div>
+                {(()=>{const total=sorted.length;const tp=Math.ceil(total/pageSize);if(tp<=1)return null;return(
+                  <div style={{padding:'10px 18px',borderTop:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+                    <div style={{fontSize:11,color:$.t3,fontWeight:500}}>{rawPage*pageSize+1}–{Math.min((rawPage+1)*pageSize,total)} / {total} kayıt</div>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <button className="tb-b" onClick={()=>setRawPage(p=>Math.max(0,p-1))} disabled={rawPage===0} style={{padding:'5px 12px',fontSize:11,opacity:rawPage===0?.4:1}}><ChevronLeft size={13}/>Önceki</button>
+                      <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1,padding:'0 8px'}}>{rawPage+1} / {tp}</span>
+                      <button className="tb-b" onClick={()=>setRawPage(p=>Math.min(tp-1,p+1))} disabled={rawPage>=tp-1} style={{padding:'5px 12px',fontSize:11,opacity:rawPage>=tp-1?.4:1}}>Sonraki<ChevronRight size={13}/></button>
+                    </div>
+                  </div>
+                );})()}
               </div>
             )}
 
@@ -634,6 +844,81 @@ export default function App(){
                 </div>
               );})()}
 
+            {/* ===== ERP VERİLERİ ===== */}
+            {pg==='erp'&&(
+              <div>
+                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
+                  <div style={{padding:'12px 16px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:200}}>
+                      <Globe size={16} color={$.ac}/>
+                      <span style={{fontSize:13,fontWeight:700,color:$.t1}}>ERP Verileri</span>
+                      {erpRaw.length>0&&<span style={{fontSize:11,color:$.t3,fontWeight:500}}>{erpRaw.length} kayıt · {erpFields.length} alan</span>}
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{position:'relative'}}>
+                        <Search size={13} style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',color:$.t3}}/>
+                        <input className="fi" placeholder="Ara..." value={erpSearch} onChange={e=>setErpSearch(e.target.value)} style={{paddingLeft:28,width:180}}/>
+                      </div>
+                      {erpRaw.length>0&&<button className="tb-b" onClick={()=>{
+                        const doIt=()=>{const ws=window.XLSX.utils.json_to_sheet(erpRaw.map(rec=>{const o={};erpFields.forEach(f=>{o[f]=rec[f]??'';});return o;}));const wb=window.XLSX.utils.book_new();window.XLSX.utils.book_append_sheet(wb,ws,'ERP');window.XLSX.writeFile(wb,'erp_verileri.xlsx');};
+                        if(window.XLSX)doIt();else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);};
+                      }} style={{gap:6}}>
+                        <Download size={13}/>Dışarı Aktar
+                      </button>}
+                      {MSAL_ENABLED&&msalAccount&&<button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:6}}>
+                        {erpLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={13}/>}
+                        {erpLoading?'Çekiliyor...':'ERP Verilerini Çek'}
+                      </button>}
+                    </div>
+                  </div>
+                  {erpRaw.length===0?(
+                    <div style={{padding:'60px 20px',textAlign:'center'}}>
+                      <Globe size={40} color={$.t3} style={{opacity:.3,marginBottom:12}}/>
+                      <div style={{fontSize:14,fontWeight:600,color:$.t2,marginBottom:6}}>Henüz ERP verisi yok</div>
+                      <div style={{fontSize:12,color:$.t3,marginBottom:16}}>D365 ERP'den veri çekmek için yukarıdaki "ERP Verilerini Çek" butonuna basın</div>
+                    </div>
+                  ):(
+                    <div style={{overflow:'auto',maxHeight:'calc(100vh - 200px)'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,fontFamily:$.mo}}>
+                        <thead>
+                          <tr style={{background:'rgba(13,110,79,.04)',position:'sticky',top:0,zIndex:5}}>
+                            <th style={{padding:'8px 10px',textAlign:'left',fontWeight:700,fontSize:10,color:$.ac,borderBottom:'2px solid '+$.bdL,whiteSpace:'nowrap',position:'sticky',left:0,background:'rgba(237,241,246,.98)',zIndex:6}}>#</th>
+                            {erpFields.map(f=><th key={f} style={{padding:'8px 10px',textAlign:'left',fontWeight:600,fontSize:9.5,color:$.t2,borderBottom:'2px solid '+$.bdL,whiteSpace:'nowrap',letterSpacing:.3}}>{f.replace('mserp_','')}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(()=>{
+                            const s=erpSearch.toLowerCase();
+                            const filtered=s?erpRaw.filter(rec=>erpFields.some(f=>String(rec[f]||'').toLowerCase().includes(s))):erpRaw;
+                            return filtered.slice(erpPage*pageSize,(erpPage+1)*pageSize).map((rec,i)=>(
+                              <tr key={i} className="rh" style={{borderBottom:'1px solid '+$.bdL}}>
+                                <td style={{padding:'6px 10px',color:$.t3,fontSize:10,position:'sticky',left:0,background:'#fff',zIndex:1}}>{erpPage*pageSize+i+1}</td>
+                                {erpFields.map(f=>{
+                                  const v=rec[f];
+                                  const isEmpty=v==null||v==='';
+                                  return <td key={f} style={{padding:'6px 10px',whiteSpace:'nowrap',maxWidth:250,overflow:'hidden',textOverflow:'ellipsis',color:isEmpty?$.t3:$.t1,opacity:isEmpty?.4:1}}>{isEmpty?'—':typeof v==='number'?v:String(v).slice(0,80)}</td>;
+                                })}
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                      {(()=>{const s=erpSearch.toLowerCase();const ef=s?erpRaw.filter(rec=>erpFields.some(f=>String(rec[f]||'').toLowerCase().includes(s))):erpRaw;const total=ef.length;const tp=Math.ceil(total/pageSize);if(tp<=1)return null;return(
+                        <div style={{padding:'10px 16px',borderTop:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+                          <div style={{fontSize:11,color:$.t3,fontWeight:500}}>{erpPage*pageSize+1}–{Math.min((erpPage+1)*pageSize,total)} / {total} kayıt</div>
+                          <div style={{display:'flex',alignItems:'center',gap:6}}>
+                            <button className="tb-b" onClick={()=>setErpPage(p=>Math.max(0,p-1))} disabled={erpPage===0} style={{padding:'5px 12px',fontSize:11,opacity:erpPage===0?.4:1}}><ChevronLeft size={13}/>Önceki</button>
+                            <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1,padding:'0 8px'}}>{erpPage+1} / {tp}</span>
+                            <button className="tb-b" onClick={()=>setErpPage(p=>Math.min(tp-1,p+1))} disabled={erpPage>=tp-1} style={{padding:'5px 12px',fontSize:11,opacity:erpPage>=tp-1?.4:1}}>Sonraki<ChevronRight size={13}/></button>
+                          </div>
+                        </div>
+                      );})()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* ===== AYARLAR ===== */}
             {pg==='set'&&(
               <div style={{maxWidth:720}}>
@@ -646,6 +931,7 @@ export default function App(){
                   <div style={{padding:'16px 18px'}}>
                     <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16}}>
                       <button className="tb-b pr" onClick={()=>fR.current?.click()} style={{padding:'10px 20px',fontSize:12}}><Upload size={14}/>Excel İçe Aktar (.xlsx)</button>
+                      {MSAL_ENABLED&&msalAccount&&<button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{padding:'10px 20px',fontSize:12,background:erpLoading?'#6b7280':'#0d6e4f',opacity:erpLoading?.7:1}}><Database size={14}/>{erpLoading?'Çekiliyor...':'ERP Verilerini Çek (D365)'}</button>}
                       <button className="tb-b" onClick={()=>{const hdr=HDR.join(',')+'\n';const csv=rows.map(r=>r.map(v=>typeof v==='string'?'"'+v+'"':v).join(',')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([hdr+csv],{type:'text/csv;charset=utf-8'}));a.download='TYRO_Export_'+new Date().toISOString().slice(0,10)+'.csv';a.click();}} style={{padding:'10px 20px',fontSize:12}}><Download size={14}/>CSV Dışa Aktar</button>
                     </div>
                     <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
@@ -686,6 +972,27 @@ export default function App(){
                             <div style={{width:10,height:10,borderRadius:3,background:v.color}}/>
                             <span style={{fontSize:11,fontWeight:500,color:$.t1}}>{v.label}</span>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tablo Ayarları */}
+                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16}}>
+                  <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
+                    <div style={{width:26,height:26,borderRadius:7,background:$.orgB,color:$.org,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Layers size={14}/></div>
+                    {'Tablo Ayarları'}
+                  </div>
+                  <div style={{padding:'16px 18px'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:16}}>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:600,color:$.t1,marginBottom:2}}>Sayfa Başına Kayıt Sayısı</div>
+                        <div style={{fontSize:10.5,color:$.t3,fontWeight:400}}>Rapor Satırları ve ERP Verileri tablolarındaki sayfalama boyutu</div>
+                      </div>
+                      <div style={{display:'flex',gap:4}}>
+                        {[25,50,100,250,500].map(s=>(
+                          <div key={s} onClick={()=>{setPageSize(s);setRawPage(0);setErpPage(0);}} style={{padding:'6px 14px',borderRadius:$.r,fontSize:12,fontFamily:$.mo,fontWeight:pageSize===s?700:500,cursor:'pointer',background:pageSize===s?$.acL:$.bg,color:pageSize===s?$.ac:$.t2,border:'1px solid '+(pageSize===s?'#b8dece':$.bdL),transition:'all .15s'}}>{s}</div>
                         ))}
                       </div>
                     </div>
