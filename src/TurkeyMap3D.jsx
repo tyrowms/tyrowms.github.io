@@ -119,10 +119,11 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, onSelect
   const ref = useRef();
   const ringRef = useRef();
 
-  // All markers: silo cylinder (min size for small cities)
+  // All markers: silo cylinder (min size increased for better UX)
   const ratio = city.q / maxQty;
-  const radius = Math.max(0.1, ratio * 0.5);
-  const height = Math.max(0.18, ratio * 2.2);
+  const radius = Math.max(0.22, ratio * 0.6);
+  const height = Math.max(0.4, ratio * 2.5);
+  const hitRadius = Math.max(radius * 1.5, 0.35);
   const pos = [x, 0.16, y];
 
   useFrame((state) => {
@@ -146,12 +147,19 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, onSelect
           <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
         </mesh>
       )}
+      {/* Invisible hitbox for easier clicking */}
       <mesh
-        ref={ref}
-        position={[0, height / 2, 0]}
+        position={[0, (height + 0.3) / 2, 0]}
         onClick={e => { e.stopPropagation(); onSelect(city.n); }}
         onPointerOver={e => { e.stopPropagation(); onHover(city.n); document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => { onHoverEnd(); document.body.style.cursor = 'default'; }}
+      >
+        <cylinderGeometry args={[hitRadius, hitRadius, height + 0.3, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <mesh
+        ref={ref}
+        position={[0, height / 2, 0]}
       >
         <cylinderGeometry args={[radius, radius * 0.85, height, 20]} />
         <meshStandardMaterial
@@ -165,7 +173,7 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, onSelect
         />
       </mesh>
       <mesh position={[0, height + 0.05, 0]}>
-        <sphereGeometry args={[radius * 0.4, 12, 12]} />
+        <sphereGeometry args={[radius * 0.45, 12, 12]} />
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.2} />
       </mesh>
 
