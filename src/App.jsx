@@ -445,7 +445,7 @@ export default function App(){
                   <div style={{padding:'15px 18px 13px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid '+$.bdL}}>
                     <div style={{fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
                       <div style={{width:26,height:26,borderRadius:7,background:$.bluB,color:$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><MapPin size={14}/></div>
-                      {'Türkiye Tiryaki Haritası'}
+                      {'Tiryaki Haritası'}
                       <span style={{fontSize:9,fontWeight:600,color:$.ac,background:$.acL,padding:'2px 8px',borderRadius:6,marginLeft:4}}>3D</span>
                     </div>
                   </div>

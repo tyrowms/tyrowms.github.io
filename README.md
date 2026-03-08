@@ -1,65 +1,131 @@
-# T-Stock — WH Agent v9.0
+<p align="center">
+  <img src="public/ttech-logo.svg" alt="TYRO WMS Agent" width="80" />
+</p>
 
-**Warehouse Digital Twin Dashboard** by TTECH Business Solutions
+<h1 align="center">TYRO WMS Agent</h1>
 
-Enterprise-grade warehouse inventory aging analysis system for Tiryaki Agro.
+<p align="center">
+  <strong>Warehouse Management System &mdash; Digital Twin Dashboard</strong><br/>
+  <em>by TTECH Business Solutions for Tiryaki Agro</em>
+</p>
+
+<p align="center">
+  <a href="https://tyrowms.github.io">Live Demo</a> &bull;
+  <a href="#features">Features</a> &bull;
+  <a href="#tech-stack">Tech Stack</a> &bull;
+  <a href="#getting-started">Getting Started</a>
+</p>
+
+---
+
+## Overview
+
+TYRO WMS Agent is an enterprise-grade warehouse inventory aging analysis dashboard. It connects to Microsoft D365 ERP via Dataverse API, providing real-time visibility into stock aging, facility distribution, and risk analysis across all Tiryaki Agro warehouses.
 
 ## Features
 
-- 📊 **Dashboard** — KPI cards, Turkey SVG map, aging distribution, facility type charts
-- 📈 **Analiz & Risk** — Oldest stocks, value donut chart, top products, risk summary
-- 📋 **Raporlar** — 5-tab pivot analysis (Company/Facility/L2/L3/Origin), PDF/Excel export
-- 🗃️ **Ham Veri** — Full CRUD data table with inline editing, search, sort
-- ⚙️ **Ayarlar** — Data management, import/export, app info
-- 📱 **Mobile Responsive** — Hamburger menu, adaptive grids, touch-friendly
+- **Dashboard** — KPI cards, interactive 3D Turkey map, aging distribution charts, facility breakdown
+- **Analiz & Risk** — Oldest stock analysis, value distribution, top products, risk scoring
+- **Raporlar** — Multi-tab pivot analysis (Company / Facility / L2 / L3 / Origin) with PDF & Excel export
+- **Rapor Satrilari** — Full CRUD data table with inline editing, search, sort, Excel import/export
+- **ERP Verileri** — Live D365 Dataverse integration with one-click data sync
+- **Ayarlar** — Data management, theme preferences, app configuration
+- **Mobile Responsive** — Adaptive layout with hamburger menu and touch-friendly controls
 
 ## Tech Stack
 
-- React 18 + Vite
-- Lucide React Icons
-- SVG Turkey Map (custom)
-- Glassmorphism UI
-- PurchFIFO Aging Method
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 6 |
+| 3D Map | Three.js, React Three Fiber, React Three Drei |
+| Auth | MSAL (Azure AD) |
+| ERP | Microsoft Dataverse OData API |
+| Icons | Lucide React |
+| Geo | D3-geo, custom Turkey provinces GeoJSON |
+| Export | SheetJS (xlsx) via CDN |
+| UI | Custom glassmorphism design system |
 
-## Quick Start
+## Getting Started
+
+### Prerequisites
+
+- Node.js v18+
+- npm v9+
+- Azure AD app registration (for ERP integration)
+
+### Installation
 
 ```bash
+git clone https://github.com/djeanker34/TYRO-WMSAgent.git
+cd TYRO-WMSAgent
 npm install
+```
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+VITE_AZURE_CLIENT_ID=your-azure-client-id
+VITE_AZURE_TENANT_ID=your-azure-tenant-id
+VITE_DATAVERSE_URL=https://your-instance.crm4.dynamics.com
+VITE_DATAVERSE_ENTITY=your-entity-name
+```
+
+### Development
+
+```bash
 npm run dev
 ```
 
-## Deploy
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### Production Build
 
 ```bash
 npm run build
-# Upload dist/ to Netlify, Vercel, or GitHub Pages
+npm run preview
 ```
 
-## GitHub Pages Deploy
+## Deployment
+
+### GitHub Pages (Automated)
+
+This project includes a GitHub Actions workflow for automatic deployment:
+
+1. Push to `main` branch
+2. GitHub Actions builds with Vite
+3. Deploys to GitHub Pages automatically
+
+**Live site:** [https://tyrowms.github.io](https://tyrowms.github.io)
+
+### Manual Deploy
 
 ```bash
-# In vite.config.js, set base to your repo name:
-# base: '/t-stock-wh-agent/'
-
 npm run build
-npx gh-pages -d dist
+# Upload dist/ folder to any static hosting provider
 ```
+
+## Project Structure
+
+```
+src/
+  App.jsx              # Main application (routing, state, UI)
+  TurkeyMap3D.jsx      # 3D Turkey map with Three.js
+  dataverseService.js  # MSAL auth & Dataverse API client
+  main.jsx             # Entry point with ErrorBoundary
+  turkey-provinces.json # GeoJSON province boundaries
+```
+
+## Data Format
+
+Import inventory data via Excel (.xlsx) with 33 columns:
+
+`Sirket Kodu | Sirket Adi | Madde Kodu | Urun Adi | Mense | Proje No | Ambalaj | Gumruk | Miktar | Tesis | Tesis Adi | Depo | Ambar Adi | Parti No | L1-L5 | Fiyat TL/USD | PurchWEAV/FIFO/LIFO | ProdWEAV/FIFO/LIFO | Gun`
+
 ---
-git clone https://github.com/djeanker34/TyroWhAgent.git
-cd TyroWhAgent
-npm install
-npm run dev
 
-Sonra tarayıcıda http://localhost:5173 açılacak. Tek gereksinim: Node.js (v18+) yüklü olması.
-## Data
-
-Built-in sample data with 25 inventory records across Tiryaki Agro facilities.
-Import your own data via Excel (.xlsx) upload in the app.
-
-### Excel Format (33 columns)
-Şirket Kodu | Şirket Adı | Madde Kodu | Ürün Adı | Menşe | Proje No | Ambalaj | Gümrük | Miktar | Tesis | Tesis Adı | Depo | Ambar Adı | Parti No | L1-L5 | Fiyat ₺/$ | PurchWEAV/FIFO/LIFO | ProdWEAV/FIFO/LIFO | Gün
-
----
-
-**Developer:** TTECH Business Solutions  
-**© 2026** All rights reserved.
+<p align="center">
+  <strong>TTECH Business Solutions</strong><br/>
+  &copy; 2026 Tiryaki Agro &mdash; All rights reserved.
+</p>
