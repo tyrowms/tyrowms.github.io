@@ -91,35 +91,32 @@ npm run preview
 
 ### Architecture
 
-| Repo | Role |
-|------|------|
-| `djeanker34/TYRO-WMSAgent` | Source code (development) |
-| `tyrowms/tyrowms.github.io` | Production deploy (GitHub Pages) |
+| Repo | Role | Workflow |
+|------|------|---------|
+| `djeanker34/TYRO-WMSAgent` | Source code (development) | — |
+| `tyrowms/tyrowms.github.io` | Production (GitHub Pages) | Build & deploy via Actions |
 
-Push to `main` on the source repo triggers GitHub Actions, which builds the app and force-pushes the `dist/` output to `tyrowms/tyrowms.github.io`.
+**How it works:**
+1. Development happens in `djeanker34/TYRO-WMSAgent`
+2. When ready to deploy, push the **source code** to `tyrowms/tyrowms.github.io`
+3. That repo's GitHub Actions workflow builds with Vite and deploys to GitHub Pages
+4. Site goes live at [https://tyrowms.github.io](https://tyrowms.github.io)
 
-### Automated (GitHub Actions)
+> **Important:** Push the source code (not `dist/`) to `tyrowms.github.io`. The build happens on GitHub Actions in that repo. Both repos have their own secrets for env vars (`VITE_AZURE_CLIENT_ID`, `VITE_AZURE_TENANT_ID`, `VITE_DATAVERSE_URL`, `VITE_DATAVERSE_ENTITY`).
 
-1. Push to `main` on `djeanker34/TYRO-WMSAgent`
-2. GitHub Actions builds with Vite (env vars from repo secrets)
-3. Built `dist/` is force-pushed to `tyrowms/tyrowms.github.io`
-4. GitHub Pages serves from `tyrowms.github.io`
-
-**Required secrets** in source repo:
-- `VITE_AZURE_CLIENT_ID`, `VITE_AZURE_TENANT_ID`, `VITE_DATAVERSE_URL`, `VITE_DATAVERSE_ENTITY` — build env vars
-- `DEPLOY_TOKEN` — GitHub PAT with `repo` scope for pushing to `tyrowms/tyrowms.github.io`
-
-**Live site:** [https://tyrowms.github.io](https://tyrowms.github.io)
-
-### Manual Deploy
+### Deploy Commands
 
 ```bash
-npm run build
-cd dist
-git init && git add -A
-git commit -m "deploy"
+# 1. Push to source repo
+git push origin main
+
+# 2. Push same source to deploy repo
 git push -f https://github.com/tyrowms/tyrowms.github.io.git main
 ```
+
+### Future: Automated Deploy (optional)
+
+The source repo has a workflow (`.github/workflows/deploy.yml`) that can auto-push to `tyrowms.github.io` on every push to main. To enable it, add a `DEPLOY_TOKEN` secret (GitHub PAT with `repo` scope for `tyrowms/tyrowms.github.io`) to the source repo's Actions secrets.
 
 ## Project Structure
 
