@@ -194,7 +194,7 @@ const FIELD_MAP = [
   { key: 'mserp_sfilotid',               type: 'string' },  // 5  Proje No
   { key: 'mserp_inventdimension1',       type: 'string' },  // 6  Ambalaj
   { key: 'mserp_inventsizeid',           type: 'string' },  // 7  Gümrük
-  { key: 'mserp_qty',                    type: 'int' },     // 8  Miktar
+  { key: 'mserp_qty',                    type: 'decimal2' },// 8  Miktar (kg)
   { key: 'mserp_inventsiteid',           type: 'string' },  // 9  Tesis
   { key: 'mserp_inventsitename',         type: 'string' },  // 10 Tesis Adı
   { key: 'mserp_inventlocationid',       type: 'string' },  // 11 Depo

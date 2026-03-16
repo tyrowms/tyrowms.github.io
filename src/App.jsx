@@ -24,8 +24,8 @@ function buildD(rows){
     const f=fm[ts];f.q+=mi;f.v+=mi*ft;f.vu+=mi*fu;f.ws.add(dp);f.ps.add(ua);f.td+=mi*fifo;f.tq+=mi;
     const wk=ts+'|'+dp;if(!wm[wk])wm[wk]={fc:ts,id:dp,n:da,q:0,ps:new Set(),td:0,tq:0};
     const w=wm[wk];w.q+=mi;w.ps.add(ua);w.td+=mi*fifo;w.tq+=mi;});
-  const f=Object.values(fm).map(x=>({id:x.id,n:x.n,city:x.city,type:x.type,q:Math.round(x.q),v:Math.round(x.v),vu:Math.round(x.vu),wc:x.ws.size,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
-  const w=Object.values(wm).map(x=>({fc:x.fc,id:x.id,n:x.n,q:Math.round(x.q),pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
+  const f=Object.values(fm).map(x=>({id:x.id,n:x.n,city:x.city,type:x.type,q:x.q,v:x.v,vu:x.vu,wc:x.ws.size,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
+  const w=Object.values(wm).map(x=>({fc:x.fc,id:x.id,n:x.n,q:x.q,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
   const cm={};f.forEach(fc=>{const c=fc.city;if(!cm[c])cm[c]={n:c,q:0,v:0,fc:0,wc:0,fcs:[],td:0,tq:0};const o=cm[c];o.q+=fc.q;o.v+=fc.v;o.fc++;o.wc+=fc.wc;o.fcs.push(fc.id);o.td+=fc.a*fc.q;o.tq+=fc.q;});
   const ct=Object.values(cm).map(c=>{const ll=CLL[c.n]||[39,35];return{n:c.n,q:c.q,v:c.v,fc:c.fc,wc:c.wc,fcs:c.fcs,a:c.tq>0?Math.round(c.td/c.tq):0,lat:ll[0],lng:ll[1]};});
   const ag={};BK.forEach(b=>{ag[b.k]=0;});
@@ -92,10 +92,10 @@ function buildPivot(rows,groupIdx,labelIdx){
   const m={};
   rows.forEach(r=>{
     const g=r[labelIdx]||r[groupIdx]||'Diğer';
-    const q=r[8];const d=r[27];
-    if(!m[g])m[g]={n:g,total:0,td:0,ag:{}};
+    const q=r[8];const d=r[27];const vl=r[8]*r[24];
+    if(!m[g])m[g]={n:g,total:0,totalVal:0,td:0,ag:{}};
     BK.forEach(b=>{if(!m[g].ag[b.k])m[g].ag[b.k]=0;});
-    m[g].total+=q;m[g].td+=q*d;
+    m[g].total+=q;m[g].totalVal+=vl;m[g].td+=q*d;
     if(d<=30)m[g].ag['0-30']+=q;else if(d<=60)m[g].ag['31-60']+=q;else if(d<=90)m[g].ag['61-90']+=q;else if(d<=120)m[g].ag['91-120']+=q;else if(d<=180)m[g].ag['121-180']+=q;else if(d<=365)m[g].ag['181-365']+=q;else m[g].ag['365+']+=q;
   });
   return Object.values(m).map(x=>({...x,avg:x.total>0?Math.round(x.td/x.total):0})).sort((a,b)=>b.total-a.total);
@@ -115,7 +115,7 @@ const SegBar=({ag,total,h,rd})=>{const tq=total||1;const hh=h||10;const rr=rd||5
       <div key={b.k} className="sg" style={{width:p+'%',background:b.c,opacity:.7,transition:'width .4s',position:'relative',cursor:'pointer'}}>
         <div className="sgt" style={{position:'absolute',bottom:'calc(100% + 8px)',left:'50%',transform:'translateX(-50%)',padding:'7px 11px',background:$.bg2,border:'1px solid '+$.bd,borderRadius:8,boxShadow:'0 4px 16px rgba(0,0,0,.12)',whiteSpace:'nowrap',zIndex:30,pointerEvents:'none',opacity:0,transition:'opacity .15s',fontSize:11.5,lineHeight:1.5}}>
           <div style={{fontWeight:700,color:b.c,marginBottom:1}}>{b.k} gün</div>
-          <div style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fmt(v)} ton</div>
+          <div style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fN(v)} kg</div>
           <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>{p.toFixed(1)}%</div>
           <div style={{position:'absolute',bottom:-5,left:'50%',marginLeft:-5,width:10,height:10,background:$.bg2,border:'1px solid '+$.bd,borderTop:'none',borderLeft:'none',transform:'rotate(45deg)'}}/>
         </div>
@@ -456,7 +456,7 @@ export default function App(){
                 {/* KPI Cards */}
                 {(()=>{const critQty=rows.filter(r=>r[27]>=180).reduce((s,r)=>s+r[8],0);const critPct=D.s.totalQty>0?((critQty/D.s.totalQty)*100).toFixed(1):'0';
                 const tips=[
-                  'Tüm tesislerdeki toplam envanter miktarı (ton). Formül: Σ Miktar (tüm satırlar)',
+                  'Tüm tesislerdeki toplam envanter miktarı (kg). Formül: Σ Miktar (tüm satırlar)',
                   'Envanterin TL cinsinden toplam değeri. Formül: Σ (Miktar × Birim Fiyat ₺)',
                   'Aktif tesis ve depo sayısı. Benzersiz Tesis Kodu ve Depo Kodu sayımı',
                   'Stokta bulunan benzersiz ürün (Ürün Adı) sayısı. Ürün çeşitliliği göstergesi',
@@ -466,12 +466,12 @@ export default function App(){
                 return(
                 <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(6,1fr)',gap:mob?8:10,marginBottom:mob?14:20}}>
                   {[
-                    {l:'Toplam Stok (ton)',v:fmt(D.s.totalQty),cls:'blu',ic:<Package size={18}/>},
-                    {l:'Toplam Değer',v:'₺'+fmt(D.s.totalVal),cls:'grn',ic:<TrendingUp size={18}/>},
+                    {l:'Toplam Stok (kg)',v:fN(D.s.totalQty),cls:'blu',ic:<Package size={18}/>},
+                    {l:'Toplam Değer',v:'₺'+fN(D.s.totalVal),cls:'grn',ic:<TrendingUp size={18}/>},
                     {l:'Tesis / Depo',v:D.s.facilityCount+' / '+D.s.whCount,cls:'pur',ic:<Building2 size={18}/>},
                     {l:'Aktif Ürün',v:String(D.s.prodCount),cls:'tel',ic:<Layers size={18}/>},
                     {l:'Ort. Yaşlanma (FIFO)',v:String(D.s.avgAge)+' gün',cls:'org',ic:<Clock size={18}/>},
-                    {l:'Kritik Stok (180+ gün)',v:fmt(critQty),cls:'red',ic:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,sub:critPct+'% toplam stokun'},
+                    {l:'Kritik Stok (180+ gün)',v:fN(critQty),cls:'red',ic:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,sub:critPct+'% toplam stokun'},
                   ].map((k,i)=>{const cc=clr(k.cls);return(
                     <div key={i} className="kp fu" style={{animationDelay:i*70+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'13px 14px',position:'relative',overflow:'hidden',boxShadow:$.sh}}>
                       <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,'+cc.c+',transparent)',opacity:.6,borderRadius:'12px 12px 0 0'}}/>
@@ -635,7 +635,7 @@ export default function App(){
                         <div style={{display:'flex',gap:4,alignItems:'flex-end',height:140}}>
                           {BK.map(b=>{const v=D.ag[b.k]||0;const pct=((v/tq)*100).toFixed(1);const h=Math.max(4,(v/mx)*110);return(
                             <div key={b.k} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2,minWidth:0,overflow:'hidden'}}>
-                              <span style={{fontSize:9,fontFamily:$.mo,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%',textAlign:'center'}}>{fmt(v)}</span>
+                              <span style={{fontSize:9,fontFamily:$.mo,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%',textAlign:'center'}}>{fN(v)} kg</span>
                               <span style={{fontSize:8.5,fontFamily:$.mo,color:b.c,fontWeight:600}}>{pct}%</span>
                               <div style={{width:'100%',borderRadius:6,background:b.c,opacity:.75,height:h,transition:'height .5s ease'}}/>
                               <span style={{fontSize:9,color:$.t3,fontWeight:500,whiteSpace:'nowrap'}}>{b.k}</span>
@@ -716,7 +716,7 @@ export default function App(){
                               <div style={{flex:1,height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
                                 <div style={{height:'100%',width:Math.min(100,(p.a/365)*100)+'%',borderRadius:5,background:ac(p.a),opacity:.6,transition:'width .5s'}}/>
                               </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t3,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmt(p.q)} ton</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t3,fontWeight:600,minWidth:55,textAlign:'right'}}>{fN(p.q)} kg</span>
                             </div>
                           </div>));})()}
                       </div>
@@ -730,7 +730,7 @@ export default function App(){
                       <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16}}>
                         <svg width="140" height="140" viewBox="0 0 140 140">
                           {donutSegs.map(s=><path key={s.k} d={arc(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8"/>)}
-                          <text x="70" y="65" textAnchor="middle" fontSize="15" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fmt(tVal)}</text>
+                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fN(tVal)}</text>
                           <text x="70" y="82" textAnchor="middle" fontSize="9" fill={$.t3} fontWeight="500">{'Toplam Değer'}</text>
                         </svg>
                         <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
@@ -738,7 +738,7 @@ export default function App(){
                             <div key={s.k} style={{display:'flex',alignItems:'center',gap:6}}>
                               <div style={{width:8,height:8,borderRadius:3,background:s.c,flexShrink:0}}/>
                               <span style={{fontSize:11,color:$.t2,flex:1}}>{s.k} Gün</span>
-                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
+                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fN(s.v)}</span>
                             </div>))}
                         </div>
                       </div>
@@ -757,7 +757,7 @@ export default function App(){
                           <div key={p.n} style={{marginBottom:i<4?12:0}}>
                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                               <span style={{fontSize:11.5,fontWeight:600,color:$.t1,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fmt(p.q)} ton</span>
+                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fN(p.q)} kg</span>
                             </div>
                             <div style={{display:'flex',alignItems:'center',gap:8}}>
                               <div style={{flex:1,height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
@@ -788,7 +788,7 @@ export default function App(){
                               <div style={{flex:1,height:8,borderRadius:4,background:'rgba(0,0,0,.04)',overflow:'hidden'}}>
                                 <div style={{height:'100%',width:D.f.length>0?(r.count/D.f.length)*100+'%':'0%',borderRadius:4,background:r.c,opacity:.6,transition:'width .5s'}}/>
                               </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t2,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmt(r.qty)} ton</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t2,fontWeight:600,minWidth:55,textAlign:'right'}}>{fN(r.qty)} kg</span>
                             </div>
                           </div>))}
                       </div>
@@ -871,12 +871,14 @@ export default function App(){
                 let va,vb;
                 if(repSC==='n'){va=a.n;vb=b.n;return va.localeCompare(vb)*repSD;}
                 else if(repSC==='total'){va=a.total;vb=b.total;}
+                else if(repSC==='totalVal'){va=a.totalVal;vb=b.totalVal;}
                 else if(repSC==='avg'){va=a.avg;vb=b.avg;}
                 else{va=a.ag[repSC]||0;vb=b.ag[repSC]||0;}
                 return(va-vb)*repSD;
               });
               const mxT=Math.max(...pv.map(r=>r.total),1);
               const gt=pv.reduce((s,r)=>s+r.total,0);
+              const gtVal=pv.reduce((s,r)=>s+r.totalVal,0);
               return(
                 <div>
                   {/* Tab selector */}
@@ -898,8 +900,8 @@ export default function App(){
                       <span style={{fontSize:11,color:$.t3,fontFamily:$.mo}}>{pv.length} kayıt</span>
                       <div style={{marginLeft:'auto',display:'flex',gap:6}}>
                         <button className="tb-b" onClick={()=>{
-                          const hd=[cur.l,'Toplam (ton)','Ort.Yaş (gün)',...BK.map(b=>b.k)];
-                          const csvRows=pv.map(r=>['"'+r.n+'"',Math.round(r.total),r.avg,...BK.map(b=>Math.round(r.ag[b.k]||0))].join(','));
+                          const hd=[cur.l,'Toplam Miktar (kg)','Toplam Değer (₺)','Ort.Yaş (gün)',...BK.map(b=>b.k)];
+                          const csvRows=pv.map(r=>['"'+r.n+'"',Math.round(r.total),Math.round(r.totalVal),r.avg,...BK.map(b=>Math.round(r.ag[b.k]||0))].join(','));
                           const csv=hd.join(',')+'\n'+csvRows.join('\n');
                           const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));a.download='TYRO_'+cur.l+'_Rapor_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
                         }} style={{fontSize:11}}><Download size={13}/>Excel</button>
@@ -909,12 +911,13 @@ export default function App(){
                           const bkH=BK.map(b=>'<th style="padding:8px 6px;text-align:right;font-size:9px;color:'+b.c+';border-bottom:2px solid #ddd;white-space:nowrap">'+b.k+'</th>').join('');
                           const trs=pv.map((r,i)=>{
                             const bkC=BK.map(b=>{const v=r.ag[b.k]||0;return '<td style="padding:7px 6px;text-align:right;font-family:monospace;font-size:10px;color:'+(v>0?'#333':'#ccc')+'">'+( v>0?Math.round(v).toLocaleString('tr-TR'):'-')+'</td>';}).join('');
-                            return '<tr style="background:'+(i%2?'#fafbfc':'#fff')+'"><td style="padding:7px 10px;font-weight:600;font-size:11px">'+r.n+'</td><td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;font-size:11px">'+Math.round(r.total).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right"><span style="font-family:monospace;font-size:10px;font-weight:700;color:'+(r.avg<60?'#0d6e4f':r.avg<180?'#f5a623':'#e5484d')+';padding:2px 6px;border-radius:4px;background:'+(r.avg<60?'rgba(45,212,160,.1)':r.avg<180?'rgba(245,166,35,.08)':'rgba(229,72,77,.08)')+'">'+r.avg+' g</span></td>'+bkC+'</tr>';
+                            return '<tr style="background:'+(i%2?'#fafbfc':'#fff')+'"><td style="padding:7px 10px;font-weight:600;font-size:11px">'+r.n+'</td><td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;font-size:11px">'+Math.round(r.total).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;font-size:10px;color:#3b82f6">₺'+Math.round(r.totalVal).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right"><span style="font-family:monospace;font-size:10px;font-weight:700;color:'+(r.avg<60?'#0d6e4f':r.avg<180?'#f5a623':'#e5484d')+';padding:2px 6px;border-radius:4px;background:'+(r.avg<60?'rgba(45,212,160,.1)':r.avg<180?'rgba(245,166,35,.08)':'rgba(229,72,77,.08)')+'">'+r.avg+' g</span></td>'+bkC+'</tr>';
                           }).join('');
                           const gBk=BK.map(b=>{const v=pv.reduce((s,r)=>s+(r.ag[b.k]||0),0);return '<td style="padding:8px 6px;text-align:right;font-family:monospace;font-size:10px;font-weight:700;color:'+b.c+'">'+Math.round(v).toLocaleString('tr-TR')+'</td>';}).join('');
                           w.document.write('<!DOCTYPE html><html><head><title>T-Stock '+cur.l+' Raporu</title><style>@page{size:landscape;margin:15mm}body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#1a2332}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 10px;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #ddd}td{border-bottom:1px solid #eee}.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #0d6e4f}.logo{display:flex;align-items:center;gap:10px}.lbox{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#134E5E,#0d7a5f,#2dd4a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900}.meta{text-align:right;font-size:11px;color:#888}.ttl{font-size:20px;font-weight:800}.sub{font-size:10px;color:#0d6e4f;font-weight:700;letter-spacing:2px;text-transform:uppercase}.ftr{margin-top:20px;padding-top:12px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#aaa}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>');
-                          w.document.write('<div class="hdr"><div class="logo"><div class="lbox">T</div><div><div class="ttl">TYRO</div><div class="sub">WH AGENT</div></div></div><div class="meta">'+cur.l+' Bazlı Yaşlandırma Raporu<br>'+new Date().toLocaleDateString('tr-TR')+'<br><span style="font-size:10px;color:#555">'+pv.length+' kayıt · Toplam '+Math.round(gtot).toLocaleString('tr-TR')+' ton</span></div></div>');
-                          w.document.write('<table><thead><tr><th>'+cur.l+'</th><th style="text-align:right">Toplam</th><th style="text-align:right">Ort.Yaş</th>'+bkH+'</tr></thead><tbody>'+trs+'<tr style="background:#e4f5ee;border-top:2px solid #0d6e4f"><td style="padding:8px 10px;font-weight:800;color:#0d6e4f">TOPLAM</td><td style="padding:8px 10px;text-align:right;font-family:monospace;font-weight:800;color:#0d6e4f">'+Math.round(gtot).toLocaleString('tr-TR')+'</td><td></td>'+gBk+'</tr></tbody></table>');
+                          w.document.write('<div class="hdr"><div class="logo"><div class="lbox">T</div><div><div class="ttl">TYRO</div><div class="sub">WH AGENT</div></div></div><div class="meta">'+cur.l+' Bazlı Yaşlandırma Raporu<br>'+new Date().toLocaleDateString('tr-TR')+'<br><span style="font-size:10px;color:#555">'+pv.length+' kayıt · Toplam '+Math.round(gtot).toLocaleString('tr-TR')+' kg</span></div></div>');
+                                                    const gvt=pv.reduce((s,r)=>s+r.totalVal,0);
+                          w.document.write('<table><thead><tr><th>'+cur.l+'</th><th style="text-align:right">Toplam Miktar</th><th style="text-align:right">Toplam Değer</th><th style="text-align:right">Ort.Yaş</th>'+bkH+'</tr></thead><tbody>'+trs+'<tr style="background:#e4f5ee;border-top:2px solid #0d6e4f"><td style="padding:8px 10px;font-weight:800;color:#0d6e4f">TOPLAM</td><td style="padding:8px 10px;text-align:right;font-family:monospace;font-weight:800;color:#0d6e4f">'+Math.round(gtot).toLocaleString('tr-TR')+'</td><td style="padding:8px 10px;text-align:right;font-family:monospace;font-weight:800;color:#3b82f6">₺'+Math.round(gvt).toLocaleString('tr-TR')+'</td><td></td>'+gBk+'</tr></tbody></table>');
                           w.document.write('<div class="ftr"><span>Powered by TTECH Business Solutions</span><span>© '+new Date().getFullYear()+' TYRO WH AGENT — Stok Yaşlandırma Raporu</span></div>');
                           w.document.write('</body></html>');
                           w.document.close();
@@ -929,7 +932,8 @@ export default function App(){
                           <tr style={{position:'sticky',top:0,zIndex:2,background:$.bg}}>
                             {(()=>{const sH=(col)=>({onClick:()=>{if(repSC===col)setRepSD(d=>d*-1);else{setRepSC(col);setRepSD(-1);}},style:{cursor:'pointer',userSelect:'none'}});const sI=(col)=>repSC===col?<ArrowUpDown size={9} style={{marginLeft:3,verticalAlign:'middle'}} color={$.blu}/>:null;return(<>
                             <th {...sH('n')} style={{padding:'10px 14px',textAlign:'left',fontWeight:700,fontSize:10,color:repSC==='n'?$.blu:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:160,cursor:'pointer'}}>{cur.l}{sI('n')}</th>
-                            <th {...sH('total')} style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:repSC==='total'?$.blu:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:90,cursor:'pointer'}}>Toplam{sI('total')}</th>
+                            <th {...sH('total')} style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:repSC==='total'?$.blu:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:90,cursor:'pointer'}}>Toplam Miktar{sI('total')}</th>
+                            <th {...sH('totalVal')} style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:repSC==='totalVal'?$.blu:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:100,cursor:'pointer'}}>Toplam Değer{sI('totalVal')}</th>
                             <th {...sH('avg')} style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:repSC==='avg'?$.blu:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:60,cursor:'pointer'}}>Ort.Yaş{sI('avg')}</th>
                             {BK.map(b=><th key={b.k} {...sH(b.k)} style={{padding:'10px 8px',textAlign:'right',fontWeight:700,fontSize:9,color:repSC===b.k?$.blu:b.c,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:62,cursor:'pointer'}}>{b.k}{sI(b.k)}</th>)}
                             </>);})()}
@@ -940,12 +944,13 @@ export default function App(){
                           {pv.map((r,ri)=>(
                             <tr key={r.n} className="rh" style={{borderBottom:'1px solid '+$.bdL,background:ri%2?'#fafbfc':'#fff'}}>
                               <td style={{padding:'9px 14px',fontWeight:600,fontSize:12,color:$.t1}}>{r.n}</td>
-                              <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,fontSize:12,color:$.t1}}>{fmt(r.total)}</td>
+                              <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,fontSize:12,color:$.t1}}>{fN(r.total)}</td>
+                              <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,fontSize:11,color:$.blu}}>₺{fN(r.totalVal)}</td>
                               <td style={{padding:'9px 14px',textAlign:'right'}}>
                                 <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(r.avg),padding:'2px 8px',borderRadius:5,background:acBg(r.avg)}}>{r.avg}g</span>
                               </td>
                               {BK.map(b=>{const v=r.ag[b.k]||0;const p=r.total>0?((v/r.total)*100).toFixed(0):'0';return(
-                                <td key={b.k} style={{padding:'9px 8px',textAlign:'right',fontFamily:$.mo,fontSize:10.5,color:v>0?$.t2:$.bdL,fontWeight:v>0?600:400}}>{v>0?fmt(v)+' ('+p+'%)':'-'}</td>
+                                <td key={b.k} style={{padding:'9px 8px',textAlign:'right',fontFamily:$.mo,fontSize:10.5,color:v>0?$.t2:$.bdL,fontWeight:v>0?600:400}}>{v>0?fN(v)+' ('+p+'%)':'-'}</td>
                               );})}
                               <td style={{padding:'9px 14px'}}>
                                 <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -958,12 +963,13 @@ export default function App(){
                           {/* Grand total row */}
                           <tr style={{background:$.acL,borderTop:'2px solid '+$.bd}}>
                             <td style={{padding:'10px 14px',fontWeight:800,fontSize:12,color:$.ac}}>TOPLAM</td>
-                            <td style={{padding:'10px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:800,fontSize:12,color:$.ac}}>{fmt(gt)}</td>
+                            <td style={{padding:'10px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:800,fontSize:12,color:$.ac}}>{fN(gt)}</td>
+                            <td style={{padding:'10px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:800,fontSize:11,color:$.blu}}>₺{fN(gtVal)}</td>
                             <td style={{padding:'10px 14px',textAlign:'right'}}>
                               <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(D.s.avgAge),padding:'2px 8px',borderRadius:5,background:acBg(D.s.avgAge)}}>{D.s.avgAge}g</span>
                             </td>
                             {BK.map(b=>{const v=pv.reduce((s,r)=>s+(r.ag[b.k]||0),0);return(
-                              <td key={b.k} style={{padding:'10px 8px',textAlign:'right',fontFamily:$.mo,fontSize:10.5,fontWeight:700,color:b.c}}>{fmt(v)}</td>
+                              <td key={b.k} style={{padding:'10px 8px',textAlign:'right',fontFamily:$.mo,fontSize:10.5,fontWeight:700,color:b.c}}>{fN(v)}</td>
                             );})}
                             <td style={{padding:'10px 14px'}}>
                               {(()=>{const tag={};BK.forEach(b=>{tag[b.k]=pv.reduce((s,r)=>s+(r.ag[b.k]||0),0);});return <SegBar ag={tag} total={gt}/>;})()}
@@ -986,7 +992,7 @@ export default function App(){
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                             <span style={{fontSize:12,fontWeight:600,color:$.t1,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.n}</span>
                             <div style={{display:'flex',alignItems:'center',gap:10}}>
-                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fmt(r.total)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fN(r.total)} kg</span>
                               <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(r.avg),padding:'2px 8px',borderRadius:5,background:acBg(r.avg)}}>{r.avg}g</span>
                             </div>
                           </div>
@@ -1036,31 +1042,48 @@ export default function App(){
                     </div>
                   ):(
                     <div style={{overflow:'auto',maxHeight:'calc(100vh - 200px)'}}>
+                      {(()=>{
+                        const s=erpSearch.toLowerCase();
+                        const erpFiltered=s?erpRaw.filter(rec=>erpFields.some(f=>String(rec[f]||'').toLowerCase().includes(s))):erpRaw;
+                        const sumQty=erpFiltered.reduce((acc,rec)=>acc+(Number(rec['mserp_qty'])||0),0);
+                        const sumAmt=erpFiltered.reduce((acc,rec)=>acc+(Number(rec['mserp_amountmst'])||0),0);
+                        const total=erpFiltered.length;
+                        const tp=Math.ceil(total/pageSize);
+                        return(<>
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,fontFamily:$.mo}}>
                         <thead>
                           <tr style={{background:'rgba(13,110,79,.04)',position:'sticky',top:0,zIndex:5}}>
                             <th style={{padding:'8px 10px',textAlign:'left',fontWeight:700,fontSize:10,color:$.ac,borderBottom:'2px solid '+$.bdL,whiteSpace:'nowrap',position:'sticky',left:0,background:'rgba(237,241,246,.98)',zIndex:6}}>#</th>
-                            {erpFields.map(f=><th key={f} style={{padding:'8px 10px',textAlign:'left',fontWeight:600,fontSize:9.5,color:$.t2,borderBottom:'2px solid '+$.bdL,whiteSpace:'nowrap',letterSpacing:.3}}>{f.replace('mserp_','')}</th>)}
+                            {erpFields.map(f=><th key={f} style={{padding:'8px 10px',textAlign:'left',fontWeight:600,fontSize:9.5,color:f==='mserp_qty'||f==='mserp_amountmst'?$.ac:$.t2,borderBottom:'2px solid '+$.bdL,whiteSpace:'nowrap',letterSpacing:.3}}>{f.replace('mserp_','')}{f==='mserp_qty'?' (kg)':f==='mserp_amountmst'?' (₺)':''}</th>)}
                           </tr>
                         </thead>
                         <tbody>
-                          {(()=>{
-                            const s=erpSearch.toLowerCase();
-                            const filtered=s?erpRaw.filter(rec=>erpFields.some(f=>String(rec[f]||'').toLowerCase().includes(s))):erpRaw;
-                            return filtered.slice(erpPage*pageSize,(erpPage+1)*pageSize).map((rec,i)=>(
+                          {erpFiltered.slice(erpPage*pageSize,(erpPage+1)*pageSize).map((rec,i)=>(
                               <tr key={i} className="rh" style={{borderBottom:'1px solid '+$.bdL}}>
                                 <td style={{padding:'6px 10px',color:$.t3,fontSize:10,position:'sticky',left:0,background:'#fff',zIndex:1}}>{erpPage*pageSize+i+1}</td>
                                 {erpFields.map(f=>{
                                   const v=rec[f];
                                   const isEmpty=v==null||v==='';
-                                  return <td key={f} style={{padding:'6px 10px',whiteSpace:'nowrap',maxWidth:250,overflow:'hidden',textOverflow:'ellipsis',color:isEmpty?$.t3:$.t1,opacity:isEmpty?.4:1}}>{isEmpty?'—':typeof v==='number'?v:String(v).slice(0,80)}</td>;
+                                  const isSum=f==='mserp_qty'||f==='mserp_amountmst';
+                                  return <td key={f} style={{padding:'6px 10px',whiteSpace:'nowrap',maxWidth:250,overflow:'hidden',textOverflow:'ellipsis',color:isEmpty?$.t3:isSum?$.ac:$.t1,opacity:isEmpty?.4:1,fontWeight:isSum?700:400}}>{isEmpty?'—':typeof v==='number'?(isSum?fN(v):v):String(v).slice(0,80)}</td>;
                                 })}
                               </tr>
-                            ));
-                          })()}
+                            ))}
                         </tbody>
+                        <tfoot>
+                          <tr style={{background:'rgba(13,110,79,.06)',borderTop:'2px solid '+$.ac}}>
+                            <td style={{padding:'10px 10px',fontWeight:800,fontSize:10,color:$.ac,position:'sticky',left:0,background:'rgba(228,245,238,.98)',zIndex:1}}>Σ</td>
+                            {erpFields.map(f=>{
+                              const isQty=f==='mserp_qty';
+                              const isAmt=f==='mserp_amountmst';
+                              return <td key={f} style={{padding:'10px 10px',whiteSpace:'nowrap',fontWeight:isQty||isAmt?800:400,fontSize:isQty||isAmt?12:10,color:isQty?$.ac:isAmt?$.blu:$.t3}}>
+                                {isQty?fN(sumQty)+' kg':isAmt?'₺'+fN(sumAmt):''}
+                              </td>;
+                            })}
+                          </tr>
+                        </tfoot>
                       </table>
-                      {(()=>{const s=erpSearch.toLowerCase();const ef=s?erpRaw.filter(rec=>erpFields.some(f=>String(rec[f]||'').toLowerCase().includes(s))):erpRaw;const total=ef.length;const tp=Math.ceil(total/pageSize);if(tp<=1)return null;return(
+                      {tp>1&&(
                         <div style={{padding:'10px 16px',borderTop:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
                           <div style={{fontSize:11,color:$.t3,fontWeight:500}}>{erpPage*pageSize+1}–{Math.min((erpPage+1)*pageSize,total)} / {total} kayıt</div>
                           <div style={{display:'flex',alignItems:'center',gap:6}}>
@@ -1069,7 +1092,7 @@ export default function App(){
                             <button className="tb-b" onClick={()=>setErpPage(p=>Math.min(tp-1,p+1))} disabled={erpPage>=tp-1} style={{padding:'5px 12px',fontSize:11,opacity:erpPage>=tp-1?.4:1}}>Sonraki<ChevronRight size={13}/></button>
                           </div>
                         </div>
-                      );})()}
+                      )}</>);})()}
                     </div>
                   )}
                 </div>
@@ -1210,7 +1233,7 @@ export default function App(){
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.5}}/></div>
-                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:60,textAlign:'right'}}>{fmt(item.q)}</span>
+                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:60,textAlign:'right'}}>{fN(item.q)} kg</span>
                         </div>
                       </div>);})}
                   </div>
@@ -1218,7 +1241,7 @@ export default function App(){
                   <div>
                     {/* Mini KPI */}
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
-                      {[{l:'Stok',v:fmt(sd.tQ),c:$.blu,bg:$.bluB},{l:'Değer',v:'₺'+fmt(sd.tV),c:'#0d6e4f',bg:$.grnB},{l:'Depo',v:sd.tWh,c:$.pur,bg:$.purB},{l:'Ürün',v:sd.tPc,c:$.org,bg:$.orgB}].map((k,i)=>(
+                      {[{l:'Stok (kg)',v:fN(sd.tQ),c:$.blu,bg:$.bluB},{l:'Değer',v:'₺'+fN(sd.tV),c:'#0d6e4f',bg:$.grnB},{l:'Depo',v:sd.tWh,c:$.pur,bg:$.purB},{l:'Ürün',v:sd.tPc,c:$.org,bg:$.orgB}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 13px'}}>
                           <div style={{fontSize:9,color:$.t3,textTransform:'uppercase',fontWeight:700,letterSpacing:1}}>{k.l}</div>
                           <div style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:$.mo,marginTop:3}}>{k.v}</div>
@@ -1254,7 +1277,7 @@ export default function App(){
                         <div style={{position:'absolute',top:0,left:0,bottom:0,width:3,background:ti.color,opacity:.5}}/>
                         <div style={{paddingLeft:8,fontWeight:700,fontSize:12,marginBottom:3}}>{f.n}</div>
                         <div style={{display:'flex',gap:10,paddingLeft:8,fontSize:11,color:$.t2}}>
-                          <span style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fmt(f.q)}</span>
+                          <span style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fN(f.q)} kg</span>
                           <span style={{marginLeft:'auto',fontFamily:$.mo,fontWeight:700,color:ac(f.a)}}>{f.a}g</span>
                           <ChevronRight size={13} color={$.t3}/>
                         </div>
@@ -1268,7 +1291,7 @@ export default function App(){
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:6}}>
                           <div style={{flex:1,height:4,borderRadius:2,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:Math.min(100,(w.q/(sd.whs[0]?.q||1))*100)+'%',borderRadius:2,background:ac(w.a),opacity:.45}}/></div>
-                          <span style={{fontSize:10,fontFamily:$.mo,color:$.t2,fontWeight:600}}>{fmt(w.q)}</span>
+                          <span style={{fontSize:10,fontFamily:$.mo,color:$.t2,fontWeight:600}}>{fN(w.q)} kg</span>
                         </div>
                       </div>))}
                   </div>
@@ -1281,7 +1304,7 @@ export default function App(){
       </div>
       {/* Fixed tooltip for KPI info */}
       {hovTip&&pg==='dash'&&(()=>{const tips2=[
-        'Tüm tesislerdeki toplam envanter miktarı (ton). Formül: Σ Miktar (tüm satırlar)',
+        'Tüm tesislerdeki toplam envanter miktarı (kg). Formül: Σ Miktar (tüm satırlar)',
         'Envanterin TL cinsinden toplam değeri. Formül: Σ (Miktar × Birim Fiyat ₺)',
         'Aktif tesis ve depo sayısı. Benzersiz Tesis Kodu ve Depo Kodu sayımı',
         'Stokta bulunan benzersiz ürün (Ürün Adı) sayısı. Ürün çeşitliliği göstergesi',
