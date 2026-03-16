@@ -854,8 +854,8 @@ export default function App(){
                       </div>
                     </BCard>
 
-                    {/* ROW 3: Tesis Performance (full width) */}
-                    <BCard span={mob?1:4}>
+                    {/* ROW 3: Tesis Performance (span 2) + L2 Portfolio (span 2) */}
+                    <BCard span={mob?1:2}>
                       <BHead icon={Building2} color={$.pur} bg={$.purB} title="Tesis Performansı (Değer)"/>
                       <div style={{padding:'12px 16px'}}>
                         {facPerf.map((f,i)=>(
@@ -872,7 +872,6 @@ export default function App(){
                       </div>
                     </BCard>
 
-                    {/* ROW 4: L2 Portfolio (span 2) + AI Insights (span 2) */}
                     <BCard span={mob?1:2}>
                       <BHead icon={Layers} color={$.org} bg={$.orgB} title="Ürün Portföyü (L2)"/>
                       <div style={{padding:'12px 16px'}}>
@@ -890,6 +889,7 @@ export default function App(){
                       </div>
                     </BCard>
 
+                    {/* ROW 4: AI Insights (span 2) + Action items (span 2) */}
                     <BCard span={mob?1:2}>
                       <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI İçgörüler"/>
                       <div style={{padding:'12px 16px'}}>
@@ -904,8 +904,8 @@ export default function App(){
                       </div>
                     </BCard>
 
-                    {/* ROW 5: Action items (full width span 4) */}
-                    <BCard span={mob?1:4}>
+                    {/* ROW 4: Action items (span 2) */}
+                    <BCard span={mob?1:2}>
                       <BHead icon={Zap} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Aksiyon Önerileri"/>
                       <div style={{padding:'12px 16px'}}>
                         <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat('+Math.min(actions.length,3)+',1fr)',gap:mob?8:10}}>
