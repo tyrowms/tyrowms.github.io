@@ -91,6 +91,7 @@ export default function App(){
   const [sbOpen,setSbOpen]=useState(false);
   useEffect(()=>{const h=()=>{setMob(window.innerWidth<768);if(window.innerWidth>=768)setSbOpen(false);};window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);
   const [pg,setPg]=useState('dash');
+  const [anaDetail,setAnaDetail]=useState(null);
   const [sel,setSel]=useState(null);
   const [hov,setHov]=useState(null);
   const [tab,setTab]=useState('f');
@@ -331,13 +332,13 @@ export default function App(){
         <div style={{padding:'0 12px',flex:1,overflowY:'auto'}}>
           <div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>
           {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
+            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
               {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
             </div>);})}
           <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>
           {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
+            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
               {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
               {p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
@@ -524,96 +525,196 @@ export default function App(){
               const vBk={};BK.forEach(b=>{vBk[b.k]=0;});
               rows.forEach(r=>{const d=r[27],v=r[8]*r[24];if(d<=30)vBk['0-30']+=v;else if(d<=60)vBk['31-60']+=v;else if(d<=90)vBk['61-90']+=v;else if(d<=120)vBk['91-120']+=v;else if(d<=180)vBk['121-180']+=v;else if(d<=365)vBk['181-365']+=v;else vBk['365+']+=v;});
               const tVal=Object.values(vBk).reduce((s,v)=>s+v,0)||1;
-              // Top 5 products by qty
-              const pm={};rows.forEach(r=>{const n=r[3];if(!pm[n])pm[n]={n,q:0,td:0,tq:0};pm[n].q+=r[8];pm[n].td+=r[8]*r[27];pm[n].tq+=r[8];});
-              Object.values(pm).forEach(x=>{x.a=x.tq>0?Math.round(x.td/x.tq):0;});
-              const top5=Object.values(pm).sort((a,b)=>b.q-a.q).slice(0,5);
-              const mxP=top5[0]?.q||1;
+              // Products map with 1+ ton filter
+              const pm={};rows.forEach(r=>{const n=r[3];if(!pm[n])pm[n]={n,q:0,v:0,td:0,tq:0,sites:new Set()};pm[n].q+=r[8];pm[n].v+=r[8]*r[24];pm[n].td+=r[8]*r[27];pm[n].tq+=r[8];pm[n].sites.add(r[9]);});
+              Object.values(pm).forEach(x=>{x.a=x.tq>0?Math.round(x.td/x.tq):0;x.sc=x.sites.size;});
+              const allProds=Object.values(pm);
+              const prods1t=allProds.filter(p=>p.q>=1000); // 1+ ton = 1000 kg
+              // Age sorted (1+ ton)
+              const oldest10=prods1t.sort((a,b)=>b.a-a.a).slice(0,10);
+              const youngest10=[...prods1t].sort((a,b)=>a.a-b.a).slice(0,10);
+              // Qty sorted
+              const top10=allProds.sort((a,b)=>b.q-a.q).slice(0,10);
+              const bot10=[...allProds].filter(p=>p.q>0).sort((a,b)=>a.q-b.q).slice(0,10);
+              const mxP=top10[0]?.q||1;
               // Risk levels per facility
               const rl=[{k:'fresh',l:'Taze Stok',r:'0-60 gün',c:'#0d6e4f',bg:'rgba(45,212,160,.08)',fn:f=>f.a<60},
                 {k:'normal',l:'Normal',r:'60-180 gün',c:'#f5a623',bg:'rgba(245,166,35,.06)',fn:f=>f.a>=60&&f.a<180},
                 {k:'risky',l:'Riskli',r:'180-365 gün',c:'#ea580c',bg:'rgba(234,88,12,.06)',fn:f=>f.a>=180&&f.a<365},
                 {k:'critical',l:'Kritik',r:'365+ gün',c:'#e5484d',bg:'rgba(229,72,77,.06)',fn:f=>f.a>=365}];
-              const rCounts=rl.map(r=>({...r,count:D.f.filter(r.fn).length,qty:D.f.filter(r.fn).reduce((s,f)=>s+f.q,0)}));
-              const mxR=Math.max(...rCounts.map(r=>r.count),1);
+              const rCounts=rl.map(r=>({...r,count:D.f.filter(r.fn).length,qty:D.f.filter(r.fn).reduce((s,f)=>s+f.q,0),facs:D.f.filter(r.fn)}));
               // Donut segments
               const donutSegs=[];let cumAngle=0;
               BK.forEach(b=>{const v=vBk[b.k]||0;const pct=v/tVal;if(pct>0){const a=pct*360;donutSegs.push({k:b.k,c:b.c,start:cumAngle,end:cumAngle+a,pct,v});cumAngle+=a;}});
               const arc=(cx,cy,r,s,e)=>{const sr=s*Math.PI/180,er=e*Math.PI/180;const x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr),x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);const lg=e-s>180?1:0;return`M${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2}`;};
+              // Drill state for clickable items
+              // Render product row
+              const prodRow=(p,i,mode,last)=>(
+                <div key={p.n+mode} onClick={()=>setAnaDetail({type:'product',name:p.n,data:p})} style={{padding:'8px 12px',borderRadius:8,marginBottom:i<last?6:0,cursor:'pointer',transition:'background .15s',background:'transparent'}} className="rh">
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                    <span style={{fontSize:11,fontWeight:600,color:$.t1,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      {mode==='age'&&<span style={{fontFamily:$.mo,fontSize:12,fontWeight:800,color:ac(p.a),padding:'2px 8px',borderRadius:5,background:acBg(p.a)}}>{p.a}g</span>}
+                      {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:$.t1}}>{fmtTon(p.q)}</span>}
+                      <ChevronRight size={12} color={$.t3}/>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:mode==='age'?Math.min(100,(p.a/500)*100)+'%':(p.q/mxP)*100+'%',borderRadius:3,background:ac(p.a),opacity:.5,transition:'width .5s'}}/>
+                    </div>
+                    {mode==='age'&&<span style={{fontFamily:$.mo,fontSize:9,color:$.t3,fontWeight:600,minWidth:50,textAlign:'right'}}>{fmtTon(p.q)}</span>}
+                    {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:9,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>}
+                  </div>
+                </div>);
               return(
                 <div>
-                  {/* Top row: Oldest Stocks + Donut */}
-                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1.2fr 1fr',gap:16,marginBottom:16}}>
-                    {/* En Yaşlı Stoklar */}
-                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
-                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
-                        <div style={{width:26,height:26,borderRadius:7,background:$.redB,color:$.red,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Clock size={14}/></div>
-                        {'En Yaşlı Stoklar (Ürün)'}
+                  {/* Drill detail overlay */}
+                  {anaDetail&&(
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16,overflow:'hidden'}}>
+                    <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <div onClick={()=>setAnaDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
+                        <span style={{fontSize:14,fontWeight:700,color:$.t1}}>{anaDetail.name}</span>
+                        {anaDetail.type==='product'&&<span style={{fontSize:10,color:$.t3,fontWeight:500}}>{anaDetail.data.sc} tesis</span>}
+                        {anaDetail.type==='risk'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.r}</span>}
+                        {anaDetail.type==='value'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.k} gün</span>}
                       </div>
-                      <div style={{padding:'14px 18px'}}>
-                        {(()=>{const old5=Object.values(pm).sort((a,b)=>b.a-a.a).slice(0,5);return old5.map((p,i)=>(
-                          <div key={p.n} style={{marginBottom:i<4?12:0}}>
-                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                              <span style={{fontSize:11.5,fontWeight:600,color:$.t1,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:13,fontWeight:800,color:ac(p.a),padding:'2px 8px',borderRadius:5,background:acBg(p.a)}}>{p.a} gün</span>
-                            </div>
-                            <div style={{display:'flex',alignItems:'center',gap:8}}>
-                              <div style={{flex:1,height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
-                                <div style={{height:'100%',width:Math.min(100,(p.a/365)*100)+'%',borderRadius:5,background:ac(p.a),opacity:.6,transition:'width .5s'}}/>
-                              </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t3,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmtTon(p.q)}</span>
-                            </div>
-                          </div>));})()}
+                      <X size={16} color={$.t3} style={{cursor:'pointer'}} onClick={()=>setAnaDetail(null)}/>
+                    </div>
+                    <div style={{padding:'14px 18px'}}>
+                      {anaDetail.type==='product'&&(()=>{
+                        const p=anaDetail.data;
+                        const pRows=rows.filter(r=>r[3]===p.n);
+                        const bySite={};pRows.forEach(r=>{const s=r[10]||r[9];if(!bySite[s])bySite[s]={n:s,q:0,v:0,td:0,tq:0};bySite[s].q+=r[8];bySite[s].v+=r[8]*r[24];bySite[s].td+=r[8]*r[27];bySite[s].tq+=r[8];});
+                        const sites=Object.values(bySite).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.q-a.q);
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Toplam Stok',v:fmtTon(p.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(p.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:p.a+' gün',c:ac(p.a)},{l:'Tesis Sayısı',v:p.sc,c:$.pur}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı</div>
+                          {sites.map((s,i)=>(
+                            <div key={s.n} style={{padding:'7px 0',borderBottom:i<sites.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(s.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(s.a),padding:'1px 6px',borderRadius:4,background:acBg(s.a)}}>{s.a}g</span>
+                            </div>))}
+                        </div>);
+                      })()}
+                      {anaDetail.type==='risk'&&(()=>{
+                        const facs=anaDetail.data.facs||[];
+                        return(<div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>{facs.length} tesis — {fmtTon(anaDetail.data.qty)}</div>
+                          {facs.sort((a,b)=>b.q-a.q).map((f,i)=>(
+                            <div key={f.id} onClick={()=>{setPg('dash');setSelCity(null);setDrillFac(f.id);setAnaDetail(null);}} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1}}>{f.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                              <ChevronRight size={12} color={$.t3}/>
+                            </div>))}
+                        </div>);
+                      })()}
+                      {anaDetail.type==='value'&&(()=>{
+                        const bk=anaDetail.data;
+                        const range=bk.k;const ranges={'0-30':[0,30],'31-60':[31,60],'61-90':[61,90],'91-120':[91,120],'121-180':[121,180],'181-365':[181,365],'365+':[365,9999]};
+                        const [lo,hi]=ranges[range]||[0,9999];
+                        const bRows=rows.filter(r=>r[27]>=lo&&r[27]<=hi);
+                        const byProd={};bRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];});
+                        const prods=Object.values(byProd).sort((a,b)=>b.v-a.v).slice(0,15);
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Toplam Değer',v:'₺'+fmt(bk.v),c:bk.c},{l:'Satır Sayısı',v:fN(bRows.length),c:$.blu},{l:'Oran',v:(bk.pct*100).toFixed(1)+'%',c:$.t1}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>En Yüksek Değerli Ürünler</div>
+                          {prods.map((p,i)=>(
+                            <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:10,fontWeight:700,color:$.t3,width:16,textAlign:'right'}}>{i+1}</span>
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:bk.c}}>₺{fmt(p.v)}</span>
+                            </div>))}
+                        </div>);
+                      })()}
+                    </div>
+                  </div>)}
+
+                  {/* Top row: Age card (oldest + youngest) + Donut (clickable) */}
+                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1.2fr 1fr',gap:16,marginBottom:16}}>
+                    {/* Yaşlanma: En Yaşlı + En Genç */}
+                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
+                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:7,background:$.redB,color:$.red,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Clock size={14}/></div>
+                        <span style={{fontSize:13,fontWeight:700}}>Stok Yaşlanma (1+ Ton)</span>
+                      </div>
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',minHeight:0}}>
+                        {/* En Yaşlı */}
+                        <div style={{padding:'12px 14px',borderRight:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.red,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Yaşlı 10</div>
+                          {oldest10.map((p,i)=>prodRow(p,i,'age',9))}
+                          {oldest10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
+                        {/* En Genç */}
+                        <div style={{padding:'12px 14px'}}>
+                          <div style={{fontSize:10,fontWeight:700,color:'#0d6e4f',textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Genç 10</div>
+                          {youngest10.map((p,i)=>prodRow(p,i,'age',9))}
+                          {youngest10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
                       </div>
                     </div>
-                    {/* Donut Chart */}
+                    {/* Donut Chart — clickable segments */}
                     <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
                       <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
                         <div style={{width:26,height:26,borderRadius:7,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={14}/></div>
                         {'Stok Değer Dağılımı (₺)'}
                       </div>
                       <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16}}>
-                        <svg width="140" height="140" viewBox="0 0 140 140">
-                          {donutSegs.map(s=><path key={s.k} d={arc(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8"/>)}
+                        <svg width="140" height="140" viewBox="0 0 140 140" style={{cursor:'pointer'}}>
+                          {donutSegs.map(s=><path key={s.k} d={arc(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8" style={{cursor:'pointer'}} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})}/>)}
                           <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fmt(tVal)}</text>
                           <text x="70" y="82" textAnchor="middle" fontSize="9" fill={$.t3} fontWeight="500">{'Toplam Değer'}</text>
                         </svg>
-                        <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
+                        <div style={{display:'flex',flexDirection:'column',gap:4,flex:1}}>
                           {donutSegs.map(s=>(
-                            <div key={s.k} style={{display:'flex',alignItems:'center',gap:6}}>
+                            <div key={s.k} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 8px',borderRadius:6,cursor:'pointer',transition:'background .15s'}} className="rh">
                               <div style={{width:8,height:8,borderRadius:3,background:s.c,flexShrink:0}}/>
                               <span style={{fontSize:11,color:$.t2,flex:1}}>{s.k} Gün</span>
                               <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
+                              <ChevronRight size={10} color={$.t3}/>
                             </div>))}
                         </div>
                       </div>
                     </div>
                   </div>
-                  {/* Bottom row: Top 5 + Risk */}
+                  {/* Bottom row: Stock qty card (top + bottom) + Risk (clickable) */}
                   <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1.2fr 1fr',gap:16}}>
-                    {/* Top 5 Products */}
+                    {/* Stok Miktarı: En Yüksek + En Düşük */}
                     <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
                       <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
                         <div style={{width:26,height:26,borderRadius:7,background:$.orgB,color:$.org,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Package size={14}/></div>
-                        {'En Yüksek Stok (Ürün)'}
+                        <span style={{fontSize:13,fontWeight:700}}>Stok Miktarı (Ürün)</span>
                       </div>
-                      <div style={{padding:'14px 18px'}}>
-                        {top5.map((p,i)=>(
-                          <div key={p.n} style={{marginBottom:i<4?12:0}}>
-                            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                              <span style={{fontSize:11.5,fontWeight:600,color:$.t1,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fmtTon(p.q)}</span>
-                            </div>
-                            <div style={{display:'flex',alignItems:'center',gap:8}}>
-                              <div style={{flex:1,height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
-                                <div style={{height:'100%',width:(p.q/mxP)*100+'%',borderRadius:5,background:ac(p.a),opacity:.65,transition:'width .5s'}}/>
-                              </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(p.a),padding:'2px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
-                            </div>
-                          </div>))}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',minHeight:0}}>
+                        <div style={{padding:'12px 14px',borderRight:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.org,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Yüksek 10</div>
+                          {top10.map((p,i)=>prodRow(p,i,'qty',9))}
+                          {top10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
+                        <div style={{padding:'12px 14px'}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.blu,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Düşük 10</div>
+                          {bot10.map((p,i)=>prodRow(p,i,'qty',9))}
+                          {bot10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
                       </div>
                     </div>
-                    {/* Risk Summary */}
+                    {/* Risk Summary — clickable */}
                     <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
                       <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
                         <div style={{width:26,height:26,borderRadius:7,background:$.redB,color:$.red,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Activity size={14}/></div>
@@ -621,13 +722,16 @@ export default function App(){
                       </div>
                       <div style={{padding:'14px 18px'}}>
                         {rCounts.map((r,i)=>(
-                          <div key={r.k} style={{padding:'10px 12px',borderRadius:$.rM,background:r.bg,marginBottom:i<3?8:0}}>
+                          <div key={r.k} onClick={()=>setAnaDetail({type:'risk',name:r.l+' Tesisler',data:r})} style={{padding:'10px 12px',borderRadius:$.rM,background:r.bg,marginBottom:i<3?8:0,cursor:'pointer',transition:'background .15s'}} className="rh">
                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                               <div>
                                 <span style={{fontSize:12.5,fontWeight:700,color:r.c}}>{r.l}</span>
                                 <span style={{fontSize:10,color:$.t3,marginLeft:8}}>{r.r}</span>
                               </div>
-                              <span style={{fontFamily:$.mo,fontSize:13,fontWeight:800,color:r.c}}>{r.count} tesis</span>
+                              <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                <span style={{fontFamily:$.mo,fontSize:13,fontWeight:800,color:r.c}}>{r.count} tesis</span>
+                                <ChevronRight size={12} color={$.t3}/>
+                              </div>
                             </div>
                             <div style={{display:'flex',alignItems:'center',gap:8}}>
                               <div style={{flex:1,height:8,borderRadius:4,background:'rgba(0,0,0,.04)',overflow:'hidden'}}>
@@ -710,7 +814,7 @@ export default function App(){
 
             {/* ===== RAPORLAR ===== */}
             {pg==='rep'&&(()=>{
-              const tabs=[{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4}];
+              const tabs=[{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4},{id:'prod',l:'Ürünler',idx:3,lbl:3}];
               const cur=tabs.find(t=>t.id===repTab)||tabs[0];
               const pv=buildPivot(rows,cur.idx,cur.lbl).filter(r=>!repSearch.trim()||r.n.toLowerCase().includes(repSearch.toLowerCase())).sort((a,b)=>{
                 let va,vb;
@@ -726,11 +830,13 @@ export default function App(){
               const gtVal=pv.reduce((s,r)=>s+r.totalVal,0);
               return(
                 <div>
-                  {/* Tab selector */}
-                  <div style={{display:'flex',gap:6,marginBottom:18,alignItems:'center',flexWrap:'wrap'}}>
-                    {tabs.map(t=>(
-                      <div key={t.id} onClick={()=>{setRepTab(t.id);setRepSearch('');setRepSC('total');setRepSD(-1);}} style={{padding:'8px 18px',borderRadius:$.r,fontSize:12,fontWeight:600,cursor:'pointer',background:repTab===t.id?$.acL:$.bg2,color:repTab===t.id?$.ac:$.t3,border:'1px solid '+(repTab===t.id?'#b8dece':$.bdL),transition:'all .15s'}}>{t.l}</div>
-                    ))}
+                  {/* Tab selector — macOS segmented control */}
+                  <div style={{display:'flex',gap:12,marginBottom:18,alignItems:'center',flexWrap:'wrap'}}>
+                    <div style={{display:'inline-flex',background:'#f0f1f3',borderRadius:10,padding:3,gap:2}}>
+                      {tabs.map(t=>(
+                        <div key={t.id} onClick={()=>{setRepTab(t.id);setRepSearch('');setRepSC('total');setRepSD(-1);}} style={{padding:'7px 16px',borderRadius:8,fontSize:11.5,fontWeight:repTab===t.id?700:500,cursor:'pointer',background:repTab===t.id?'#fff':'transparent',color:repTab===t.id?$.t1:$.t3,boxShadow:repTab===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s',userSelect:'none'}}>{t.l}</div>
+                      ))}
+                    </div>
                     <div style={{marginLeft:'auto',position:'relative',width:220}}>
                       <Search size={14} color={$.t3} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}}/>
                       <input className="fi" value={repSearch} onChange={e=>setRepSearch(e.target.value)} placeholder={cur.l+' ara...'} style={{paddingLeft:30,height:34}}/>
