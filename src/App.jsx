@@ -11,6 +11,8 @@ const CLL={"Adana":[37,35.33],"Adapazarı":[40.68,30.4],"Bandırma":[40.35,27.97
 const fmt=n=>n>=1e12?(n/1e12).toFixed(1)+' Trilyon':n>=1e9?(n/1e9).toFixed(1)+' Milyar':n>=1e6?(n/1e6).toFixed(1)+' Milyon':n>=1e3?(n/1e3).toFixed(1)+' Bin':String(Math.round(n));
 const fmtTon=n=>{const t=n/1000;return t>=1e6?(t/1e6).toFixed(1)+' Milyon Ton':t>=1e3?(t/1e3).toFixed(1)+' Bin Ton':t>=1?Math.round(t)+' Ton':fN(n)+' kg';};
 const fN=n=>new Intl.NumberFormat('tr-TR').format(Math.round(n));
+const arcFn=(cx,cy,r,s,e)=>{const sr=s*Math.PI/180,er=e*Math.PI/180;const x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr),x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);const lg=e-s>180?1:0;return`M${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2}`;};
+const RL=[{k:'fresh',l:'Taze Stok',r:'0-60 gün',c:'#0d6e4f',bg:'rgba(45,212,160,.08)',fn:f=>f.a<60},{k:'normal',l:'Normal',r:'60-180 gün',c:'#f5a623',bg:'rgba(245,166,35,.06)',fn:f=>f.a>=60&&f.a<180},{k:'risky',l:'Riskli',r:'180-365 gün',c:'#ea580c',bg:'rgba(234,88,12,.06)',fn:f=>f.a>=180&&f.a<365},{k:'critical',l:'Kritik',r:'365+ gün',c:'#e5484d',bg:'rgba(229,72,77,.06)',fn:f=>f.a>=365}];
 const ac=d=>d<60?'#0d6e4f':d<90?'#16a34a':d<180?'#f5a623':d<365?'#ea580c':'#e5484d';
 const acBg=d=>d<60?'rgba(45,212,160,.1)':d<90?'rgba(22,163,74,.08)':d<180?'rgba(245,166,35,.08)':d<365?'rgba(234,88,12,.08)':'rgba(229,72,77,.08)';
 const TI={own:{color:'#0d6e4f',label:'Öz Tesis'},fason:{color:'#8b5cf6',label:'Fason'},dis:{color:'#3b82f6',label:'Dış Tesis'},disticaret:{color:'#f5a623',label:'Dış Ticaret'}};
@@ -64,6 +66,8 @@ function buildPivot(rows,groupIdx,labelIdx){
 const $={bg:'#f5f7fa',bg2:'#fff',bg3:'#edf1f6',t1:'#1a2332',t2:'#5a6b7f',t3:'#8e9bb3',ac:'#0d6e4f',acL:'#e4f5ee',grn:'#2dd4a0',grnB:'rgba(45,212,160,.1)',blu:'#3b82f6',bluB:'rgba(59,130,246,.08)',red:'#e5484d',redB:'rgba(229,72,77,.08)',pur:'#8b5cf6',purB:'rgba(139,92,246,.08)',org:'#f5a623',orgB:'rgba(245,166,35,.08)',tel:'#14b8a6',telB:'rgba(20,184,166,.08)',bd:'#e2e7ee',bdL:'#eef1f6',sh:'0 1px 3px rgba(0,0,0,.04)',shM:'0 4px 16px rgba(0,0,0,.07)',r:'8px',rM:'12px',rL:'16px',f:"'Plus Jakarta Sans',-apple-system,sans-serif",mo:"'JetBrains Mono',monospace"};
 
 const KI=({children,bg,color})=><div style={{width:30,height:30,borderRadius:8,background:bg,color,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{children}</div>;
+const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
+const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
 
 const AgBar=({ag,total,big})=>{const tq=total||1;const sz=big?12:10.5;const dt=big?9:7;const gp=big?'5px 14px':'4px 10px';const bh=big?12:8;return(<div><div style={{display:'flex',height:bh,borderRadius:bh/2,overflow:'hidden',background:$.bdL,marginBottom:big?10:6}}>{BK.map(b=>{const p=(ag[b.k]||0)/tq*100;return p>0?<div key={b.k} style={{width:p+'%',background:b.c,transition:'width .4s'}}/>:null;})}</div><div style={{display:'flex',flexWrap:'wrap',gap:gp}}>{BK.map(b=>{const v=ag[b.k]||0;return v>0?<div key={b.k} style={{display:'flex',alignItems:'center',gap:big?5:3,fontSize:sz,color:$.t2}}><div style={{width:dt,height:dt,borderRadius:3,background:b.c}}/><span style={{fontFamily:$.mo,fontWeight:700}}>{((v/tq)*100).toFixed(0)}%</span><span style={{color:$.t3,fontWeight:500}}>{b.k}</span></div>:null;})}</div></div>);};
 
@@ -112,6 +116,62 @@ export default function App(){
   const [repSearch,setRepSearch]=useState('');
   const [repSC,setRepSC]=useState('total'); // sort column: n, total, avg, or bucket key
   const [repSD,setRepSD]=useState(-1); // sort direction
+
+  // ─── Memoized Analiz computations ───
+  const anaData=useMemo(()=>{
+    const tq=D.s.totalQty||1;
+    const vBk={};BK.forEach(b=>{vBk[b.k]=0;});
+    rows.forEach(r=>{const d=r[27],v=r[8]*r[24];if(d<=30)vBk['0-30']+=v;else if(d<=60)vBk['31-60']+=v;else if(d<=90)vBk['61-90']+=v;else if(d<=120)vBk['91-120']+=v;else if(d<=180)vBk['121-180']+=v;else if(d<=365)vBk['181-365']+=v;else vBk['365+']+=v;});
+    const tVal=Object.values(vBk).reduce((s,v)=>s+v,0)||1;
+    const pm={};rows.forEach(r=>{const n=r[3];if(!pm[n])pm[n]={n,q:0,v:0,td:0,tq:0,sites:new Set()};pm[n].q+=r[8];pm[n].v+=r[8]*r[24];pm[n].td+=r[8]*r[27];pm[n].tq+=r[8];pm[n].sites.add(r[9]);});
+    Object.values(pm).forEach(x=>{x.a=x.tq>0?Math.round(x.td/x.tq):0;x.sc=x.sites.size;});
+    const allProds=Object.values(pm);
+    const prods1t=[...allProds].filter(p=>p.q>=1000);
+    const oldest10=[...prods1t].sort((a,b)=>b.a-a.a).slice(0,10);
+    const youngest10=[...prods1t].sort((a,b)=>a.a-b.a).slice(0,10);
+    const top10=[...allProds].sort((a,b)=>b.q-a.q).slice(0,10);
+    const bot10=[...allProds].filter(p=>p.q>0).sort((a,b)=>a.q-b.q).slice(0,10);
+    const mxP=top10[0]?.q||1;
+    const rCounts=RL.map(r=>({...r,count:D.f.filter(r.fn).length,qty:D.f.filter(r.fn).reduce((s,f)=>s+f.q,0),facs:D.f.filter(r.fn)}));
+    const donutSegs=[];let cumAngle=0;
+    BK.forEach(b=>{const v=vBk[b.k]||0;const pct=v/tVal;if(pct>0){const a=pct*360;donutSegs.push({k:b.k,c:b.c,start:cumAngle,end:cumAngle+a,pct,v});cumAngle+=a;}});
+    return{tq,vBk,tVal,oldest10,youngest10,top10,bot10,mxP,rCounts,donutSegs};
+  },[rows,D]);
+
+  // ─── Memoized Yönetim computations ───
+  const yonData=useMemo(()=>{
+    const tq=D.s.totalQty||1;
+    const compMap={};rows.forEach(r=>{const c=r[1]||r[0]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!compMap[c])compMap[c]={n:c,q:0,v:0,td:0,tq:0,prods:new Set()};compMap[c].q+=q;compMap[c].v+=v;compMap[c].td+=q*d;compMap[c].tq+=q;compMap[c].prods.add(r[3]);});
+    const comps=Object.values(compMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,pc:x.prods.size})).sort((a,b)=>b.v-a.v);
+    const heatData=comps.slice(0,10).map(c=>{const ag={};BK.forEach(b=>{ag[b.k]=0;});rows.filter(r=>(r[1]||r[0])===c.n).forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});return{n:c.n,ag,total:c.q};});
+    const facPerf=[...D.f].sort((a,b)=>b.v-a.v).slice(0,12);const maxFV=facPerf[0]?.v||1;
+    const origMap={};rows.forEach(r=>{const o=r[4]||'Belirtilmemiş';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!origMap[o])origMap[o]={n:o,q:0,v:0,td:0,tq:0};origMap[o].q+=q;origMap[o].v+=v;origMap[o].td+=q*d;origMap[o].tq+=q;});
+    const origins=Object.values(origMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q).slice(0,10);const maxOQ=origins[0]?.q||1;
+    const l2Map={};rows.forEach(r=>{const l=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!l2Map[l])l2Map[l]={n:l,q:0,v:0,td:0,tq:0};l2Map[l].q+=q;l2Map[l].v+=v;l2Map[l].td+=q*d;l2Map[l].tq+=q;});
+    const l2s=Object.values(l2Map).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.v-a.v).slice(0,8);const maxL2V=l2s[0]?.v||1;
+    const crit365=rows.filter(r=>r[27]>=365);const critQty=crit365.reduce((s,r)=>s+r[8],0);const critVal=crit365.reduce((s,r)=>s+r[8]*r[24],0);
+    const crit180=rows.filter(r=>r[27]>=180);const c180Qty=crit180.reduce((s,r)=>s+r[8],0);
+    const topCritProd={};crit365.forEach(r=>{const n=r[3];if(!topCritProd[n])topCritProd[n]={n,q:0,v:0,a:0,td:0,tq:0,sites:new Set()};topCritProd[n].q+=r[8];topCritProd[n].v+=r[8]*r[24];topCritProd[n].td+=r[8]*r[27];topCritProd[n].tq+=r[8];topCritProd[n].sites.add(r[9]);});
+    const critProds=Object.values(topCritProd).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,sc:x.sites.size})).sort((a,b)=>b.v-a.v).slice(0,8);
+    const typeStats=Object.entries(TI).map(([k,v])=>{const fcs=D.f.filter(f=>f.type===k);return{k,l:v.label,c:v.color,count:fcs.length,q:fcs.reduce((s,f)=>s+f.q,0),v:fcs.reduce((s,f)=>s+f.v,0),a:fcs.length>0?Math.round(fcs.reduce((s,f)=>s+f.a*f.q,0)/(fcs.reduce((s,f)=>s+f.q,0)||1)):0};}).filter(t=>t.count>0);
+    const avgAge=D.s.avgAge;const critPct=tq>0?((critQty/tq)*100):0;const c180Pct=tq>0?((c180Qty/tq)*100):0;
+    const worstFac=[...D.f].sort((a,b)=>b.a-a.a)[0];const bestFac=[...D.f].sort((a,b)=>a.a-b.a)[0];
+    const topComp=comps[0];const worstComp=[...comps].sort((a,b)=>b.a-a.a)[0];
+    const insights=[];
+    if(critPct>5)insights.push({icon:AlertTriangle,c:'#e5484d',bg:'rgba(229,72,77,.06)',t:'Kritik Yaşlanma Uyarısı',d:`Toplam stoğun %${critPct.toFixed(1)}'i 365+ gün yaşında. Bu stokların toplam değeri ₺${fmt(critVal)}. Acil değerlendirme gerektirir.`});
+    else if(critPct>0)insights.push({icon:ShieldAlert,c:'#ea580c',bg:'rgba(234,88,12,.06)',t:'Yaşlı Stok İzleme',d:`365+ gün stok oranı %${critPct.toFixed(1)} — kontrol altında. Ancak ${fN(Math.round(critQty))} kg stok hâlâ bu grupta.`});
+    if(c180Pct>20)insights.push({icon:Zap,c:'#f5a623',bg:'rgba(245,166,35,.06)',t:'180+ Gün Yoğunluğu',d:`Stoğun %${c180Pct.toFixed(1)}'i 180 günü aşmış durumda. Toplam ${fmtTon(c180Qty)} stok 6 aydan eski.`});
+    if(worstFac)insights.push({icon:Target,c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:'Tesis Karşılaştırma',d:`En yüksek yaş: ${worstFac.n} (${worstFac.a} gün). En düşük yaş: ${bestFac?.n||'-'} (${bestFac?.a||0} gün). Fark: ${(worstFac.a-(bestFac?.a||0))} gün.`});
+    if(worstComp&&comps.length>1)insights.push({icon:Building2,c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:'Şirket Performansı',d:`${worstComp.n} ortalama ${worstComp.a} gün yaş ile en yüksek. ${topComp.n} ₺${fmt(topComp.v)} değer ile en büyük portföye sahip.`});
+    if(origins.length>1){const domOrig=origins[0];insights.push({icon:Globe,c:'#14b8a6',bg:'rgba(20,184,166,.06)',t:'Menşe Analizi',d:`${domOrig.n} menşeli stok ${fmtTon(domOrig.q)} ile en büyük paya sahip (ort. ${domOrig.a} gün). Toplam ${origins.length} farklı menşe.`});}
+    const actions=[];
+    if(critProds.length>0)actions.push({pri:'Yüksek',c:'#e5484d',bg:'rgba(229,72,77,.06)',t:`${critProds.length} ürün 365+ gün yaşında — eritme planı oluşturun`,sub:`En büyük: ${critProds[0].n} (${fmtTon(critProds[0].q)}, ₺${fmt(critProds[0].v)})`});
+    if(worstFac&&worstFac.a>180)actions.push({pri:'Yüksek',c:'#ea580c',bg:'rgba(234,88,12,.06)',t:`${worstFac.n} tesisi yaş ortalaması ${worstFac.a} gün`,sub:'Tesis bazlı stok devir hızını artırın'});
+    if(c180Pct>15)actions.push({pri:'Orta',c:'#f5a623',bg:'rgba(245,166,35,.06)',t:`180+ gün stok oranını %${c180Pct.toFixed(0)}'den düşürün`,sub:'Satış ve lojistik ile koordineli aksiyon planı'});
+    if(D.s.facilityCount>5)actions.push({pri:'Normal',c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:`${D.s.facilityCount} tesis arasında stok dengeleme analizi`,sub:'Yüksek yaşlı tesislerden düşük yaşlı tesislere transfer değerlendirmesi'});
+    actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:'Tüm veriler güncel — sistem nominal durumda'});
+    return{comps,heatData,facPerf,maxFV,origins,maxOQ,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions};
+  },[rows,D]);
 
   // ─── MSAL Auth State ───
   const [msalReady,setMsalReady]=useState(false);
@@ -521,39 +581,11 @@ export default function App(){
 
             {/* ===== ANALİZ & RİSK ===== */}
             {pg==='ana'&&(()=>{
-              const tq=D.s.totalQty||1;
-              // Value by aging bucket
-              const vBk={};BK.forEach(b=>{vBk[b.k]=0;});
-              rows.forEach(r=>{const d=r[27],v=r[8]*r[24];if(d<=30)vBk['0-30']+=v;else if(d<=60)vBk['31-60']+=v;else if(d<=90)vBk['61-90']+=v;else if(d<=120)vBk['91-120']+=v;else if(d<=180)vBk['121-180']+=v;else if(d<=365)vBk['181-365']+=v;else vBk['365+']+=v;});
-              const tVal=Object.values(vBk).reduce((s,v)=>s+v,0)||1;
-              // Products map with 1+ ton filter
-              const pm={};rows.forEach(r=>{const n=r[3];if(!pm[n])pm[n]={n,q:0,v:0,td:0,tq:0,sites:new Set()};pm[n].q+=r[8];pm[n].v+=r[8]*r[24];pm[n].td+=r[8]*r[27];pm[n].tq+=r[8];pm[n].sites.add(r[9]);});
-              Object.values(pm).forEach(x=>{x.a=x.tq>0?Math.round(x.td/x.tq):0;x.sc=x.sites.size;});
-              const allProds=Object.values(pm);
-              const prods1t=allProds.filter(p=>p.q>=1000); // 1+ ton = 1000 kg
-              // Age sorted (1+ ton)
-              const oldest10=prods1t.sort((a,b)=>b.a-a.a).slice(0,10);
-              const youngest10=[...prods1t].sort((a,b)=>a.a-b.a).slice(0,10);
-              // Qty sorted
-              const top10=allProds.sort((a,b)=>b.q-a.q).slice(0,10);
-              const bot10=[...allProds].filter(p=>p.q>0).sort((a,b)=>a.q-b.q).slice(0,10);
-              const mxP=top10[0]?.q||1;
-              // Risk levels per facility
-              const rl=[{k:'fresh',l:'Taze Stok',r:'0-60 gün',c:'#0d6e4f',bg:'rgba(45,212,160,.08)',fn:f=>f.a<60},
-                {k:'normal',l:'Normal',r:'60-180 gün',c:'#f5a623',bg:'rgba(245,166,35,.06)',fn:f=>f.a>=60&&f.a<180},
-                {k:'risky',l:'Riskli',r:'180-365 gün',c:'#ea580c',bg:'rgba(234,88,12,.06)',fn:f=>f.a>=180&&f.a<365},
-                {k:'critical',l:'Kritik',r:'365+ gün',c:'#e5484d',bg:'rgba(229,72,77,.06)',fn:f=>f.a>=365}];
-              const rCounts=rl.map(r=>({...r,count:D.f.filter(r.fn).length,qty:D.f.filter(r.fn).reduce((s,f)=>s+f.q,0),facs:D.f.filter(r.fn)}));
-              // Donut segments
-              const donutSegs=[];let cumAngle=0;
-              BK.forEach(b=>{const v=vBk[b.k]||0;const pct=v/tVal;if(pct>0){const a=pct*360;donutSegs.push({k:b.k,c:b.c,start:cumAngle,end:cumAngle+a,pct,v});cumAngle+=a;}});
-              const arc=(cx,cy,r,s,e)=>{const sr=s*Math.PI/180,er=e*Math.PI/180;const x1=cx+r*Math.cos(sr),y1=cy+r*Math.sin(sr),x2=cx+r*Math.cos(er),y2=cy+r*Math.sin(er);const lg=e-s>180?1:0;return`M${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2}`;};
-              // Drill state for clickable items
-              // Render product row
+              const{tq,tVal,oldest10,youngest10,top10,bot10,mxP,rCounts,donutSegs}=anaData;
               const prodRow=(p,i,mode,last)=>(
                 <div key={p.n+mode} onClick={()=>setAnaDetail({type:'product',name:p.n,data:p})} style={{padding:'8px 12px',borderRadius:8,marginBottom:i<last?6:0,cursor:'pointer',transition:'background .15s',background:'transparent'}} className="rh">
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                    <span style={{fontSize:11,fontWeight:600,color:$.t1,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                    <span style={{fontSize:11,fontWeight:600,color:$.t1,maxWidth:mob?120:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       {mode==='age'&&<span style={{fontFamily:$.mo,fontSize:12,fontWeight:800,color:ac(p.a),padding:'2px 8px',borderRadius:5,background:acBg(p.a)}}>{p.a}g</span>}
                       {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:$.t1}}>{fmtTon(p.q)}</span>}
@@ -590,7 +622,7 @@ export default function App(){
                         const bySite={};pRows.forEach(r=>{const s=r[10]||r[9];if(!bySite[s])bySite[s]={n:s,q:0,v:0,td:0,tq:0};bySite[s].q+=r[8];bySite[s].v+=r[8]*r[24];bySite[s].td+=r[8]*r[27];bySite[s].tq+=r[8];});
                         const sites=Object.values(bySite).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.q-a.q);
                         return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+                          <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)',gap:8,marginBottom:14}}>
                             {[{l:'Toplam Stok',v:fmtTon(p.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(p.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:p.a+' gün',c:ac(p.a)},{l:'Tesis Sayısı',v:p.sc,c:$.pur}].map((k,i)=>(
                               <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
                                 <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
@@ -627,7 +659,7 @@ export default function App(){
                         const byProd={};bRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];});
                         const prods=Object.values(byProd).sort((a,b)=>b.v-a.v).slice(0,15);
                         return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+                          <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat(3,1fr)',gap:8,marginBottom:14}}>
                             {[{l:'Toplam Değer',v:'₺'+fmt(bk.v),c:bk.c},{l:'Satır Sayısı',v:fN(bRows.length),c:$.blu},{l:'Oran',v:(bk.pct*100).toFixed(1)+'%',c:$.t1}].map((k,i)=>(
                               <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
                                 <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
@@ -647,74 +679,8 @@ export default function App(){
                     </div>
                   </div>)}
 
-                  {/* Top row: Age card (oldest + youngest) + Donut (clickable) */}
-                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1.2fr 1fr',gap:16,marginBottom:16}}>
-                    {/* Yaşlanma: En Yaşlı + En Genç */}
-                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
-                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:7}}>
-                        <div style={{width:26,height:26,borderRadius:7,background:$.redB,color:$.red,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Clock size={14}/></div>
-                        <span style={{fontSize:13,fontWeight:700}}>Stok Yaşlanma (1+ Ton)</span>
-                      </div>
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',minHeight:0}}>
-                        {/* En Yaşlı */}
-                        <div style={{padding:'12px 14px',borderRight:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:10,fontWeight:700,color:$.red,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Yaşlı 10</div>
-                          {oldest10.map((p,i)=>prodRow(p,i,'age',9))}
-                          {oldest10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
-                        </div>
-                        {/* En Genç */}
-                        <div style={{padding:'12px 14px'}}>
-                          <div style={{fontSize:10,fontWeight:700,color:'#0d6e4f',textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Genç 10</div>
-                          {youngest10.map((p,i)=>prodRow(p,i,'age',9))}
-                          {youngest10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Donut Chart — clickable segments */}
-                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
-                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
-                        <div style={{width:26,height:26,borderRadius:7,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={14}/></div>
-                        {'Stok Değer Dağılımı (₺)'}
-                      </div>
-                      <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16}}>
-                        <svg width="140" height="140" viewBox="0 0 140 140" style={{cursor:'pointer'}}>
-                          {donutSegs.map(s=><path key={s.k} d={arc(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8" style={{cursor:'pointer'}} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})}/>)}
-                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fmt(tVal)}</text>
-                          <text x="70" y="82" textAnchor="middle" fontSize="9" fill={$.t3} fontWeight="500">{'Toplam Değer'}</text>
-                        </svg>
-                        <div style={{display:'flex',flexDirection:'column',gap:4,flex:1}}>
-                          {donutSegs.map(s=>(
-                            <div key={s.k} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 8px',borderRadius:6,cursor:'pointer',transition:'background .15s'}} className="rh">
-                              <div style={{width:8,height:8,borderRadius:3,background:s.c,flexShrink:0}}/>
-                              <span style={{fontSize:11,color:$.t2,flex:1}}>{s.k} Gün</span>
-                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
-                              <ChevronRight size={10} color={$.t3}/>
-                            </div>))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Bottom row: Stock qty card (top + bottom) + Risk (clickable) */}
-                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1.2fr 1fr',gap:16}}>
-                    {/* Stok Miktarı: En Yüksek + En Düşük */}
-                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
-                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
-                        <div style={{width:26,height:26,borderRadius:7,background:$.orgB,color:$.org,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Package size={14}/></div>
-                        <span style={{fontSize:13,fontWeight:700}}>Stok Miktarı (Ürün)</span>
-                      </div>
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',minHeight:0}}>
-                        <div style={{padding:'12px 14px',borderRight:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:10,fontWeight:700,color:$.org,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Yüksek 10</div>
-                          {top10.map((p,i)=>prodRow(p,i,'qty',9))}
-                          {top10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
-                        </div>
-                        <div style={{padding:'12px 14px'}}>
-                          <div style={{fontSize:10,fontWeight:700,color:$.blu,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Düşük 10</div>
-                          {bot10.map((p,i)=>prodRow(p,i,'qty',9))}
-                          {bot10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
-                        </div>
-                      </div>
-                    </div>
+                  {/* Top row: Risk Özeti + Stok Değer Dağılımı */}
+                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',gap:16,marginBottom:16}}>
                     {/* Risk Summary — clickable */}
                     <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
                       <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
@@ -743,185 +709,82 @@ export default function App(){
                           </div>))}
                       </div>
                     </div>
+                    {/* Donut Chart — clickable segments */}
+                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
+                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:7,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={14}/></div>
+                        {'Stok Değer Dağılımı (₺)'}
+                      </div>
+                      <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16}}>
+                        <svg width={mob?100:140} height={mob?100:140} viewBox="0 0 140 140" style={{cursor:'pointer',flexShrink:0}}>
+                          {donutSegs.map(s=><path key={s.k} d={arcFn(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8" style={{cursor:'pointer'}} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})}/>)}
+                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fmt(tVal)}</text>
+                          <text x="70" y="82" textAnchor="middle" fontSize="9" fill={$.t3} fontWeight="500">{'Toplam Değer'}</text>
+                        </svg>
+                        <div style={{display:'flex',flexDirection:'column',gap:4,flex:1}}>
+                          {donutSegs.map(s=>(
+                            <div key={s.k} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 8px',borderRadius:6,cursor:'pointer',transition:'background .15s'}} className="rh">
+                              <div style={{width:8,height:8,borderRadius:3,background:s.c,flexShrink:0}}/>
+                              <span style={{fontSize:11,color:$.t2,flex:1}}>{s.k} Gün</span>
+                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
+                              <ChevronRight size={10} color={$.t3}/>
+                            </div>))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Bottom row: Stok Yaşlanma + Stok Miktarı */}
+                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',gap:16}}>
+                    {/* Yaşlanma: En Yaşlı + En Genç */}
+                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
+                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:7,background:$.redB,color:$.red,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Clock size={14}/></div>
+                        <span style={{fontSize:13,fontWeight:700}}>Stok Yaşlanma (1+ Ton)</span>
+                      </div>
+                      <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',minHeight:0}}>
+                        <div style={{padding:'12px 14px',borderRight:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.red,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Yaşlı 10</div>
+                          {oldest10.map((p,i)=>prodRow(p,i,'age',9))}
+                          {oldest10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
+                        <div style={{padding:'12px 14px'}}>
+                          <div style={{fontSize:10,fontWeight:700,color:'#0d6e4f',textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Genç 10</div>
+                          {youngest10.map((p,i)=>prodRow(p,i,'age',9))}
+                          {youngest10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Stok Miktarı: En Yüksek + En Düşük */}
+                    <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh}}>
+                      <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:7,background:$.orgB,color:$.org,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Package size={14}/></div>
+                        <span style={{fontSize:13,fontWeight:700}}>Stok Miktarı (Ürün)</span>
+                      </div>
+                      <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',minHeight:0}}>
+                        <div style={{padding:'12px 14px',borderRight:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.org,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Yüksek 10</div>
+                          {top10.map((p,i)=>prodRow(p,i,'qty',9))}
+                          {top10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
+                        <div style={{padding:'12px 14px'}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.blu,textTransform:'uppercase',letterSpacing:.5,marginBottom:8}}>En Düşük 10</div>
+                          {bot10.map((p,i)=>prodRow(p,i,'qty',9))}
+                          {bot10.length===0&&<div style={{fontSize:11,color:$.t3,padding:12}}>Veri yok</div>}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );})()}
 
             {/* ===== YÖNETİM ===== */}
             {pg==='yon'&&(()=>{
-              const tq=D.s.totalQty||1;const tV=D.s.totalVal||1;const tVU=D.s.totalValUsd||1;
-              // Company breakdown
-              const compMap={};rows.forEach(r=>{const c=r[1]||r[0]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!compMap[c])compMap[c]={n:c,q:0,v:0,td:0,tq:0,prods:new Set()};compMap[c].q+=q;compMap[c].v+=v;compMap[c].td+=q*d;compMap[c].tq+=q;compMap[c].prods.add(r[3]);});
-              const comps=Object.values(compMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,pc:x.prods.size})).sort((a,b)=>b.v-a.v);
-              // Aging heatmap data: company × bucket
-              const heatData=comps.slice(0,10).map(c=>{const ag={};BK.forEach(b=>{ag[b.k]=0;});rows.filter(r=>(r[1]||r[0])===c.n).forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});return{n:c.n,ag,total:c.q};});
-              // Facility performance
-              const facPerf=[...D.f].sort((a,b)=>b.v-a.v).slice(0,12);
-              const maxFV=facPerf[0]?.v||1;
-              // Origin analysis
-              const origMap={};rows.forEach(r=>{const o=r[4]||'Belirtilmemiş';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!origMap[o])origMap[o]={n:o,q:0,v:0,td:0,tq:0};origMap[o].q+=q;origMap[o].v+=v;origMap[o].td+=q*d;origMap[o].tq+=q;});
-              const origins=Object.values(origMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q).slice(0,10);
-              const maxOQ=origins[0]?.q||1;
-              // L2 product portfolio
-              const l2Map={};rows.forEach(r=>{const l=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!l2Map[l])l2Map[l]={n:l,q:0,v:0,td:0,tq:0};l2Map[l].q+=q;l2Map[l].v+=v;l2Map[l].td+=q*d;l2Map[l].tq+=q;});
-              const l2s=Object.values(l2Map).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.v-a.v).slice(0,8);
-              const maxL2V=l2s[0]?.v||1;
-              // Critical alerts
-              const crit365=rows.filter(r=>r[27]>=365);const critQty=crit365.reduce((s,r)=>s+r[8],0);const critVal=crit365.reduce((s,r)=>s+r[8]*r[24],0);
-              const crit180=rows.filter(r=>r[27]>=180);const c180Qty=crit180.reduce((s,r)=>s+r[8],0);
-              const topCritProd={};crit365.forEach(r=>{const n=r[3];if(!topCritProd[n])topCritProd[n]={n,q:0,v:0,a:0,td:0,tq:0,sites:new Set()};topCritProd[n].q+=r[8];topCritProd[n].v+=r[8]*r[24];topCritProd[n].td+=r[8]*r[27];topCritProd[n].tq+=r[8];topCritProd[n].sites.add(r[9]);});
-              const critProds=Object.values(topCritProd).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,sc:x.sites.size})).sort((a,b)=>b.v-a.v).slice(0,8);
-              // Facility type distribution
-              const typeStats=Object.entries(TI).map(([k,v])=>{const facs=D.f.filter(f=>f.type===k);return{k,l:v.label,c:v.color,count:facs.length,q:facs.reduce((s,f)=>s+f.q,0),v:facs.reduce((s,f)=>s+f.v,0),a:facs.length>0?Math.round(facs.reduce((s,f)=>s+f.a*f.q,0)/(facs.reduce((s,f)=>s+f.q,0)||1)):0};}).filter(t=>t.count>0);
-              // AI Insights generation
-              const avgAge=D.s.avgAge;const critPct=tq>0?((critQty/tq)*100):0;const c180Pct=tq>0?((c180Qty/tq)*100):0;
-              const worstFac=[...D.f].sort((a,b)=>b.a-a.a)[0];const bestFac=[...D.f].sort((a,b)=>a.a-b.a)[0];
-              const topComp=comps[0];const worstComp=[...comps].sort((a,b)=>b.a-a.a)[0];
-              const insights=[];
-              if(critPct>5)insights.push({icon:AlertTriangle,c:'#e5484d',bg:'rgba(229,72,77,.06)',t:'Kritik Yaşlanma Uyarısı',d:`Toplam stoğun %${critPct.toFixed(1)}'i 365+ gün yaşında. Bu stokların toplam değeri ₺${fmt(critVal)}. Acil değerlendirme gerektirir.`});
-              else if(critPct>0)insights.push({icon:ShieldAlert,c:'#ea580c',bg:'rgba(234,88,12,.06)',t:'Yaşlı Stok İzleme',d:`365+ gün stok oranı %${critPct.toFixed(1)} — kontrol altında. Ancak ${fN(Math.round(critQty))} kg stok hâlâ bu grupta.`});
-              if(c180Pct>20)insights.push({icon:Zap,c:'#f5a623',bg:'rgba(245,166,35,.06)',t:'180+ Gün Yoğunluğu',d:`Stoğun %${c180Pct.toFixed(1)}'i 180 günü aşmış durumda. Toplam ${fmtTon(c180Qty)} stok 6 aydan eski.`});
-              if(worstFac)insights.push({icon:Target,c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:'Tesis Karşılaştırma',d:`En yüksek yaş: ${worstFac.n} (${worstFac.a} gün). En düşük yaş: ${bestFac?.n||'-'} (${bestFac?.a||0} gün). Fark: ${(worstFac.a-(bestFac?.a||0))} gün.`});
-              if(worstComp&&comps.length>1)insights.push({icon:Building2,c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:'Şirket Performansı',d:`${worstComp.n} ortalama ${worstComp.a} gün yaş ile en yüksek. ${topComp.n} ₺${fmt(topComp.v)} değer ile en büyük portföye sahip.`});
-              if(origins.length>1){const domOrig=origins[0];insights.push({icon:Globe,c:'#14b8a6',bg:'rgba(20,184,166,.06)',t:'Menşe Analizi',d:`${domOrig.n} menşeli stok ${fmtTon(domOrig.q)} ile en büyük paya sahip (ort. ${domOrig.a} gün). Toplam ${origins.length} farklı menşe.`});}
-              // Action items
-              const actions=[];
-              if(critProds.length>0)actions.push({pri:'Yüksek',c:'#e5484d',bg:'rgba(229,72,77,.06)',t:`${critProds.length} ürün 365+ gün yaşında — eritme planı oluşturun`,sub:`En büyük: ${critProds[0].n} (${fmtTon(critProds[0].q)}, ₺${fmt(critProds[0].v)})`});
-              if(worstFac&&worstFac.a>180)actions.push({pri:'Yüksek',c:'#ea580c',bg:'rgba(234,88,12,.06)',t:`${worstFac.n} tesisi yaş ortalaması ${worstFac.a} gün`,sub:'Tesis bazlı stok devir hızını artırın'});
-              if(c180Pct>15)actions.push({pri:'Orta',c:'#f5a623',bg:'rgba(245,166,35,.06)',t:`180+ gün stok oranını %${c180Pct.toFixed(0)}'den düşürün`,sub:'Satış ve lojistik ile koordineli aksiyon planı'});
-              if(D.s.facilityCount>5)actions.push({pri:'Normal',c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:`${D.s.facilityCount} tesis arasında stok dengeleme analizi`,sub:'Yüksek yaşlı tesislerden düşük yaşlı tesislere transfer değerlendirmesi'});
-              actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:'Tüm veriler güncel — sistem nominal durumda'});
-
-              // Card helper
-              const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
-              const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
+              const{comps,heatData,facPerf,maxFV,origins,maxOQ,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions}=yonData;
 
               return(
                 <div>
-                  {/* Drill detail overlay */}
-                  {yonDetail&&(
-                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16,overflow:'hidden'}}>
-                    <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
-                        <span style={{fontSize:14,fontWeight:700,color:$.t1}}>{yonDetail.name}</span>
-                        {yonDetail.badge&&<span style={{fontSize:10,color:yonDetail.badgeC||$.t3,fontWeight:600,padding:'2px 8px',borderRadius:5,background:yonDetail.badgeBg||$.bdL}}>{yonDetail.badge}</span>}
-                      </div>
-                      <X size={16} color={$.t3} style={{cursor:'pointer'}} onClick={()=>setYonDetail(null)}/>
-                    </div>
-                    <div style={{padding:'14px 18px'}}>
-                      {yonDetail.type==='company'&&(()=>{
-                        const c=yonDetail.data;const cRows=rows.filter(r=>(r[1]||r[0])===c.n);
-                        const byFac={};cRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
-                        const facs=Object.values(byFac).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.v-a.v);
-                        return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
-                            {[{l:'Toplam Stok',v:fmtTon(c.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(c.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:c.a+' gün',c:ac(c.a)},{l:'Ürün Sayısı',v:c.pc,c:$.pur}].map((k,i)=>(
-                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
-                              </div>))}
-                          </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length} tesis)</div>
-                          {facs.map((f,i)=>(
-                            <div key={f.n} onClick={()=>{setPg('dash');setDrillFac(facs.find(x=>x.n===f.n)?.n);setYonDetail(null);}} style={{padding:'7px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8,cursor:'pointer'}} className="rh">
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                              <ChevronRight size={12} color={$.t3}/>
-                            </div>))}
-                        </div>);
-                      })()}
-                      {yonDetail.type==='facility'&&(()=>{
-                        const f=yonDetail.data;const fRows=rows.filter(r=>r[9]===f.id);
-                        const byProd={};fRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
-                        const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.v-a.v).slice(0,15);
-                        return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
-                            {[{l:'Stok',v:fmtTon(f.q),c:$.blu},{l:'Değer',v:'₺'+fmt(f.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:f.a+' gün',c:ac(f.a)},{l:'Depo',v:f.wc,c:$.pur}].map((k,i)=>(
-                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
-                              </div>))}
-                          </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürün Dağılımı</div>
-                          {prods.map((p,i)=>(
-                            <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(p.a),padding:'1px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
-                            </div>))}
-                        </div>);
-                      })()}
-                      {yonDetail.type==='origin'&&(()=>{
-                        const o=yonDetail.data;const oRows=rows.filter(r=>(r[4]||'Belirtilmemiş')===o.n);
-                        const byProd={};oRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
-                        const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.q-a.q).slice(0,12);
-                        return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
-                            {[{l:'Toplam Stok',v:fmtTon(o.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(o.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:o.a+' gün',c:ac(o.a)}].map((k,i)=>(
-                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
-                              </div>))}
-                          </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürünler ({prods.length})</div>
-                          {prods.map((p,i)=>(
-                            <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(p.a),padding:'1px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
-                            </div>))}
-                        </div>);
-                      })()}
-                      {yonDetail.type==='l2'&&(()=>{
-                        const l=yonDetail.data;const lRows=rows.filter(r=>(r[17]||'Diğer')===l.n);
-                        const byFac={};lRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
-                        const facs=Object.values(byFac).map(f=>({...f,a:f.tq>0?Math.round(f.td/f.tq):0})).sort((a,b)=>b.q-a.q);
-                        return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
-                            {[{l:'Toplam Stok',v:fmtTon(l.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(l.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:l.a+' gün',c:ac(l.a)}].map((k,i)=>(
-                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
-                              </div>))}
-                          </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
-                          {facs.map((f,i)=>(
-                            <div key={f.n} style={{padding:'6px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                            </div>))}
-                        </div>);
-                      })()}
-                      {yonDetail.type==='critical'&&(()=>{
-                        return(<div>
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
-                            {[{l:'Kritik Stok',v:fmtTon(critQty),c:'#e5484d'},{l:'Kritik Değer',v:'₺'+fmt(critVal),c:'#ea580c'},{l:'Ürün Sayısı',v:critProds.length,c:$.pur}].map((k,i)=>(
-                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
-                              </div>))}
-                          </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>365+ Gün Ürünler</div>
-                          {critProds.map((p,i)=>(
-                            <div key={p.n} style={{padding:'7px 0',borderBottom:i<critProds.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#e5484d'}}>₺{fmt(p.v)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(p.a),padding:'1px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
-                            </div>))}
-                        </div>);
-                      })()}
-                    </div>
-                  </div>)}
-
                   {/* ── BENTO GRID ── */}
-                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat(4,1fr)',gap:14}}>
+                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat(4,1fr)',gap:mob?10:14}}>
 
                     {/* ROW 1: Executive KPIs — 4 cards */}
                     {[
@@ -1064,7 +927,7 @@ export default function App(){
                     <BCard span={mob?1:4}>
                       <BHead icon={Zap} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Aksiyon Önerileri"/>
                       <div style={{padding:'12px 16px'}}>
-                        <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat('+Math.min(actions.length,3)+',1fr)',gap:10}}>
+                        <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat('+Math.min(actions.length,3)+',1fr)',gap:mob?8:10}}>
                           {actions.map((a,i)=>(
                             <div key={i} style={{padding:'12px 14px',borderRadius:$.rM,background:a.bg,border:'1px solid '+a.c+'18'}}>
                               <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
@@ -1582,6 +1445,130 @@ export default function App(){
                       </div>))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ===== YÖNETİM RIGHT DRAWER ===== */}
+          {yonDetail&&pg==='yon'&&(
+            <div style={{width:mob?'100%':360,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(24px) saturate(160%)',WebkitBackdropFilter:'blur(24px) saturate(160%)',borderLeft:mob?'none':'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden',position:mob?'absolute':'relative',top:mob?0:undefined,right:mob?0:undefined,bottom:mob?0:undefined,zIndex:mob?40:undefined,height:mob?'100%':undefined}}>
+              <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{yonDetail.name}</div>
+                  {yonDetail.badge&&<div style={{fontSize:10,color:yonDetail.badgeC||$.t3,fontWeight:600,marginTop:2}}>{yonDetail.badge}</div>}
+                </div>
+                <X size={16} color={$.t3} style={{cursor:'pointer',flexShrink:0}} onClick={()=>setYonDetail(null)}/>
+              </div>
+              <div style={{flex:1,overflow:'auto',padding:'14px 16px'}}>
+                {yonDetail.type==='company'&&(()=>{
+                  const c=yonDetail.data;const cRows=rows.filter(r=>(r[1]||r[0])===c.n);
+                  const byFac={};cRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
+                  const facs=Object.values(byFac).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.v-a.v);
+                  return(<div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
+                      {[{l:'Toplam Stok',v:fmtTon(c.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(c.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:c.a+' gün',c:ac(c.a)},{l:'Ürün Sayısı',v:c.pc,c:$.pur}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:15,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
+                    {facs.map((f,i)=>(
+                      <div key={f.n} onClick={()=>{setPg('dash');setDrillFac(f.n);setYonDetail(null);}} style={{padding:'7px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6,cursor:'pointer'}} className="rh">
+                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                        <ChevronRight size={11} color={$.t3}/>
+                      </div>))}
+                  </div>);
+                })()}
+                {yonDetail.type==='facility'&&(()=>{
+                  const f=yonDetail.data;const fRows=rows.filter(r=>r[9]===f.id);
+                  const byProd={};fRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
+                  const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.v-a.v).slice(0,15);
+                  return(<div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
+                      {[{l:'Stok',v:fmtTon(f.q),c:$.blu},{l:'Değer',v:'₺'+fmt(f.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:f.a+' gün',c:ac(f.a)},{l:'Depo',v:f.wc,c:$.pur}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:15,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürün Dağılımı</div>
+                    {prods.map((p,i)=>(
+                      <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                      </div>))}
+                  </div>);
+                })()}
+                {yonDetail.type==='origin'&&(()=>{
+                  const o=yonDetail.data;const oRows=rows.filter(r=>(r[4]||'Belirtilmemiş')===o.n);
+                  const byProd={};oRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
+                  const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.q-a.q).slice(0,12);
+                  return(<div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
+                      {[{l:'Toplam Stok',v:fmtTon(o.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(o.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:o.a+' gün',c:ac(o.a)}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:13,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürünler ({prods.length})</div>
+                    {prods.map((p,i)=>(
+                      <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                      </div>))}
+                  </div>);
+                })()}
+                {yonDetail.type==='l2'&&(()=>{
+                  const l=yonDetail.data;const lRows=rows.filter(r=>(r[17]||'Diğer')===l.n);
+                  const byFac={};lRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
+                  const facs=Object.values(byFac).map(f=>({...f,a:f.tq>0?Math.round(f.td/f.tq):0})).sort((a,b)=>b.q-a.q);
+                  return(<div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
+                      {[{l:'Toplam Stok',v:fmtTon(l.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(l.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:l.a+' gün',c:ac(l.a)}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:13,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
+                    {facs.map((f,i)=>(
+                      <div key={f.n} style={{padding:'6px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                      </div>))}
+                  </div>);
+                })()}
+                {yonDetail.type==='critical'&&(()=>{
+                  const{critQty,critVal,critProds}=yonData;
+                  return(<div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
+                      {[{l:'Kritik Stok',v:fmtTon(critQty),c:'#e5484d'},{l:'Kritik Değer',v:'₺'+fmt(critVal),c:'#ea580c'},{l:'Ürün',v:critProds.length,c:$.pur}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:13,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>365+ Gün Ürünler</div>
+                    {critProds.map((p,i)=>(
+                      <div key={p.n} style={{padding:'6px 0',borderBottom:i<critProds.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
+                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#e5484d'}}>₺{fmt(p.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                      </div>))}
+                  </div>);
+                })()}
               </div>
             </div>
           )}
