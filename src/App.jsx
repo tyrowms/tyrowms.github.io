@@ -145,8 +145,6 @@ export default function App(){
     const comps=Object.values(compMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,pc:x.prods.size})).sort((a,b)=>b.v-a.v);
     const heatData=comps.slice(0,10).map(c=>{const ag={};BK.forEach(b=>{ag[b.k]=0;});rows.filter(r=>(r[1]||r[0])===c.n).forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});return{n:c.n,ag,total:c.q};});
     const facPerf=[...D.f].sort((a,b)=>b.v-a.v).slice(0,12);const maxFV=facPerf[0]?.v||1;
-    const origMap={};rows.forEach(r=>{const o=r[4]||'Belirtilmemiş';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!origMap[o])origMap[o]={n:o,q:0,v:0,td:0,tq:0};origMap[o].q+=q;origMap[o].v+=v;origMap[o].td+=q*d;origMap[o].tq+=q;});
-    const origins=Object.values(origMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q).slice(0,10);const maxOQ=origins[0]?.q||1;
     const l2Map={};rows.forEach(r=>{const l=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!l2Map[l])l2Map[l]={n:l,q:0,v:0,td:0,tq:0};l2Map[l].q+=q;l2Map[l].v+=v;l2Map[l].td+=q*d;l2Map[l].tq+=q;});
     const l2s=Object.values(l2Map).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.v-a.v).slice(0,8);const maxL2V=l2s[0]?.v||1;
     const crit365=rows.filter(r=>r[27]>=365);const critQty=crit365.reduce((s,r)=>s+r[8],0);const critVal=crit365.reduce((s,r)=>s+r[8]*r[24],0);
@@ -163,14 +161,13 @@ export default function App(){
     if(c180Pct>20)insights.push({icon:Zap,c:'#f5a623',bg:'rgba(245,166,35,.06)',t:'180+ Gün Yoğunluğu',d:`Stoğun %${c180Pct.toFixed(1)}'i 180 günü aşmış durumda. Toplam ${fmtTon(c180Qty)} stok 6 aydan eski.`});
     if(worstFac)insights.push({icon:Target,c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:'Tesis Karşılaştırma',d:`En yüksek yaş: ${worstFac.n} (${worstFac.a} gün). En düşük yaş: ${bestFac?.n||'-'} (${bestFac?.a||0} gün). Fark: ${(worstFac.a-(bestFac?.a||0))} gün.`});
     if(worstComp&&comps.length>1)insights.push({icon:Building2,c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:'Şirket Performansı',d:`${worstComp.n} ortalama ${worstComp.a} gün yaş ile en yüksek. ${topComp.n} ₺${fmt(topComp.v)} değer ile en büyük portföye sahip.`});
-    if(origins.length>1){const domOrig=origins[0];insights.push({icon:Globe,c:'#14b8a6',bg:'rgba(20,184,166,.06)',t:'Menşe Analizi',d:`${domOrig.n} menşeli stok ${fmtTon(domOrig.q)} ile en büyük paya sahip (ort. ${domOrig.a} gün). Toplam ${origins.length} farklı menşe.`});}
     const actions=[];
     if(critProds.length>0)actions.push({pri:'Yüksek',c:'#e5484d',bg:'rgba(229,72,77,.06)',t:`${critProds.length} ürün 365+ gün yaşında — eritme planı oluşturun`,sub:`En büyük: ${critProds[0].n} (${fmtTon(critProds[0].q)}, ₺${fmt(critProds[0].v)})`});
     if(worstFac&&worstFac.a>180)actions.push({pri:'Yüksek',c:'#ea580c',bg:'rgba(234,88,12,.06)',t:`${worstFac.n} tesisi yaş ortalaması ${worstFac.a} gün`,sub:'Tesis bazlı stok devir hızını artırın'});
     if(c180Pct>15)actions.push({pri:'Orta',c:'#f5a623',bg:'rgba(245,166,35,.06)',t:`180+ gün stok oranını %${c180Pct.toFixed(0)}'den düşürün`,sub:'Satış ve lojistik ile koordineli aksiyon planı'});
     if(D.s.facilityCount>5)actions.push({pri:'Normal',c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:`${D.s.facilityCount} tesis arasında stok dengeleme analizi`,sub:'Yüksek yaşlı tesislerden düşük yaşlı tesislere transfer değerlendirmesi'});
     actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:'Tüm veriler güncel — sistem nominal durumda'});
-    return{comps,heatData,facPerf,maxFV,origins,maxOQ,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions};
+    return{comps,heatData,facPerf,maxFV,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions};
   },[rows,D]);
 
   // ─── MSAL Auth State ───
@@ -779,7 +776,7 @@ export default function App(){
 
             {/* ===== YÖNETİM ===== */}
             {pg==='yon'&&(()=>{
-              const{comps,heatData,facPerf,maxFV,origins,maxOQ,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions}=yonData;
+              const{comps,heatData,facPerf,maxFV,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions}=yonData;
 
               return(
                 <div>
@@ -857,8 +854,8 @@ export default function App(){
                       </div>
                     </BCard>
 
-                    {/* ROW 3: Tesis Performance (span 2) + Menşe (span 2) */}
-                    <BCard span={mob?1:2}>
+                    {/* ROW 3: Tesis Performance (full width) */}
+                    <BCard span={mob?1:4}>
                       <BHead icon={Building2} color={$.pur} bg={$.purB} title="Tesis Performansı (Değer)"/>
                       <div style={{padding:'12px 16px'}}>
                         {facPerf.map((f,i)=>(
@@ -870,22 +867,6 @@ export default function App(){
                             </div>
                             <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f',minWidth:60,textAlign:'right'}}>₺{fmt(f.v)}</span>
                             <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                            <ChevronRight size={11} color={$.t3}/>
-                          </div>))}
-                      </div>
-                    </BCard>
-
-                    <BCard span={mob?1:2}>
-                      <BHead icon={Globe} color={$.tel} bg={$.telB} title="Menşe Analizi"/>
-                      <div style={{padding:'12px 16px'}}>
-                        {origins.map((o,i)=>(
-                          <div key={o.n} onClick={()=>setYonDetail({type:'origin',name:o.n+' Menşeli Stoklar',data:o,badge:fmtTon(o.q),badgeC:$.tel,badgeBg:$.telB})} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<origins.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
-                            <span style={{fontSize:11,fontWeight:600,color:$.t1,minWidth:70}}>{o.n}</span>
-                            <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
-                              <div style={{height:'100%',width:(o.q/maxOQ)*100+'%',borderRadius:3,background:$.tel,opacity:.45,transition:'width .5s'}}/>
-                            </div>
-                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2,minWidth:55,textAlign:'right'}}>{fmtTon(o.q)}</span>
-                            <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(o.a),padding:'1px 5px',borderRadius:4,background:acBg(o.a)}}>{o.a}g</span>
                             <ChevronRight size={11} color={$.t3}/>
                           </div>))}
                       </div>
@@ -1502,27 +1483,6 @@ export default function App(){
                         <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
                         <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
                         <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
-                      </div>))}
-                  </div>);
-                })()}
-                {yonDetail.type==='origin'&&(()=>{
-                  const o=yonDetail.data;const oRows=rows.filter(r=>(r[4]||'Belirtilmemiş')===o.n);
-                  const byProd={};oRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
-                  const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.q-a.q).slice(0,12);
-                  return(<div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
-                      {[{l:'Toplam Stok',v:fmtTon(o.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(o.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:o.a+' gün',c:ac(o.a)}].map((k,i)=>(
-                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                          <div style={{fontSize:13,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
-                        </div>))}
-                    </div>
-                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürünler ({prods.length})</div>
-                    {prods.map((p,i)=>(
-                      <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
                         <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
                       </div>))}
                   </div>);
