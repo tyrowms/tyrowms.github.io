@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from "react";
-import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X } from "lucide-react";
+import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye } from "lucide-react";
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
@@ -92,6 +92,7 @@ export default function App(){
   useEffect(()=>{const h=()=>{setMob(window.innerWidth<768);if(window.innerWidth>=768)setSbOpen(false);};window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);
   const [pg,setPg]=useState('dash');
   const [anaDetail,setAnaDetail]=useState(null);
+  const [yonDetail,setYonDetail]=useState(null);
   const [sel,setSel]=useState(null);
   const [hov,setHov]=useState(null);
   const [tab,setTab]=useState('f');
@@ -331,14 +332,14 @@ export default function App(){
         </div>
         <div style={{padding:'0 12px',flex:1,overflowY:'auto'}}>
           <div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'}].map(p=>{const isA=pg===p.id;return(
+            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
               {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
             </div>);})}
           <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>
           {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
+            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
               {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
               {p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
@@ -346,7 +347,7 @@ export default function App(){
             </div>);})}
           <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Sistem'}</div>
           {(()=>{const isA=pg==='set';return(
-            <div className="sbn" onClick={()=>{setPg('set');setSel(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
+            <div className="sbn" onClick={()=>{setPg('set');setSel(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
               {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <Settings size={16} strokeWidth={isA?2.2:1.8}/>Ayarlar
             </div>);})()}
@@ -385,11 +386,11 @@ export default function App(){
           </div>}
           <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
             {!mob&&<div style={{width:32,height:32,borderRadius:9,background:'rgba(13,110,79,.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {pg==='dash'?<BarChart3 size={15} color={$.ac}/>:pg==='ana'?<Activity size={15} color={$.ac}/>:pg==='rep'?<FileBarChart size={15} color={$.ac}/>:pg==='raw'?<Database size={15} color={$.ac}/>:pg==='erp'?<Globe size={15} color={$.ac}/>:<Settings size={15} color={$.ac}/>}
+              {pg==='dash'?<BarChart3 size={15} color={$.ac}/>:pg==='ana'?<Activity size={15} color={$.ac}/>:pg==='yon'?<Briefcase size={15} color={$.ac}/>:pg==='rep'?<FileBarChart size={15} color={$.ac}/>:pg==='raw'?<Database size={15} color={$.ac}/>:pg==='erp'?<Globe size={15} color={$.ac}/>:<Settings size={15} color={$.ac}/>}
             </div>}
             <div style={{minWidth:0}}>
-              <div style={{fontSize:mob?13:15,fontWeight:700,color:$.t1,lineHeight:1.2}}>{{'dash':'Dashboard','ana':'Analiz & Risk','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
-              {!mob&&<div style={{fontSize:10,color:$.t3,fontWeight:400}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
+              <div style={{fontSize:mob?13:15,fontWeight:700,color:$.t1,lineHeight:1.2}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
+              {!mob&&<div style={{fontSize:10,color:$.t3,fontWeight:400}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
             </div>
           </div>
           {/* ERP Status */}
@@ -742,6 +743,340 @@ export default function App(){
                           </div>))}
                       </div>
                     </div>
+                  </div>
+                </div>
+              );})()}
+
+            {/* ===== YÖNETİM ===== */}
+            {pg==='yon'&&(()=>{
+              const tq=D.s.totalQty||1;const tV=D.s.totalVal||1;const tVU=D.s.totalValUsd||1;
+              // Company breakdown
+              const compMap={};rows.forEach(r=>{const c=r[1]||r[0]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!compMap[c])compMap[c]={n:c,q:0,v:0,td:0,tq:0,prods:new Set()};compMap[c].q+=q;compMap[c].v+=v;compMap[c].td+=q*d;compMap[c].tq+=q;compMap[c].prods.add(r[3]);});
+              const comps=Object.values(compMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,pc:x.prods.size})).sort((a,b)=>b.v-a.v);
+              // Aging heatmap data: company × bucket
+              const heatData=comps.slice(0,10).map(c=>{const ag={};BK.forEach(b=>{ag[b.k]=0;});rows.filter(r=>(r[1]||r[0])===c.n).forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});return{n:c.n,ag,total:c.q};});
+              // Facility performance
+              const facPerf=[...D.f].sort((a,b)=>b.v-a.v).slice(0,12);
+              const maxFV=facPerf[0]?.v||1;
+              // Origin analysis
+              const origMap={};rows.forEach(r=>{const o=r[4]||'Belirtilmemiş';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!origMap[o])origMap[o]={n:o,q:0,v:0,td:0,tq:0};origMap[o].q+=q;origMap[o].v+=v;origMap[o].td+=q*d;origMap[o].tq+=q;});
+              const origins=Object.values(origMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q).slice(0,10);
+              const maxOQ=origins[0]?.q||1;
+              // L2 product portfolio
+              const l2Map={};rows.forEach(r=>{const l=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!l2Map[l])l2Map[l]={n:l,q:0,v:0,td:0,tq:0};l2Map[l].q+=q;l2Map[l].v+=v;l2Map[l].td+=q*d;l2Map[l].tq+=q;});
+              const l2s=Object.values(l2Map).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.v-a.v).slice(0,8);
+              const maxL2V=l2s[0]?.v||1;
+              // Critical alerts
+              const crit365=rows.filter(r=>r[27]>=365);const critQty=crit365.reduce((s,r)=>s+r[8],0);const critVal=crit365.reduce((s,r)=>s+r[8]*r[24],0);
+              const crit180=rows.filter(r=>r[27]>=180);const c180Qty=crit180.reduce((s,r)=>s+r[8],0);
+              const topCritProd={};crit365.forEach(r=>{const n=r[3];if(!topCritProd[n])topCritProd[n]={n,q:0,v:0,a:0,td:0,tq:0,sites:new Set()};topCritProd[n].q+=r[8];topCritProd[n].v+=r[8]*r[24];topCritProd[n].td+=r[8]*r[27];topCritProd[n].tq+=r[8];topCritProd[n].sites.add(r[9]);});
+              const critProds=Object.values(topCritProd).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,sc:x.sites.size})).sort((a,b)=>b.v-a.v).slice(0,8);
+              // Facility type distribution
+              const typeStats=Object.entries(TI).map(([k,v])=>{const facs=D.f.filter(f=>f.type===k);return{k,l:v.label,c:v.color,count:facs.length,q:facs.reduce((s,f)=>s+f.q,0),v:facs.reduce((s,f)=>s+f.v,0),a:facs.length>0?Math.round(facs.reduce((s,f)=>s+f.a*f.q,0)/(facs.reduce((s,f)=>s+f.q,0)||1)):0};}).filter(t=>t.count>0);
+              // AI Insights generation
+              const avgAge=D.s.avgAge;const critPct=tq>0?((critQty/tq)*100):0;const c180Pct=tq>0?((c180Qty/tq)*100):0;
+              const worstFac=[...D.f].sort((a,b)=>b.a-a.a)[0];const bestFac=[...D.f].sort((a,b)=>a.a-b.a)[0];
+              const topComp=comps[0];const worstComp=[...comps].sort((a,b)=>b.a-a.a)[0];
+              const insights=[];
+              if(critPct>5)insights.push({icon:AlertTriangle,c:'#e5484d',bg:'rgba(229,72,77,.06)',t:'Kritik Yaşlanma Uyarısı',d:`Toplam stoğun %${critPct.toFixed(1)}'i 365+ gün yaşında. Bu stokların toplam değeri ₺${fmt(critVal)}. Acil değerlendirme gerektirir.`});
+              else if(critPct>0)insights.push({icon:ShieldAlert,c:'#ea580c',bg:'rgba(234,88,12,.06)',t:'Yaşlı Stok İzleme',d:`365+ gün stok oranı %${critPct.toFixed(1)} — kontrol altında. Ancak ${fN(Math.round(critQty))} kg stok hâlâ bu grupta.`});
+              if(c180Pct>20)insights.push({icon:Zap,c:'#f5a623',bg:'rgba(245,166,35,.06)',t:'180+ Gün Yoğunluğu',d:`Stoğun %${c180Pct.toFixed(1)}'i 180 günü aşmış durumda. Toplam ${fmtTon(c180Qty)} stok 6 aydan eski.`});
+              if(worstFac)insights.push({icon:Target,c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:'Tesis Karşılaştırma',d:`En yüksek yaş: ${worstFac.n} (${worstFac.a} gün). En düşük yaş: ${bestFac?.n||'-'} (${bestFac?.a||0} gün). Fark: ${(worstFac.a-(bestFac?.a||0))} gün.`});
+              if(worstComp&&comps.length>1)insights.push({icon:Building2,c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:'Şirket Performansı',d:`${worstComp.n} ortalama ${worstComp.a} gün yaş ile en yüksek. ${topComp.n} ₺${fmt(topComp.v)} değer ile en büyük portföye sahip.`});
+              if(origins.length>1){const domOrig=origins[0];insights.push({icon:Globe,c:'#14b8a6',bg:'rgba(20,184,166,.06)',t:'Menşe Analizi',d:`${domOrig.n} menşeli stok ${fmtTon(domOrig.q)} ile en büyük paya sahip (ort. ${domOrig.a} gün). Toplam ${origins.length} farklı menşe.`});}
+              // Action items
+              const actions=[];
+              if(critProds.length>0)actions.push({pri:'Yüksek',c:'#e5484d',bg:'rgba(229,72,77,.06)',t:`${critProds.length} ürün 365+ gün yaşında — eritme planı oluşturun`,sub:`En büyük: ${critProds[0].n} (${fmtTon(critProds[0].q)}, ₺${fmt(critProds[0].v)})`});
+              if(worstFac&&worstFac.a>180)actions.push({pri:'Yüksek',c:'#ea580c',bg:'rgba(234,88,12,.06)',t:`${worstFac.n} tesisi yaş ortalaması ${worstFac.a} gün`,sub:'Tesis bazlı stok devir hızını artırın'});
+              if(c180Pct>15)actions.push({pri:'Orta',c:'#f5a623',bg:'rgba(245,166,35,.06)',t:`180+ gün stok oranını %${c180Pct.toFixed(0)}'den düşürün`,sub:'Satış ve lojistik ile koordineli aksiyon planı'});
+              if(D.s.facilityCount>5)actions.push({pri:'Normal',c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:`${D.s.facilityCount} tesis arasında stok dengeleme analizi`,sub:'Yüksek yaşlı tesislerden düşük yaşlı tesislere transfer değerlendirmesi'});
+              actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:'Tüm veriler güncel — sistem nominal durumda'});
+
+              // Card helper
+              const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
+              const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
+
+              return(
+                <div>
+                  {/* Drill detail overlay */}
+                  {yonDetail&&(
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16,overflow:'hidden'}}>
+                    <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
+                        <span style={{fontSize:14,fontWeight:700,color:$.t1}}>{yonDetail.name}</span>
+                        {yonDetail.badge&&<span style={{fontSize:10,color:yonDetail.badgeC||$.t3,fontWeight:600,padding:'2px 8px',borderRadius:5,background:yonDetail.badgeBg||$.bdL}}>{yonDetail.badge}</span>}
+                      </div>
+                      <X size={16} color={$.t3} style={{cursor:'pointer'}} onClick={()=>setYonDetail(null)}/>
+                    </div>
+                    <div style={{padding:'14px 18px'}}>
+                      {yonDetail.type==='company'&&(()=>{
+                        const c=yonDetail.data;const cRows=rows.filter(r=>(r[1]||r[0])===c.n);
+                        const byFac={};cRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
+                        const facs=Object.values(byFac).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.v-a.v);
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Toplam Stok',v:fmtTon(c.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(c.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:c.a+' gün',c:ac(c.a)},{l:'Ürün Sayısı',v:c.pc,c:$.pur}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length} tesis)</div>
+                          {facs.map((f,i)=>(
+                            <div key={f.n} onClick={()=>{setPg('dash');setDrillFac(facs.find(x=>x.n===f.n)?.n);setYonDetail(null);}} style={{padding:'7px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8,cursor:'pointer'}} className="rh">
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                              <ChevronRight size={12} color={$.t3}/>
+                            </div>))}
+                        </div>);
+                      })()}
+                      {yonDetail.type==='facility'&&(()=>{
+                        const f=yonDetail.data;const fRows=rows.filter(r=>r[9]===f.id);
+                        const byProd={};fRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
+                        const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.v-a.v).slice(0,15);
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Stok',v:fmtTon(f.q),c:$.blu},{l:'Değer',v:'₺'+fmt(f.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:f.a+' gün',c:ac(f.a)},{l:'Depo',v:f.wc,c:$.pur}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürün Dağılımı</div>
+                          {prods.map((p,i)=>(
+                            <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(p.a),padding:'1px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                            </div>))}
+                        </div>);
+                      })()}
+                      {yonDetail.type==='origin'&&(()=>{
+                        const o=yonDetail.data;const oRows=rows.filter(r=>(r[4]||'Belirtilmemiş')===o.n);
+                        const byProd={};oRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
+                        const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.q-a.q).slice(0,12);
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Toplam Stok',v:fmtTon(o.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(o.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:o.a+' gün',c:ac(o.a)}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürünler ({prods.length})</div>
+                          {prods.map((p,i)=>(
+                            <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(p.a),padding:'1px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                            </div>))}
+                        </div>);
+                      })()}
+                      {yonDetail.type==='l2'&&(()=>{
+                        const l=yonDetail.data;const lRows=rows.filter(r=>(r[17]||'Diğer')===l.n);
+                        const byFac={};lRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
+                        const facs=Object.values(byFac).map(f=>({...f,a:f.tq>0?Math.round(f.td/f.tq):0})).sort((a,b)=>b.q-a.q);
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Toplam Stok',v:fmtTon(l.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(l.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:l.a+' gün',c:ac(l.a)}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
+                          {facs.map((f,i)=>(
+                            <div key={f.n} style={{padding:'6px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                            </div>))}
+                        </div>);
+                      })()}
+                      {yonDetail.type==='critical'&&(()=>{
+                        return(<div>
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Kritik Stok',v:fmtTon(critQty),c:'#e5484d'},{l:'Kritik Değer',v:'₺'+fmt(critVal),c:'#ea580c'},{l:'Ürün Sayısı',v:critProds.length,c:$.pur}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>365+ Gün Ürünler</div>
+                          {critProds.map((p,i)=>(
+                            <div key={p.n} style={{padding:'7px 0',borderBottom:i<critProds.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#e5484d'}}>₺{fmt(p.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(p.a),padding:'1px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                            </div>))}
+                        </div>);
+                      })()}
+                    </div>
+                  </div>)}
+
+                  {/* ── BENTO GRID ── */}
+                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat(4,1fr)',gap:14}}>
+
+                    {/* ROW 1: Executive KPIs — 4 cards */}
+                    {[
+                      {l:'Toplam Stok',v:fmtTon(D.s.totalQty),sub:`${fN(D.s.prodCount)} ürün`,icon:Package,c:$.blu,bg:$.bluB},
+                      {l:'Toplam Değer (₺)',v:'₺'+fmt(D.s.totalVal),sub:'$'+fmt(D.s.totalValUsd),icon:TrendingUp,c:'#0d6e4f',bg:$.grnB},
+                      {l:'Ortalama Yaş',v:avgAge+' gün',sub:avgAge<90?'İyi durumda':avgAge<180?'İzlenmeli':'Dikkat',icon:Clock,c:ac(avgAge),bg:acBg(avgAge)},
+                      {l:'Aktif Varlıklar',v:D.s.facilityCount+' tesis',sub:`${D.s.whCount} depo · ${D.s.cityCount} şehir`,icon:Building2,c:$.pur,bg:$.purB}
+                    ].map((k,i)=>(
+                      <BCard key={i}><div style={{padding:'16px 18px'}}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                          <span style={{fontSize:10.5,fontWeight:600,color:$.t3,textTransform:'uppercase',letterSpacing:.5}}>{k.l}</span>
+                          <div style={{width:28,height:28,borderRadius:8,background:k.bg,color:k.c,display:'flex',alignItems:'center',justifyContent:'center'}}><k.icon size={14}/></div>
+                        </div>
+                        <div style={{fontSize:22,fontWeight:800,fontFamily:$.mo,color:k.c,lineHeight:1.1,marginBottom:4}}>{k.v}</div>
+                        <div style={{fontSize:10.5,color:$.t3,fontWeight:500}}>{k.sub}</div>
+                      </div></BCard>
+                    ))}
+
+                    {/* ROW 2: Heatmap (span 3) + Risk Radar (span 1) */}
+                    <BCard span={mob?1:3}>
+                      <BHead icon={Layers} color={$.org} bg={$.orgB} title="Şirket × Yaş Grubu Isı Haritası"/>
+                      <div style={{padding:'12px 16px',overflowX:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0,fontSize:10.5}}>
+                          <thead><tr>
+                            <th style={{textAlign:'left',padding:'6px 8px',fontWeight:700,color:$.t2,borderBottom:'1px solid '+$.bdL,position:'sticky',left:0,background:$.bg2,minWidth:100}}>Şirket</th>
+                            {BK.map(b=><th key={b.k} style={{textAlign:'center',padding:'6px 4px',fontWeight:700,color:b.c,borderBottom:'1px solid '+$.bdL,minWidth:55}}>{b.k}</th>)}
+                            <th style={{textAlign:'right',padding:'6px 8px',fontWeight:700,color:$.t1,borderBottom:'1px solid '+$.bdL}}>Toplam</th>
+                          </tr></thead>
+                          <tbody>
+                            {heatData.map((h,i)=>{const mx=Math.max(...Object.values(h.ag));return(
+                              <tr key={h.n} onClick={()=>setYonDetail({type:'company',name:h.n,data:comps.find(c=>c.n===h.n),badge:fmtTon(h.total),badgeC:$.blu,badgeBg:$.bluB})} style={{cursor:'pointer'}} className="rh">
+                                <td style={{padding:'7px 8px',fontWeight:600,color:$.t1,borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none',position:'sticky',left:0,background:$.bg2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{h.n}</td>
+                                {BK.map(b=>{const v=h.ag[b.k]||0;const intensity=mx>0?v/mx:0;return(
+                                  <td key={b.k} style={{textAlign:'center',padding:'7px 4px',borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none'}}>
+                                    <div style={{display:'inline-block',padding:'3px 6px',borderRadius:5,fontFamily:$.mo,fontWeight:700,fontSize:9.5,background:v>0?b.c+'18':'transparent',color:v>0?b.c:$.t3,opacity:v>0?(.4+intensity*.6):0.3}}>{v>0?fmtTon(v):'-'}</div>
+                                  </td>);})}
+                                <td style={{textAlign:'right',padding:'7px 8px',fontFamily:$.mo,fontWeight:800,color:$.t1,borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none',fontSize:11}}>{fmtTon(h.total)}<ChevronRight size={10} color={$.t3} style={{marginLeft:4,verticalAlign:'middle'}}/></td>
+                              </tr>);})}
+                          </tbody>
+                        </table>
+                      </div>
+                    </BCard>
+
+                    <BCard span={1} rSpan={mob?1:1}>
+                      <BHead icon={ShieldAlert} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Risk Radarı"/>
+                      <div style={{padding:'12px 16px'}}>
+                        <div onClick={()=>setYonDetail({type:'critical',name:'Kritik Stok Detayı (365+ Gün)',badge:critProds.length+' ürün',badgeC:'#e5484d',badgeBg:'rgba(229,72,77,.08)'})} style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(229,72,77,.05)',marginBottom:8,cursor:'pointer',border:'1px solid rgba(229,72,77,.12)'}} className="rh">
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#e5484d'}}>365+ Gün</span>
+                            <ChevronRight size={12} color={$.t3}/>
+                          </div>
+                          <div style={{fontFamily:$.mo,fontSize:16,fontWeight:800,color:'#e5484d',marginBottom:2}}>{fmtTon(critQty)}</div>
+                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>₺{fmt(critVal)} · %{critPct.toFixed(1)}</div>
+                        </div>
+                        <div style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(234,88,12,.04)',marginBottom:8,border:'1px solid rgba(234,88,12,.1)'}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#ea580c',marginBottom:2}}>180+ Gün</div>
+                          <div style={{fontFamily:$.mo,fontSize:14,fontWeight:800,color:'#ea580c'}}>{fmtTon(c180Qty)}</div>
+                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>%{c180Pct.toFixed(1)} oran</div>
+                        </div>
+                        {/* Type distribution mini */}
+                        <div style={{marginTop:8}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.t2,marginBottom:6}}>Tesis Tipi Dağılımı</div>
+                          {typeStats.map(t=>(
+                            <div key={t.k} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
+                              <div style={{width:7,height:7,borderRadius:3,background:t.c,flexShrink:0}}/>
+                              <span style={{fontSize:10,color:$.t2,flex:1}}>{t.l}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:t.c}}>{t.count}</span>
+                            </div>))}
+                        </div>
+                      </div>
+                    </BCard>
+
+                    {/* ROW 3: Tesis Performance (span 2) + Menşe (span 2) */}
+                    <BCard span={mob?1:2}>
+                      <BHead icon={Building2} color={$.pur} bg={$.purB} title="Tesis Performansı (Değer)"/>
+                      <div style={{padding:'12px 16px'}}>
+                        {facPerf.map((f,i)=>(
+                          <div key={f.id} onClick={()=>setYonDetail({type:'facility',name:f.n||f.id,data:f,badge:TI[f.type]?.label,badgeC:TI[f.type]?.color,badgeBg:TI[f.type]?.color+'14'})} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<facPerf.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
+                            <div style={{width:6,height:6,borderRadius:3,background:TI[f.type]?.color||$.t3,flexShrink:0}}/>
+                            <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n||f.id}</span>
+                            <div style={{flex:1.5,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
+                              <div style={{height:'100%',width:(f.v/maxFV)*100+'%',borderRadius:3,background:TI[f.type]?.color||$.ac,opacity:.5,transition:'width .5s'}}/>
+                            </div>
+                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f',minWidth:60,textAlign:'right'}}>₺{fmt(f.v)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                            <ChevronRight size={11} color={$.t3}/>
+                          </div>))}
+                      </div>
+                    </BCard>
+
+                    <BCard span={mob?1:2}>
+                      <BHead icon={Globe} color={$.tel} bg={$.telB} title="Menşe Analizi"/>
+                      <div style={{padding:'12px 16px'}}>
+                        {origins.map((o,i)=>(
+                          <div key={o.n} onClick={()=>setYonDetail({type:'origin',name:o.n+' Menşeli Stoklar',data:o,badge:fmtTon(o.q),badgeC:$.tel,badgeBg:$.telB})} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<origins.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
+                            <span style={{fontSize:11,fontWeight:600,color:$.t1,minWidth:70}}>{o.n}</span>
+                            <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
+                              <div style={{height:'100%',width:(o.q/maxOQ)*100+'%',borderRadius:3,background:$.tel,opacity:.45,transition:'width .5s'}}/>
+                            </div>
+                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2,minWidth:55,textAlign:'right'}}>{fmtTon(o.q)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(o.a),padding:'1px 5px',borderRadius:4,background:acBg(o.a)}}>{o.a}g</span>
+                            <ChevronRight size={11} color={$.t3}/>
+                          </div>))}
+                      </div>
+                    </BCard>
+
+                    {/* ROW 4: L2 Portfolio (span 2) + AI Insights (span 2) */}
+                    <BCard span={mob?1:2}>
+                      <BHead icon={Layers} color={$.org} bg={$.orgB} title="Ürün Portföyü (L2)"/>
+                      <div style={{padding:'12px 16px'}}>
+                        {l2s.map((l,i)=>(
+                          <div key={l.n} onClick={()=>setYonDetail({type:'l2',name:l.n+' Kategorisi',data:l,badge:'₺'+fmt(l.v),badgeC:'#0d6e4f',badgeBg:$.grnB})} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<l2s.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
+                            <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.n}</span>
+                            <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
+                              <div style={{height:'100%',width:(l.v/maxL2V)*100+'%',borderRadius:3,background:$.org,opacity:.45,transition:'width .5s'}}/>
+                            </div>
+                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f',minWidth:55,textAlign:'right'}}>₺{fmt(l.v)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2,minWidth:45,textAlign:'right'}}>{fmtTon(l.q)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(l.a),padding:'1px 5px',borderRadius:4,background:acBg(l.a)}}>{l.a}g</span>
+                            <ChevronRight size={11} color={$.t3}/>
+                          </div>))}
+                      </div>
+                    </BCard>
+
+                    <BCard span={mob?1:2}>
+                      <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI İçgörüler"/>
+                      <div style={{padding:'12px 16px'}}>
+                        {insights.map((ins,i)=>(
+                          <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:ins.bg,marginBottom:i<insights.length-1?8:0,border:'1px solid '+ins.c+'18'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                              <ins.icon size={13} color={ins.c}/>
+                              <span style={{fontSize:11,fontWeight:700,color:ins.c}}>{ins.t}</span>
+                            </div>
+                            <div style={{fontSize:10.5,color:$.t2,lineHeight:1.5,fontWeight:500}}>{ins.d}</div>
+                          </div>))}
+                      </div>
+                    </BCard>
+
+                    {/* ROW 5: Action items (full width span 4) */}
+                    <BCard span={mob?1:4}>
+                      <BHead icon={Zap} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Aksiyon Önerileri"/>
+                      <div style={{padding:'12px 16px'}}>
+                        <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat('+Math.min(actions.length,3)+',1fr)',gap:10}}>
+                          {actions.map((a,i)=>(
+                            <div key={i} style={{padding:'12px 14px',borderRadius:$.rM,background:a.bg,border:'1px solid '+a.c+'18'}}>
+                              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                                <span style={{fontSize:9,fontWeight:800,color:'#fff',background:a.c,padding:'2px 7px',borderRadius:5,textTransform:'uppercase',letterSpacing:.5}}>{a.pri}</span>
+                              </div>
+                              <div style={{fontSize:11.5,fontWeight:700,color:$.t1,marginBottom:4,lineHeight:1.4}}>{a.t}</div>
+                              <div style={{fontSize:10,color:$.t3,fontWeight:500,lineHeight:1.4}}>{a.sub}</div>
+                            </div>))}
+                        </div>
+                      </div>
+                    </BCard>
+
                   </div>
                 </div>
               );})()}
