@@ -89,13 +89,25 @@ npm run preview
 
 ## Deployment
 
-### GitHub Pages (Automated)
+### Architecture
 
-This project includes a GitHub Actions workflow for automatic deployment:
+| Repo | Role |
+|------|------|
+| `djeanker34/TYRO-WMSAgent` | Source code (development) |
+| `tyrowms/tyrowms.github.io` | Production deploy (GitHub Pages) |
 
-1. Push to `main` branch
-2. GitHub Actions builds with Vite
-3. Deploys to GitHub Pages automatically
+Push to `main` on the source repo triggers GitHub Actions, which builds the app and force-pushes the `dist/` output to `tyrowms/tyrowms.github.io`.
+
+### Automated (GitHub Actions)
+
+1. Push to `main` on `djeanker34/TYRO-WMSAgent`
+2. GitHub Actions builds with Vite (env vars from repo secrets)
+3. Built `dist/` is force-pushed to `tyrowms/tyrowms.github.io`
+4. GitHub Pages serves from `tyrowms.github.io`
+
+**Required secrets** in source repo:
+- `VITE_AZURE_CLIENT_ID`, `VITE_AZURE_TENANT_ID`, `VITE_DATAVERSE_URL`, `VITE_DATAVERSE_ENTITY` — build env vars
+- `DEPLOY_TOKEN` — GitHub PAT with `repo` scope for pushing to `tyrowms/tyrowms.github.io`
 
 **Live site:** [https://tyrowms.github.io](https://tyrowms.github.io)
 
@@ -103,7 +115,10 @@ This project includes a GitHub Actions workflow for automatic deployment:
 
 ```bash
 npm run build
-# Upload dist/ folder to any static hosting provider
+cd dist
+git init && git add -A
+git commit -m "deploy"
+git push -f https://github.com/tyrowms/tyrowms.github.io.git main
 ```
 
 ## Project Structure
