@@ -8,7 +8,8 @@ const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Pr
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","YLD-KON":"Konya","YLD-MUS":"Muş"};
 const CLL={"Adana":[37,35.33],"Adapazarı":[40.68,30.4],"Bandırma":[40.35,27.97],"Bursa":[40.19,29.06],"Çorum":[40.55,34.96],"Edirne":[41.68,26.56],"Gaziantep":[37.07,37.38],"Giresun":[40.91,38.39],"Hatay":[36.2,36.16],"İskenderun":[36.59,36.17],"İstanbul":[41.01,28.98],"İzmir":[38.42,27.14],"Karaman":[37.18,33.23],"Konya":[37.87,32.48],"Mersin":[36.81,34.64],"Muş":[38.74,41.49],"Ordu":[40.99,37.88],"Samsun":[41.29,36.33]};
-const fmt=n=>n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':String(Math.round(n));
+const fmt=n=>n>=1e12?(n/1e12).toFixed(1)+' Trilyon':n>=1e9?(n/1e9).toFixed(1)+' Milyar':n>=1e6?(n/1e6).toFixed(1)+' Milyon':n>=1e3?(n/1e3).toFixed(1)+' Bin':String(Math.round(n));
+const fmtTon=n=>{const t=n/1000;return t>=1e6?(t/1e6).toFixed(1)+' Milyon Ton':t>=1e3?(t/1e3).toFixed(1)+' Bin Ton':t>=1?Math.round(t)+' Ton':fN(n)+' kg';};
 const fN=n=>new Intl.NumberFormat('tr-TR').format(Math.round(n));
 const ac=d=>d<60?'#0d6e4f':d<90?'#16a34a':d<180?'#f5a623':d<365?'#ea580c':'#e5484d';
 const acBg=d=>d<60?'rgba(45,212,160,.1)':d<90?'rgba(22,163,74,.08)':d<180?'rgba(245,166,35,.08)':d<365?'rgba(234,88,12,.08)':'rgba(229,72,77,.08)';
@@ -466,12 +467,12 @@ export default function App(){
                 return(
                 <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(6,1fr)',gap:mob?8:10,marginBottom:mob?14:20}}>
                   {[
-                    {l:'Toplam Stok (kg)',v:fN(D.s.totalQty),cls:'blu',ic:<Package size={18}/>},
-                    {l:'Toplam Değer',v:'₺'+fN(D.s.totalVal),cls:'grn',ic:<TrendingUp size={18}/>},
+                    {l:'Toplam Stok',v:fmtTon(D.s.totalQty),cls:'blu',ic:<Package size={18}/>},
+                    {l:'Toplam Değer',v:'₺'+fmt(D.s.totalVal),cls:'grn',ic:<TrendingUp size={18}/>},
                     {l:'Tesis / Depo',v:D.s.facilityCount+' / '+D.s.whCount,cls:'pur',ic:<Building2 size={18}/>},
                     {l:'Aktif Ürün',v:String(D.s.prodCount),cls:'tel',ic:<Layers size={18}/>},
                     {l:'Ort. Yaşlanma (FIFO)',v:String(D.s.avgAge)+' gün',cls:'org',ic:<Clock size={18}/>},
-                    {l:'Kritik Stok (180+ gün)',v:fN(critQty),cls:'red',ic:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,sub:critPct+'% toplam stokun'},
+                    {l:'Kritik Stok (180+ gün)',v:fmtTon(critQty),cls:'red',ic:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,sub:critPct+'% toplam stokun'},
                   ].map((k,i)=>{const cc=clr(k.cls);return(
                     <div key={i} className="kp fu" style={{animationDelay:i*70+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'13px 14px',position:'relative',overflow:'hidden',boxShadow:$.sh}}>
                       <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,'+cc.c+',transparent)',opacity:.6,borderRadius:'12px 12px 0 0'}}/>
@@ -635,7 +636,7 @@ export default function App(){
                         <div style={{display:'flex',gap:4,alignItems:'flex-end',height:140}}>
                           {BK.map(b=>{const v=D.ag[b.k]||0;const pct=((v/tq)*100).toFixed(1);const h=Math.max(4,(v/mx)*110);return(
                             <div key={b.k} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2,minWidth:0,overflow:'hidden'}}>
-                              <span style={{fontSize:9,fontFamily:$.mo,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%',textAlign:'center'}}>{fN(v)} kg</span>
+                              <span style={{fontSize:9,fontFamily:$.mo,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'100%',textAlign:'center'}}>{fmtTon(v)}</span>
                               <span style={{fontSize:8.5,fontFamily:$.mo,color:b.c,fontWeight:600}}>{pct}%</span>
                               <div style={{width:'100%',borderRadius:6,background:b.c,opacity:.75,height:h,transition:'height .5s ease'}}/>
                               <span style={{fontSize:9,color:$.t3,fontWeight:500,whiteSpace:'nowrap'}}>{b.k}</span>
@@ -716,7 +717,7 @@ export default function App(){
                               <div style={{flex:1,height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
                                 <div style={{height:'100%',width:Math.min(100,(p.a/365)*100)+'%',borderRadius:5,background:ac(p.a),opacity:.6,transition:'width .5s'}}/>
                               </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t3,fontWeight:600,minWidth:55,textAlign:'right'}}>{fN(p.q)} kg</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t3,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmtTon(p.q)}</span>
                             </div>
                           </div>));})()}
                       </div>
@@ -730,7 +731,7 @@ export default function App(){
                       <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16}}>
                         <svg width="140" height="140" viewBox="0 0 140 140">
                           {donutSegs.map(s=><path key={s.k} d={arc(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8"/>)}
-                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fN(tVal)}</text>
+                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fmt(tVal)}</text>
                           <text x="70" y="82" textAnchor="middle" fontSize="9" fill={$.t3} fontWeight="500">{'Toplam Değer'}</text>
                         </svg>
                         <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
@@ -738,7 +739,7 @@ export default function App(){
                             <div key={s.k} style={{display:'flex',alignItems:'center',gap:6}}>
                               <div style={{width:8,height:8,borderRadius:3,background:s.c,flexShrink:0}}/>
                               <span style={{fontSize:11,color:$.t2,flex:1}}>{s.k} Gün</span>
-                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fN(s.v)}</span>
+                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
                             </div>))}
                         </div>
                       </div>
@@ -757,7 +758,7 @@ export default function App(){
                           <div key={p.n} style={{marginBottom:i<4?12:0}}>
                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                               <span style={{fontSize:11.5,fontWeight:600,color:$.t1,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fN(p.q)} kg</span>
+                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fmtTon(p.q)}</span>
                             </div>
                             <div style={{display:'flex',alignItems:'center',gap:8}}>
                               <div style={{flex:1,height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
@@ -788,7 +789,7 @@ export default function App(){
                               <div style={{flex:1,height:8,borderRadius:4,background:'rgba(0,0,0,.04)',overflow:'hidden'}}>
                                 <div style={{height:'100%',width:D.f.length>0?(r.count/D.f.length)*100+'%':'0%',borderRadius:4,background:r.c,opacity:.6,transition:'width .5s'}}/>
                               </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t2,fontWeight:600,minWidth:55,textAlign:'right'}}>{fN(r.qty)} kg</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t2,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmtTon(r.qty)}</span>
                             </div>
                           </div>))}
                       </div>
@@ -1233,7 +1234,7 @@ export default function App(){
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.5}}/></div>
-                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:60,textAlign:'right'}}>{fN(item.q)} kg</span>
+                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:60,textAlign:'right'}}>{fmtTon(item.q)}</span>
                         </div>
                       </div>);})}
                   </div>
@@ -1241,7 +1242,7 @@ export default function App(){
                   <div>
                     {/* Mini KPI */}
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
-                      {[{l:'Stok (kg)',v:fN(sd.tQ),c:$.blu,bg:$.bluB},{l:'Değer',v:'₺'+fN(sd.tV),c:'#0d6e4f',bg:$.grnB},{l:'Depo',v:sd.tWh,c:$.pur,bg:$.purB},{l:'Ürün',v:sd.tPc,c:$.org,bg:$.orgB}].map((k,i)=>(
+                      {[{l:'Stok',v:fmtTon(sd.tQ),c:$.blu,bg:$.bluB},{l:'Değer',v:'₺'+fmt(sd.tV),c:'#0d6e4f',bg:$.grnB},{l:'Depo',v:sd.tWh,c:$.pur,bg:$.purB},{l:'Ürün',v:sd.tPc,c:$.org,bg:$.orgB}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 13px'}}>
                           <div style={{fontSize:9,color:$.t3,textTransform:'uppercase',fontWeight:700,letterSpacing:1}}>{k.l}</div>
                           <div style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:$.mo,marginTop:3}}>{k.v}</div>
@@ -1277,7 +1278,7 @@ export default function App(){
                         <div style={{position:'absolute',top:0,left:0,bottom:0,width:3,background:ti.color,opacity:.5}}/>
                         <div style={{paddingLeft:8,fontWeight:700,fontSize:12,marginBottom:3}}>{f.n}</div>
                         <div style={{display:'flex',gap:10,paddingLeft:8,fontSize:11,color:$.t2}}>
-                          <span style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fN(f.q)} kg</span>
+                          <span style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fmtTon(f.q)}</span>
                           <span style={{marginLeft:'auto',fontFamily:$.mo,fontWeight:700,color:ac(f.a)}}>{f.a}g</span>
                           <ChevronRight size={13} color={$.t3}/>
                         </div>
@@ -1291,7 +1292,7 @@ export default function App(){
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:6}}>
                           <div style={{flex:1,height:4,borderRadius:2,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:Math.min(100,(w.q/(sd.whs[0]?.q||1))*100)+'%',borderRadius:2,background:ac(w.a),opacity:.45}}/></div>
-                          <span style={{fontSize:10,fontFamily:$.mo,color:$.t2,fontWeight:600}}>{fN(w.q)} kg</span>
+                          <span style={{fontSize:10,fontFamily:$.mo,color:$.t2,fontWeight:600}}>{fmtTon(w.q)}</span>
                         </div>
                       </div>))}
                   </div>
