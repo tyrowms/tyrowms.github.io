@@ -34,6 +34,48 @@ function buildD(rows){
   return{f,w,ct,ag,s:{totalQty:tQ,totalVal:tV,totalValUsd:tVU,facilityCount:f.length,whCount:w.length,prodCount:new Set(rows.map(r=>r[3])).size,avgAge:tQ>0?Math.round(f.reduce((s,x)=>s+x.a*x.q,0)/tQ):0,cityCount:ct.length}};
 }
 
+function verifyStock(rows){
+  if(!rows||rows.length===0)return null;
+  // 1) Raw sum of mserp_qty
+  const rawSum=rows.reduce((s,r)=>s+r[8],0);
+  // 2) Row count
+  const rowCount=rows.length;
+  // 3) Min / Max / Avg qty per row
+  const qtys=rows.map(r=>r[8]).filter(q=>q!==0);
+  const minQ=Math.min(...qtys);
+  const maxQ=Math.max(...qtys);
+  const avgQ=qtys.length>0?rawSum/qtys.length:0;
+  // 4) Rows with qty > 100000 (outliers)
+  const outliers=rows.map((r,i)=>({i,qty:r[8],item:r[3],site:r[9],wh:r[11],batch:r[13]})).filter(x=>x.qty>100000).sort((a,b)=>b.qty-a.qty).slice(0,10);
+  // 5) Duplicate check: same item+site+warehouse+batch
+  const dupes={};
+  rows.forEach((r,i)=>{const k=r[2]+'|'+r[9]+'|'+r[11]+'|'+r[13];if(!dupes[k])dupes[k]={key:k,rows:[],totalQty:0};dupes[k].rows.push(i);dupes[k].totalQty+=r[8];});
+  const dupGroups=Object.values(dupes).filter(d=>d.rows.length>1).sort((a,b)=>b.rows.length-a.rows.length).slice(0,10);
+  const dupRowCount=dupGroups.reduce((s,d)=>s+d.rows.length,0);
+  // 6) Top 10 items by total qty
+  const itemTotals={};
+  rows.forEach(r=>{const k=r[3]||r[2];if(!itemTotals[k])itemTotals[k]=0;itemTotals[k]+=r[8];});
+  const topItems=Object.entries(itemTotals).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([n,q])=>({n,q}));
+  // 7) Negative qty check
+  const negRows=rows.filter(r=>r[8]<0).length;
+  // 8) Zero qty rows
+  const zeroRows=rows.filter(r=>r[8]===0).length;
+
+  const result={rawSum,rowCount,minQ,maxQ,avgQ:Math.round(avgQ),outliers,dupGroups,dupRowCount,topItems,negRows,zeroRows};
+
+  // Console output for debugging
+  console.group('%c[STOK DOGRULAMA]','color:#0d6e4f;font-weight:bold;font-size:14px');
+  console.log(`Toplam Satır: ${fN(rowCount)}`);
+  console.log(`Toplam Miktar (Σ mserp_qty): ${fN(rawSum)}`);
+  console.log(`Min Qty: ${fN(minQ)} | Max Qty: ${fN(maxQ)} | Ort Qty: ${fN(Math.round(avgQ))}`);
+  console.log(`Sıfır Miktar Satır: ${zeroRows} | Negatif Miktar Satır: ${negRows}`);
+  if(outliers.length>0){console.warn(`Aşırı Büyük Miktar (>100K) — ${outliers.length} satır:`);console.table(outliers);}
+  if(dupGroups.length>0){console.warn(`Olası Mükerrer Satır (aynı Madde+Tesis+Depo+Parti) — ${dupGroups.length} grup, ${dupRowCount} satır:`);console.table(dupGroups.map(d=>({key:d.key,satirSayisi:d.rows.length,toplamMiktar:fN(d.totalQty)})));}
+  console.log('En Yüksek 10 Ürün:');console.table(topItems.map(t=>({urun:t.n,miktar:fN(t.q)})));
+  console.groupEnd();
+  return result;
+}
+
 function getL2(rows,filterFn){
   const m={};
   rows.filter(filterFn).forEach(r=>{const l2=r[17]||'Diğer';const q=r[8];const fifo=r[27];if(!m[l2])m[l2]={n:l2,q:0,td:0,tq:0};m[l2].q+=q;m[l2].td+=q*fifo;m[l2].tq+=q;});
@@ -108,6 +150,8 @@ export default function App(){
   const [repSearch,setRepSearch]=useState('');
   const [repSC,setRepSC]=useState('total'); // sort column: n, total, avg, or bucket key
   const [repSD,setRepSD]=useState(-1); // sort direction
+  const [stockVerify,setStockVerify]=useState(null);
+  const [showVerify,setShowVerify]=useState(false);
 
   // ─── MSAL Auth State ───
   const [msalReady,setMsalReady]=useState(false);
@@ -156,6 +200,8 @@ export default function App(){
     try{
       const{rows:newRows,rawRecords}=await fetchErpData(msalAccount,s=>setErpStatus(s));
       setRows(newRows);setSearch('');setSelRows(new Set());
+      // Run stock verification
+      setStockVerify(verifyStock(newRows));
       // Store raw records for ERP Verileri page — only approved fields
       if(rawRecords&&rawRecords.length>0){
         const fields=Object.keys(rawRecords[0]).filter(k=>!k.includes('@')&&!k.startsWith('_')&&ERP_KEEP.has(k));
@@ -188,7 +234,7 @@ export default function App(){
   const handleImport=(e)=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=(evt)=>{try{
     const doIt=()=>{const wb=window.XLSX.read(new Uint8Array(evt.target.result),{type:'array',cellDates:true});const json=window.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
     const imp=json.map(r=>[String(r['Şirket hesapları kodu']||''),String(r['Şirket adı']||''),String(r['Madde kodu']||''),String(r['Ürün adı']||''),String(r['Menşe']||''),String(r['Proje no']||''),String(r['Ambalaj tipi']||''),String(r['Gümrük durumu']||''),Math.round(Number(r['Miktar'])||0),String(r['Tesis']||''),String(r['Tesis adı']||''),String(r['Depo']||''),String(r['Ambar adı']||''),String(r['Parti numarası']||''),String(r['Seviye 1']||''),String(r['Seviye 1 Adı']||''),String(r['Seviye 2']||''),String(r['Seviye 2 Adı']||''),String(r['Seviye 3']||''),String(r['Seviye 3 Adı']||''),String(r['Seviye 4']||''),String(r['Seviye 4 Adı']||''),String(r['Seviye 5']||''),String(r['Seviye 5 Adı']||''),Math.round((Number(r['Birim fiyat (şirket para birimi)'])||0)*100)/100,Math.round((Number(r['Birim fiyat (raporlama para birimi)'])||0)*10000)/10000,Math.round((Number(r['PurchWEAV'])||0)*100)/100,Math.round(Number(r['PurchFIFO'])||0),Math.round(Number(r['PurchLIFO'])||0),Math.round(Number(r['ProdWEAV'])||0),Math.round(Number(r['ProdFIFO'])||0),Math.round(Number(r['ProdLIFO'])||0),Math.round(Number(r['Sitting in site day'])||0)]);
-    setRows(imp);setSearch('');setSelRows(new Set());};
+    setRows(imp);setSearch('');setSelRows(new Set());setStockVerify(verifyStock(imp));};
     if(window.XLSX)doIt();else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
   }catch(err){alert('Hata: '+err.message);}};reader.readAsArrayBuffer(file);e.target.value='';};
 
@@ -439,6 +485,117 @@ export default function App(){
                       <div style={{fontSize:10,color:$.t3,fontWeight:500}}>{k.sub||k.l}</div>
                     </div>);})}
                 </div>);})()}
+
+                {/* STOCK VERIFICATION PANEL */}
+                {stockVerify&&(
+                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:18,overflow:'hidden'}}>
+                  <div onClick={()=>setShowVerify(!showVerify)} style={{padding:'13px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',borderBottom:showVerify?'1px solid '+$.bdL:'none'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div style={{width:26,height:26,borderRadius:7,background:stockVerify.dupGroups.length>0||stockVerify.outliers.length>0?$.redB:$.acL,color:stockVerify.dupGroups.length>0||stockVerify.outliers.length>0?$.red:$.ac,display:'flex',alignItems:'center',justifyContent:'center'}}><Activity size={14}/></div>
+                      <span style={{fontSize:13,fontWeight:700,color:$.t1}}>Stok Doğrulama</span>
+                      {stockVerify.dupGroups.length>0&&<span style={{fontSize:9,fontWeight:700,color:$.red,background:$.redB,padding:'2px 8px',borderRadius:6}}>Mükerrer Var</span>}
+                      {stockVerify.outliers.length>0&&<span style={{fontSize:9,fontWeight:700,color:$.org,background:$.orgB,padding:'2px 8px',borderRadius:6}}>Aşırı Değer Var</span>}
+                      {stockVerify.dupGroups.length===0&&stockVerify.outliers.length===0&&<span style={{fontSize:9,fontWeight:700,color:$.ac,background:$.acL,padding:'2px 8px',borderRadius:6}}>Temiz</span>}
+                    </div>
+                    <ChevronRight size={16} style={{color:$.t3,transform:showVerify?'rotate(90deg)':'rotate(0deg)',transition:'transform .2s'}}/>
+                  </div>
+                  {showVerify&&(
+                  <div style={{padding:'14px 18px'}}>
+                    {/* Summary stats */}
+                    <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(4,1fr)',gap:10,marginBottom:16}}>
+                      {[
+                        {l:'Toplam Satır',v:fN(stockVerify.rowCount),c:$.blu},
+                        {l:'Σ mserp_qty',v:fN(stockVerify.rawSum),c:$.ac},
+                        {l:'Min / Max Qty',v:fN(stockVerify.minQ)+' / '+fN(stockVerify.maxQ),c:$.pur},
+                        {l:'Ort. Qty/Satır',v:fN(stockVerify.avgQ),c:$.tel},
+                      ].map((s,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:3}}>{s.l}</div>
+                          <div style={{fontSize:14,fontWeight:800,fontFamily:$.mo,color:s.c}}>{s.v}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Zero & negative */}
+                    <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap'}}>
+                      <div style={{fontSize:11,color:$.t2,display:'flex',alignItems:'center',gap:4}}>
+                        <span style={{fontWeight:700}}>Sıfır Miktar:</span>
+                        <span style={{fontFamily:$.mo,fontWeight:700,color:stockVerify.zeroRows>0?$.org:$.ac}}>{stockVerify.zeroRows} satır</span>
+                      </div>
+                      <div style={{fontSize:11,color:$.t2,display:'flex',alignItems:'center',gap:4}}>
+                        <span style={{fontWeight:700}}>Negatif Miktar:</span>
+                        <span style={{fontFamily:$.mo,fontWeight:700,color:stockVerify.negRows>0?$.red:$.ac}}>{stockVerify.negRows} satır</span>
+                      </div>
+                    </div>
+                    {/* Duplicates warning */}
+                    {stockVerify.dupGroups.length>0&&(
+                    <div style={{background:$.redB,border:'1px solid rgba(229,72,77,.2)',borderRadius:10,padding:'12px 14px',marginBottom:14}}>
+                      <div style={{fontSize:12,fontWeight:700,color:$.red,marginBottom:8}}>Olası Mükerrer Satırlar (Madde+Tesis+Depo+Parti aynı)</div>
+                      <div style={{fontSize:10,color:$.t2,marginBottom:6}}>Toplam {stockVerify.dupRowCount} satır, {stockVerify.dupGroups.length} grup</div>
+                      <div style={{maxHeight:150,overflow:'auto'}}>
+                        <table style={{width:'100%',fontSize:10,borderCollapse:'collapse'}}>
+                          <thead><tr style={{borderBottom:'1px solid rgba(229,72,77,.2)'}}>
+                            <th style={{textAlign:'left',padding:'4px 6px',fontWeight:700,color:$.t1}}>Madde|Tesis|Depo|Parti</th>
+                            <th style={{textAlign:'right',padding:'4px 6px',fontWeight:700,color:$.t1}}>Satır</th>
+                            <th style={{textAlign:'right',padding:'4px 6px',fontWeight:700,color:$.t1}}>Toplam Qty</th>
+                          </tr></thead>
+                          <tbody>{stockVerify.dupGroups.map((d,i)=>(
+                            <tr key={i} style={{borderBottom:'1px solid '+$.bdL}}>
+                              <td style={{padding:'4px 6px',fontFamily:$.mo,color:$.t2}}>{d.key}</td>
+                              <td style={{padding:'4px 6px',textAlign:'right',fontFamily:$.mo,fontWeight:700}}>{d.rows.length}</td>
+                              <td style={{padding:'4px 6px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:$.red}}>{fN(d.totalQty)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>)}
+                    {/* Outliers */}
+                    {stockVerify.outliers.length>0&&(
+                    <div style={{background:$.orgB,border:'1px solid rgba(245,166,35,.2)',borderRadius:10,padding:'12px 14px',marginBottom:14}}>
+                      <div style={{fontSize:12,fontWeight:700,color:$.org,marginBottom:8}}>Aşırı Büyük Miktar ({'>'}100.000)</div>
+                      <div style={{maxHeight:150,overflow:'auto'}}>
+                        <table style={{width:'100%',fontSize:10,borderCollapse:'collapse'}}>
+                          <thead><tr style={{borderBottom:'1px solid rgba(245,166,35,.2)'}}>
+                            <th style={{textAlign:'left',padding:'4px 6px',fontWeight:700,color:$.t1}}>Ürün</th>
+                            <th style={{textAlign:'left',padding:'4px 6px',fontWeight:700,color:$.t1}}>Tesis</th>
+                            <th style={{textAlign:'left',padding:'4px 6px',fontWeight:700,color:$.t1}}>Depo</th>
+                            <th style={{textAlign:'right',padding:'4px 6px',fontWeight:700,color:$.t1}}>Miktar</th>
+                          </tr></thead>
+                          <tbody>{stockVerify.outliers.map((o,i)=>(
+                            <tr key={i} style={{borderBottom:'1px solid '+$.bdL}}>
+                              <td style={{padding:'4px 6px',color:$.t2,maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{o.item}</td>
+                              <td style={{padding:'4px 6px',fontFamily:$.mo,color:$.t2}}>{o.site}</td>
+                              <td style={{padding:'4px 6px',fontFamily:$.mo,color:$.t2}}>{o.wh}</td>
+                              <td style={{padding:'4px 6px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:$.org}}>{fN(o.qty)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    </div>)}
+                    {/* Top 10 items */}
+                    <div style={{background:$.bg,borderRadius:10,padding:'12px 14px',border:'1px solid '+$.bdL}}>
+                      <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>En Yüksek 10 Ürün (Miktar)</div>
+                      <div style={{maxHeight:200,overflow:'auto'}}>
+                        {stockVerify.topItems.map((t,i)=>{const pct=stockVerify.rawSum>0?(t.q/stockVerify.rawSum*100):0;return(
+                          <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:i<stockVerify.topItems.length-1?'1px solid '+$.bdL:'none'}}>
+                            <span style={{fontSize:10,fontWeight:700,color:$.t3,width:16,textAlign:'right'}}>{i+1}</span>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:10.5,fontWeight:600,color:$.t1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.n}</div>
+                              <div style={{height:4,borderRadius:2,background:$.bdL,marginTop:3}}>
+                                <div style={{height:'100%',borderRadius:2,background:$.ac,width:Math.max(pct,0.5)+'%',transition:'width .3s'}}/>
+                              </div>
+                            </div>
+                            <div style={{textAlign:'right',flexShrink:0}}>
+                              <div style={{fontSize:11,fontWeight:800,fontFamily:$.mo,color:$.t1}}>{fmt(t.q)}</div>
+                              <div style={{fontSize:8.5,fontWeight:600,fontFamily:$.mo,color:$.t3}}>{pct.toFixed(1)}%</div>
+                            </div>
+                          </div>);})}
+                      </div>
+                    </div>
+                    <div style={{marginTop:12,fontSize:9.5,color:$.t3,fontStyle:'italic'}}>
+                      Detaylı doğrulama logları için tarayıcı konsolunu açın (F12). Formül: Toplam Stok = Σ mserp_qty (her satır alt alta toplanır)
+                    </div>
+                  </div>)}
+                </div>)}
 
                 {/* MAP */}
                 <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:18,overflow:'hidden'}}>
