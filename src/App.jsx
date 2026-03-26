@@ -18,7 +18,7 @@ const acBg=d=>d<60?'rgba(45,212,160,.1)':d<90?'rgba(22,163,74,.08)':d<180?'rgba(
 const TI={own:{color:'#0d6e4f',label:'Öz Tesis'},fason:{color:'#8b5cf6',label:'Fason'},dis:{color:'#3b82f6',label:'Dış Tesis'},disticaret:{color:'#f5a623',label:'Dış Ticaret'}};
 const gC=c=>{if(CTM[c])return CTM[c];const p=c.split('-')[0];return CTM[p]||Object.entries(CTM).find(([k])=>c.includes(k))?.[1]||'Yurtdışı';};
 const gT=c=>{if(!c)return'dis';const u=c.toUpperCase();if(u.includes('FSN'))return'fason';if(u==='DISTICARET'||u.includes('DTC'))return'disticaret';if(u.startsWith('TRY-')||u.startsWith('YLD-'))return'own';return'dis';};
-const CGRP={'TAND':'Tiryaki Anadolu','TGFZ':'Tiryaki Anadolu','TSHY':'Tiryaki Anadolu','DNSG':'Tiryaki Anadolu','DPFZ':'Tiryaki Anadolu','THSG':'Tiryaki Anadolu','DANE':'Tiryaki Anadolu','ENUT':'Tiryaki Anadolu','LNUT':'Tiryaki Anadolu','LNCN':'Tiryaki Anadolu','DLDN':'Tiryaki Anadolu','LNFZ':'Tiryaki Anadolu','LSGA':'Tiryaki Anadolu','DYLD':'Tiryaki Anadolu','DLDP':'Tiryaki Anadolu','TSRY':'Tiryaki Anadolu','SUHO':'Tiryaki E.M','SAMA':'Tiryaki E.M','MESQ':'Tiryaki E.M','MFZC':'Tiryaki E.M','HFLT':'Tiryaki E.M','HNLT':'Tiryaki E.M','TOGO':'Tiryaki E.M','TGAN':'Tiryaki E.M','GANA':'Tiryaki E.M','NOVA':'Tiryaki E.M','TNGA':'Tiryaki E.M','DMES':'Tiryaki E.M','DTRK':'Tiryaki E.M','DARG':'Tiryaki E.M','AFZE':'Tiryaki E.M','SARG':'Tiryaki E.M','TARG':'Tiryaki E.M','MERC':'Tiryaki E.M','VMES':'Tiryaki E.M','TMES':'Tiryaki E.M','SRCA':'Tiryaki Organics','SRNL':'Tiryaki Organics','SRUS':'Tiryaki Organics','SRDE':'Tiryaki Organics','SRIL':'Tiryaki Organics','GPOR':'Tiryaki Organics','GLON':'Tiryaki Organics','DSSM':'Tiryaki Organics','DDIA':'Tiryaki Organics','DSSA':'Tiryaki Organics','DIAS':'Tiryaki Organics','TTEC':'Tiryaki Strategic Services','DNAI':'Tiryaki Strategic Services','DTFZ':'Tiryaki Strategic Services','EDGA':'Tiryaki Energy','EGNY':'Tiryaki Energy','EGNS':'Tiryaki Energy','EHUR':'Tiryaki Energy','ENIL':'Tiryaki Energy','EOKL':'Tiryaki Energy','EOZB':'Tiryaki Energy','ESFZ':'Tiryaki Energy','ETRY':'Tiryaki Energy','DTGT':'Tiryaki Energy','EYIL':'Tiryaki Energy','EYZY':'Tiryaki Energy','ASET':'Tiryaki Holding','DHDG':'Tiryaki Holding','MAEP':'Tiryaki Holding','MEFA':'Tiryaki Holding','DTMX':'Tiryaki Holding'};
+const CGRP={'TAND':'Tiryaki Anadolu','TGFZ':'Tiryaki Anadolu','TSHY':'Tiryaki Anadolu','DNSG':'Tiryaki Anadolu','DPFZ':'Tiryaki Anadolu','THSG':'Tiryaki Anadolu','DANE':'Tiryaki Anadolu','ENUT':'Tiryaki Anadolu','LNUT':'Tiryaki Anadolu','LNCN':'Tiryaki Anadolu','DLDN':'Tiryaki Anadolu','LNFZ':'Tiryaki Anadolu','LSGA':'Tiryaki Anadolu','DYLD':'Tiryaki Anadolu','DLDP':'Tiryaki Anadolu','TSRY':'Tiryaki Anadolu','SUHO':'Tiryaki Emerging Markets','SAMA':'Tiryaki Emerging Markets','MESQ':'Tiryaki Emerging Markets','MFZC':'Tiryaki Emerging Markets','HFLT':'Tiryaki Emerging Markets','HNLT':'Tiryaki Emerging Markets','TOGO':'Tiryaki Emerging Markets','TGAN':'Tiryaki Emerging Markets','GANA':'Tiryaki Emerging Markets','NOVA':'Tiryaki Emerging Markets','TNGA':'Tiryaki Emerging Markets','DMES':'Tiryaki Emerging Markets','DTRK':'Tiryaki Emerging Markets','DARG':'Tiryaki Emerging Markets','AFZE':'Tiryaki Emerging Markets','SARG':'Tiryaki Emerging Markets','TARG':'Tiryaki Emerging Markets','MERC':'Tiryaki Emerging Markets','VMES':'Tiryaki Emerging Markets','TMES':'Tiryaki Emerging Markets','SRCA':'Tiryaki Organics','SRNL':'Tiryaki Organics','SRUS':'Tiryaki Organics','SRDE':'Tiryaki Organics','SRIL':'Tiryaki Organics','GPOR':'Tiryaki Organics','GLON':'Tiryaki Organics','DSSM':'Tiryaki Organics','DDIA':'Tiryaki Organics','DSSA':'Tiryaki Organics','DIAS':'Tiryaki Organics','TTEC':'Tiryaki Strategic Services','DNAI':'Tiryaki Strategic Services','DTFZ':'Tiryaki Strategic Services','EDGA':'Tiryaki Energy','EGNY':'Tiryaki Energy','EGNS':'Tiryaki Energy','EHUR':'Tiryaki Energy','ENIL':'Tiryaki Energy','EOKL':'Tiryaki Energy','EOZB':'Tiryaki Energy','ESFZ':'Tiryaki Energy','ETRY':'Tiryaki Energy','DTGT':'Tiryaki Energy','EYIL':'Tiryaki Energy','EYZY':'Tiryaki Energy','ASET':'Tiryaki Holding','DHDG':'Tiryaki Holding','MAEP':'Tiryaki Holding','MEFA':'Tiryaki Holding','DTMX':'Tiryaki Holding'};
 const gGrp=code=>{if(!code)return'Diğer';const u=code.toUpperCase().trim();return CGRP[u]||'Diğer';};
 const BK=[{k:'0-30',c:'#0d6e4f'},{k:'31-60',c:'#16a34a'},{k:'61-90',c:'#65a30d'},{k:'91-120',c:'#f5a623'},{k:'121-180',c:'#ea580c'},{k:'181-365',c:'#e5484d'},{k:'365+',c:'#991b1b'}];
 
@@ -107,9 +107,24 @@ export default function App(){
   const [rows,setRows]=useState(()=>{try{const s=localStorage.getItem('tyrowms_rows');if(s){const p=JSON.parse(s);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return INIT;});
   useEffect(()=>{try{if(rows.length>0)localStorage.setItem('tyrowms_rows',JSON.stringify(rows));else localStorage.removeItem('tyrowms_rows');}catch(e){}},[rows]);
   const [gSearch,setGSearch]=useState('');
+  const [gSearchFocus,setGSearchFocus]=useState(false);
   const GS_IDX=[1,3,4,10,12,15,17,19,21,23]; // searchable text column indices
-  const gRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))));},[rows,gSearch]);
+  const gRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[rows,gSearch]);
   const D=useMemo(()=>buildD(gRows),[gRows]);
+  const gSuggestions=useMemo(()=>{
+    if(!gSearch.trim()||rows.length===0)return[];
+    const t=gSearch.toLowerCase();
+    const cats=[
+      {id:'grp',l:'Grup',icon:'layers',vals:[...new Set(rows.map(r=>gGrp(r[0])))]},
+      {id:'comp',l:'Şirket',icon:'building',vals:[...new Set(rows.map(r=>r[1]||r[0]||''))]},
+      {id:'prod',l:'Ürün',icon:'package',vals:[...new Set(rows.map(r=>r[3]||''))]},
+      {id:'fac',l:'Tesis',icon:'map-pin',vals:[...new Set(rows.map(r=>r[10]||''))]},
+      {id:'l2',l:'Seviye 2',icon:'git-branch',vals:[...new Set(rows.map(r=>r[17]||''))]},
+      {id:'l3',l:'Seviye 3',icon:'git-merge',vals:[...new Set(rows.map(r=>r[19]||''))]},
+      {id:'origin',l:'Menşe',icon:'globe',vals:[...new Set(rows.map(r=>r[4]||''))]},
+    ];
+    return cats.map(c=>({...c,matches:c.vals.filter(v=>v&&v.toLowerCase().includes(t)).slice(0,5)})).filter(c=>c.matches.length>0);
+  },[rows,gSearch]);
   const [mob,setMob]=useState(typeof window!=='undefined'&&window.innerWidth<768);
   const [sbOpen,setSbOpen]=useState(false);
   const [sbPinned,setSbPinned]=useState(false);
@@ -496,8 +511,24 @@ export default function App(){
           {/* Global Search */}
           <div style={{position:'relative',width:'100%',maxWidth:mob?170:340,flex:1,margin:'0 auto'}}>
             <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
-            <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
+            <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
             {gSearch&&<div onClick={()=>{setGSearch('');}} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:18,height:18,borderRadius:9,background:'rgba(0,0,0,.1)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={10} color="#636366"/></div>}
+            {/* Categorized suggestions dropdown */}
+            {gSearchFocus&&gSearch.trim()&&gSuggestions.length>0&&(
+              <div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:6,background:'#fff',borderRadius:14,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.12)',zIndex:100,maxHeight:360,overflowY:'auto',padding:'8px 0'}}>
+                {gSuggestions.map(cat=>(
+                  <div key={cat.id}>
+                    <div style={{padding:'6px 14px 4px',fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5}}>{cat.l}</div>
+                    {cat.matches.map(m=>(
+                      <div key={m} onMouseDown={e=>{e.preventDefault();setGSearch(m);setGSearchFocus(false);}} style={{padding:'7px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,transition:'background .15s'}} className="rh">
+                        <span style={{fontSize:9,fontWeight:700,color:'#fff',background:$.ac,padding:'1px 6px',borderRadius:4,flexShrink:0}}>{cat.l}</span>
+                        <span style={{fontSize:12,fontWeight:500,color:$.t1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(rows.length)}</div>}
           {/* ERP Status */}
