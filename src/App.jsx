@@ -104,7 +104,8 @@ const SegBar=({ag,total,h,rd})=>{const tq=total||1;const hh=h||10;const rr=rd||5
 );};
 
 export default function App(){
-  const [rows,setRows]=useState(INIT);
+  const [rows,setRows]=useState(()=>{try{const s=localStorage.getItem('tyrowms_rows');if(s){const p=JSON.parse(s);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return INIT;});
+  useEffect(()=>{try{if(rows.length>0)localStorage.setItem('tyrowms_rows',JSON.stringify(rows));else localStorage.removeItem('tyrowms_rows');}catch(e){}},[rows]);
   const [gSearch,setGSearch]=useState('');
   const GS_IDX=[1,3,4,10,12,15,17,19,21,23]; // searchable text column indices
   const gRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))));},[rows,gSearch]);
@@ -294,80 +295,97 @@ export default function App(){
   // LOGIN SCREEN — Apple iOS Glassmorphism
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(MSAL_ENABLED&&!msalAccount){
+    const features=[
+      {icon:BarChart3,t:'Gerçek Zamanlı Dashboard',d:'Tüm depo ve tesislerin anlık stok durumu, yaşlanma analizi ve KPI takibi'},
+      {icon:MapPin,t:'Coğrafi Görünürlük',d:'Türkiye haritası üzerinde tesis bazlı stok dağılımı ve ısı haritası'},
+      {icon:Eye,t:'AI Destekli İçgörüler',d:'Yapay zeka ile stok optimizasyonu, risk tespiti ve aksiyon önerileri'},
+      {icon:ShieldAlert,t:'Risk Radarı',d:'Kritik yaşlanma uyarıları, FIFO analizi ve erken müdahale sistemi'},
+    ];
     return(
-      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#f8fafb',position:'relative',overflow:'hidden'}}>
+      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',background:'#f8fafb',position:'relative',overflow:'hidden'}}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
         <style>{`
           @keyframes liquidA{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(40px,-50px) scale(1.1) rotate(10deg)}66%{transform:translate(-20px,30px) scale(.95) rotate(-5deg)}}
           @keyframes liquidB{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(-50px,40px) scale(1.15) rotate(-8deg)}66%{transform:translate(30px,-20px) scale(.9) rotate(12deg)}}
           @keyframes liquidC{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,35px) scale(1.08)}}
           @keyframes splashFadeUp{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-          .login-btn:hover{transform:scale(1.02)!important;box-shadow:0 8px 30px rgba(13,110,79,.25)!important}
+          @keyframes fadeInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+          @keyframes featureIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+          .login-btn:hover{transform:scale(1.02)!important;box-shadow:0 8px 30px rgba(99,102,241,.35)!important}
           .login-btn:active{transform:scale(.98)!important}
+          @keyframes auroraBorder{0%{border-color:rgba(45,212,160,.4)}25%{border-color:rgba(59,130,246,.4)}50%{border-color:rgba(139,92,246,.4)}75%{border-color:rgba(6,182,212,.4)}100%{border-color:rgba(45,212,160,.4)}}
+          .feat-card:hover{background:rgba(255,255,255,.7)!important}
+          .login-card{transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s ease}
+          .login-card:hover{transform:translateY(-4px);box-shadow:0 24px 60px rgba(13,110,79,.12),0 8px 24px rgba(99,102,241,.1)!important}
         `}</style>
 
         {/* Liquid gradient blobs */}
-        <div style={{position:'absolute',width:500,height:500,borderRadius:'40% 60% 70% 30%/40% 50% 60% 50%',background:'linear-gradient(135deg,rgba(13,110,79,.2),rgba(45,212,160,.15))',top:'-15%',right:'-10%',animation:'liquidA 15s ease-in-out infinite',filter:'blur(60px)'}}/>
-        <div style={{position:'absolute',width:450,height:450,borderRadius:'60% 40% 30% 70%/50% 60% 40% 50%',background:'linear-gradient(135deg,rgba(59,130,246,.15),rgba(139,92,246,.1))',bottom:'-12%',left:'-8%',animation:'liquidB 18s ease-in-out infinite',filter:'blur(60px)'}}/>
+        <div style={{position:'absolute',width:500,height:500,borderRadius:'40% 60% 70% 30%/40% 50% 60% 50%',background:'linear-gradient(135deg,rgba(13,110,79,.15),rgba(45,212,160,.1))',top:'-15%',right:'-10%',animation:'liquidA 15s ease-in-out infinite',filter:'blur(60px)'}}/>
+        <div style={{position:'absolute',width:450,height:450,borderRadius:'60% 40% 30% 70%/50% 60% 40% 50%',background:'linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.08))',bottom:'-12%',left:'-8%',animation:'liquidB 18s ease-in-out infinite',filter:'blur(60px)'}}/>
         <div style={{position:'absolute',width:300,height:300,borderRadius:'50% 60% 40% 70%/60% 40% 60% 40%',background:'linear-gradient(135deg,rgba(13,110,79,.06),rgba(45,212,160,.08))',top:'50%',left:'50%',marginLeft:-150,marginTop:-150,animation:'liquidC 12s ease-in-out infinite',filter:'blur(50px)'}}/>
 
-        {/* Main glass card */}
-        <div style={{textAlign:'center',padding:'2.5rem 2.5rem 2rem',background:'rgba(255,255,255,.55)',borderRadius:28,maxWidth:420,width:'88%',border:'1px solid rgba(255,255,255,.6)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',boxShadow:'0 20px 60px rgba(13,110,79,.08),0 1px 3px rgba(13,110,79,.05)',animation:'splashFadeUp .7s cubic-bezier(.4,0,.2,1)',position:'relative',zIndex:2}}>
+        {/* Content — single flex row */}
+        <div style={{position:'relative',zIndex:1,minHeight:'100vh',display:'flex',alignItems:'center',padding:'3rem 4rem'}}>
 
-          {/* 3D Warehouse Icon */}
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{marginBottom:8}}>
-            <defs>
-              <linearGradient id="wg1" x1="8" y1="56" x2="56" y2="8"><stop offset="0%" stopColor="#0d6e4f"/><stop offset="100%" stopColor="#2dd4a0"/></linearGradient>
-              <linearGradient id="wg2" x1="16" y1="48" x2="48" y2="16"><stop offset="0%" stopColor="#0a5a40"/><stop offset="100%" stopColor="#16a34a"/></linearGradient>
-              <linearGradient id="wg3" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stopColor="#134E5E" stopOpacity=".15"/><stop offset="100%" stopColor="#2dd4a0" stopOpacity=".08"/></linearGradient>
-            </defs>
-            {/* Floor / base shadow */}
-            <ellipse cx="32" cy="58" rx="24" ry="4" fill="url(#wg3)"/>
-            {/* Back wall */}
-            <path d="M12 22 L32 12 L52 22 L52 48 L32 56 L12 48Z" fill="url(#wg1)" opacity=".12"/>
-            {/* Left wall */}
-            <path d="M12 22 L32 32 L32 56 L12 48Z" fill="url(#wg1)" opacity=".85"/>
-            {/* Right wall */}
-            <path d="M52 22 L32 32 L32 56 L52 48Z" fill="url(#wg2)" opacity=".65"/>
-            {/* Roof */}
-            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="#2dd4a0" opacity=".9"/>
-            {/* Roof highlight */}
-            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="url(#wg3)" opacity=".5"/>
-            {/* Door */}
-            <path d="M27 56 L27 42 Q27 40 29 40 L35 40 Q37 40 37 42 L37 56Z" fill="#134E5E" opacity=".7"/>
-            <circle cx="35" cy="48" r="1" fill="#2dd4a0"/>
-            {/* Left shelf lines */}
-            <line x1="15" y1="32" x2="30" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".35"/>
-            <line x1="15" y1="37" x2="30" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
-            {/* Right shelf lines */}
-            <line x1="49" y1="32" x2="34" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
-            <line x1="49" y1="37" x2="34" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".18"/>
-            {/* Small boxes on left */}
-            <rect x="16" y="29" width="4" height="3" rx="0.5" fill="#fff" opacity=".3" transform="skewY(25) translate(0,-12)"/>
-            <rect x="21" y="29" width="3" height="3" rx="0.5" fill="#2dd4a0" opacity=".35" transform="skewY(25) translate(0,-12)"/>
-          </svg>
+          {/* Left — Brand & Features */}
+          <div style={{flex:1,maxWidth:520,animation:'fadeInLeft .8s cubic-bezier(.4,0,.2,1)'}}>
+            {/* Logo + Name */}
+            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:40}}>
+              <svg width="50" height="50" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 2px 8px rgba(99,102,241,.2))'}}>
+                <defs>
+                  <linearGradient id="tyro-lg2" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#2dd4a0"/><stop offset="1" stopColor="#0d6e4f"/></linearGradient>
+                  <linearGradient id="tyro-la2" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#3b82f6"/><stop offset=".5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
+                </defs>
+                <path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#tyro-lg2)"/>
+                <path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/>
+                <path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#tyro-la2)"/>
+                <path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/>
+              </svg>
+              <div style={{fontWeight:800,fontSize:26,letterSpacing:.3,lineHeight:1.1}}><span style={{color:'#1a2332'}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
+            </div>
 
-          {/* Title */}
-          <div style={{marginBottom:6}}>
-            <div style={{color:'#1a2332',fontWeight:800,fontSize:26,letterSpacing:.3,lineHeight:1.1}}>TYRO</div>
-            <div style={{color:'#0d6e4f',fontSize:10.5,fontWeight:700,letterSpacing:3,textTransform:'uppercase',marginTop:3}}>WMS AGENT</div>
+            <h1 style={{fontSize:42,fontWeight:800,color:'#1a2332',lineHeight:1.2,letterSpacing:-.5,margin:'0 0 14px'}}>Dijital Depo<br/><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Yönetim Ajanı</span></h1>
+            <p style={{fontSize:15,color:'#6b7a8d',fontWeight:500,lineHeight:1.7,margin:'0 0 40px',maxWidth:440}}>Tiryaki Agro stok yaşlandırma verilerinizi gerçek zamanlı izleyin, AI destekli içgörülerle operasyonel verimliliği artırın.</p>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              {features.map((f,i)=>(
+                <div key={i} className="feat-card" style={{padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.5)',border:'1.5px solid rgba(45,212,160,.4)',backdropFilter:'blur(12px)',transition:'all .25s',animation:`featureIn .6s cubic-bezier(.4,0,.2,1) ${.15+i*.1}s both, auroraBorder 4s ease infinite ${i*.8}s`}}>
+                  <f.icon size={18} color="#0d6e4f" style={{marginBottom:8}}/>
+                  <div style={{fontSize:13.5,fontWeight:700,color:'#1a2332',marginBottom:4}}>{f.t}</div>
+                  <div style={{fontSize:11.5,color:'#6b7a8d',fontWeight:500,lineHeight:1.5}}>{f.d}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{marginTop:48}}>
+              <p style={{fontSize:10.5,fontWeight:700,letterSpacing:2.5,margin:0,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',opacity:.5}}>TTECH BUSINESS SOLUTIONS</p>
+              <p style={{fontSize:9.5,margin:'6px 0 0',fontWeight:500,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',opacity:.35}}>{'© 2026 Tiryaki Agro — Tüm hakları saklıdır.'}</p>
+            </div>
           </div>
 
-          <p style={{fontSize:12.5,color:'#5a6b7f',margin:'.4rem 0 2rem',fontWeight:500,lineHeight:1.5}}>Dijital Depo Yönetimi Ajanı</p>
-
-          {/* Microsoft Login Button */}
-          <button className="login-btn" onClick={handleLogin} disabled={authLoading||!msalReady} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'14px 24px',borderRadius:14,border:'none',cursor:(authLoading||!msalReady)?'wait':'pointer',background:'linear-gradient(135deg,#0d6e4f,#0a5a40)',color:'#fff',fontSize:14,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",transition:'all .25s cubic-bezier(.4,0,.2,1)',boxShadow:'0 4px 16px rgba(13,110,79,.3)',opacity:(authLoading||!msalReady)?0.6:1}}>
-            <svg width="18" height="18" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-            {authLoading?'Giriş yapılıyor...':'Microsoft ile Giriş Yap'}
-          </button>
-
-          <p style={{fontSize:11.5,color:'#6b7a8d',marginTop:16,fontWeight:500}}>Tiryaki kurumsal hesabınız ile giriş yapın</p>
-        </div>
-
-        {/* TTECH Footer */}
-        <div style={{marginTop:'2rem',textAlign:'center',position:'relative',zIndex:2}}>
-          <p style={{fontSize:11.5,fontWeight:700,color:'rgba(13,110,79,.6)',fontFamily:"'Plus Jakarta Sans',sans-serif",letterSpacing:2.5,margin:'0 0 .4rem'}}>TTECH BUSINESS SOLUTIONS</p>
-          <p style={{fontSize:10.5,color:'rgba(26,35,50,.45)',margin:0,fontWeight:500}}>{'© 2026 Tiryaki Agro — Tüm hakları saklıdır.'}</p>
+          {/* Right — Login Card */}
+          <div className="login-card" style={{textAlign:'center',padding:'3.5rem 3rem 3rem',background:'rgba(255,255,255,.55)',borderRadius:28,width:460,flexShrink:0,marginLeft:'auto',marginRight:'6%',border:'1px solid rgba(255,255,255,.6)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',boxShadow:'0 20px 60px rgba(13,110,79,.08),0 1px 3px rgba(13,110,79,.05)',animation:'splashFadeUp .7s cubic-bezier(.4,0,.2,1)'}}>
+            <svg width="64" height="64" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{marginBottom:12}}>
+              <defs>
+                <linearGradient id="tyro-lg3" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#2dd4a0"/><stop offset="1" stopColor="#0d6e4f"/></linearGradient>
+                <linearGradient id="tyro-la3" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#3b82f6"/><stop offset=".5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
+              </defs>
+              <path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#tyro-lg3)"/>
+              <path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/>
+              <path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#tyro-la3)"/>
+              <path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/>
+            </svg>
+            <div style={{marginBottom:6}}>
+              <div style={{fontWeight:800,fontSize:28,letterSpacing:.3,lineHeight:1.1}}><span style={{color:'#1a2332'}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
+            </div>
+            <p style={{fontSize:16,margin:'.8rem 0 .4rem',fontWeight:600,color:'#1a2332'}}>Hoş geldiniz</p>
+            <p style={{fontSize:13,margin:'0 0 2.5rem',fontWeight:500,color:'#6b7a8d'}}>Devam etmek için kurumsal hesabınızla giriş yapın</p>
+            <button className="login-btn" onClick={handleLogin} disabled={authLoading||!msalReady} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'16px 24px',borderRadius:14,border:'none',cursor:(authLoading||!msalReady)?'wait':'pointer',background:'linear-gradient(135deg,#3b82f6,#6366f1,#8b5cf6)',color:'#fff',fontSize:15,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",transition:'all .25s cubic-bezier(.4,0,.2,1)',boxShadow:'0 4px 16px rgba(99,102,241,.3)',opacity:(authLoading||!msalReady)?0.6:1}}>
+              <svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+              {authLoading?'Giriş yapılıyor...':'Microsoft ile Giriş Yap'}
+            </button>
+            <p style={{fontSize:12,color:'#94a3b8',marginTop:18,fontWeight:500}}>Tiryaki kurumsal hesabınız ile giriş yapın</p>
+          </div>
         </div>
       </div>
     );
@@ -383,30 +401,18 @@ export default function App(){
       {mob&&sbOpen&&<div className="mob-ov" onClick={()=>setSbOpen(false)}/>}
       <div className={mob?'mob-sb':''} onMouseEnter={()=>{if(!mob&&!sbPinned){clearTimeout(sbTimerRef.current);setSbHov(true);}}} onMouseLeave={()=>{if(!mob&&!sbPinned){sbTimerRef.current=setTimeout(()=>setSbHov(false),250);}}} style={{width:sbExpanded?250:60,minWidth:sbExpanded?250:60,background:'rgba(255,255,255,.95)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',display:mob&&!sbOpen?'none':'flex',flexDirection:'column',flexShrink:0,borderRadius:mob?0:18,border:'1px solid rgba(226,231,238,.35)',margin:mob?0:'10px 0 10px 10px',transition:mob?'none':'width .25s cubic-bezier(.4,0,.2,1), min-width .25s cubic-bezier(.4,0,.2,1)',overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,.04)',...(mob?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'4px 0 24px rgba(0,0,0,.15)'}:{})}}>
         <div style={{padding:sbExpanded?'10px 20px 16px':'10px 11px 16px',display:'flex',alignItems:'center',gap:12,position:'relative'}}>
-          <svg width="38" height="38" viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
+          <svg width="32" height="32" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
             <defs>
-              <linearGradient id="sbwg1" x1="8" y1="56" x2="56" y2="8"><stop offset="0%" stopColor="#0d6e4f"/><stop offset="100%" stopColor="#2dd4a0"/></linearGradient>
-              <linearGradient id="sbwg2" x1="16" y1="48" x2="48" y2="16"><stop offset="0%" stopColor="#0a5a40"/><stop offset="100%" stopColor="#16a34a"/></linearGradient>
-              <linearGradient id="sbwg3" x1="0" y1="0" x2="64" y2="64"><stop offset="0%" stopColor="#134E5E" stopOpacity=".15"/><stop offset="100%" stopColor="#2dd4a0" stopOpacity=".08"/></linearGradient>
+              <linearGradient id="tyro-sg" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#2dd4a0"/><stop offset="1" stopColor="#0d6e4f"/></linearGradient>
+              <linearGradient id="tyro-au" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#3b82f6"/><stop offset=".5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
             </defs>
-            <ellipse cx="32" cy="58" rx="24" ry="4" fill="url(#sbwg3)"/>
-            <path d="M12 22 L32 12 L52 22 L52 48 L32 56 L12 48Z" fill="url(#sbwg1)" opacity=".12"/>
-            <path d="M12 22 L32 32 L32 56 L12 48Z" fill="url(#sbwg1)" opacity=".85"/>
-            <path d="M52 22 L32 32 L32 56 L52 48Z" fill="url(#sbwg2)" opacity=".65"/>
-            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="#2dd4a0" opacity=".9"/>
-            <path d="M12 22 L32 12 L52 22 L32 32Z" fill="url(#sbwg3)" opacity=".5"/>
-            <path d="M27 56 L27 42 Q27 40 29 40 L35 40 Q37 40 37 42 L37 56Z" fill="#134E5E" opacity=".7"/>
-            <circle cx="35" cy="48" r="1" fill="#2dd4a0"/>
-            <line x1="15" y1="32" x2="30" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".35"/>
-            <line x1="15" y1="37" x2="30" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
-            <line x1="49" y1="32" x2="34" y2="38" stroke="#fff" strokeWidth="0.7" opacity=".25"/>
-            <line x1="49" y1="37" x2="34" y2="43" stroke="#fff" strokeWidth="0.7" opacity=".18"/>
-            <rect x="16" y="29" width="4" height="3" rx="0.5" fill="#fff" opacity=".3" transform="skewY(25) translate(0,-12)"/>
-            <rect x="21" y="29" width="3" height="3" rx="0.5" fill="#2dd4a0" opacity=".35" transform="skewY(25) translate(0,-12)"/>
+            <path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#tyro-sg)"/>
+            <path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/>
+            <path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#tyro-au)"/>
+            <path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/>
           </svg>
           {sbExpanded&&<div style={{minWidth:0}}>
-            <div style={{color:$.t1,fontWeight:800,fontSize:16,letterSpacing:.3,lineHeight:1.1}}>TYRO</div>
-            <div style={{color:$.ac,fontSize:9.5,fontWeight:700,letterSpacing:2.5,textTransform:'uppercase',marginTop:2}}>WMS AGENT</div>
+            <div style={{fontWeight:800,fontSize:16,letterSpacing:.3,lineHeight:1.1}}><span style={{color:$.t1}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
           </div>}
           {sbExpanded&&!mob&&<div onClick={()=>{setSbPinned(p=>!p);setSbHov(false);}} title={sbPinned?'Sidebar\'ı serbest bırak':'Sidebar\'ı sabitle'} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)'+(sbPinned?' rotate(0deg)':' rotate(45deg)'),cursor:'pointer',width:26,height:26,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',background:sbPinned?'rgba(13,110,79,.08)':'rgba(0,0,0,.04)',transition:'all .2s',color:sbPinned?$.ac:'#86868b'}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
@@ -441,14 +447,14 @@ export default function App(){
         {MSAL_ENABLED&&msalAccount&&(
           <div style={{padding:sbExpanded?'10px 12px':'10px 8px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
             {sbExpanded?<div onClick={()=>setProfileOpen(p=>!p)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:10,cursor:'pointer',background:profileOpen?'rgba(13,110,79,.06)':'transparent',transition:'all .2s'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(13,110,79,.25)',flexShrink:0}}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(99,102,241,.3)',flexShrink:0}}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:11.5,fontWeight:600,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2}}>{msalAccount.name||msalAccount.username}</div>
                 <div style={{fontSize:9.5,color:$.t3,marginTop:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{msalAccount.username}</div>
               </div>
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{flexShrink:0,transition:'transform .2s',transform:profileOpen?'rotate(180deg)':'rotate(0)'}}><path d="M1 1L5 5L9 1" stroke={$.t3} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>:<div style={{display:'flex',justifyContent:'center',padding:'4px 0'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(13,110,79,.25)',cursor:'pointer'}} title={msalAccount.name||msalAccount.username}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(99,102,241,.3)',cursor:'pointer'}} title={msalAccount.name||msalAccount.username}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
             </div>}
             {sbExpanded&&profileOpen&&<div style={{marginTop:6,padding:'4px 0'}}>
               <div onClick={()=>{handleLogout();setProfileOpen(false);}} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',borderRadius:8,cursor:'pointer',fontSize:11.5,fontWeight:500,color:'#e5484d',transition:'all .15s'}} className="sbn">
@@ -459,8 +465,8 @@ export default function App(){
         )}
         {/* Copyright */}
         {sbExpanded&&<div style={{padding:'10px 16px 14px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
-          <div style={{fontSize:9,fontWeight:700,color:'rgba(13,110,79,.5)',letterSpacing:2,textAlign:'center',marginBottom:3}}>TTECH BUSINESS SOLUTIONS</div>
-          <div style={{fontSize:8,color:$.t3,opacity:.45,textAlign:'center',fontWeight:500}}>{'© '}{new Date().getFullYear()}{' Tiryaki Agro — Tüm hakları saklıdır.'}</div>
+          <div style={{fontSize:10.5,fontWeight:700,letterSpacing:2,textAlign:'center',marginBottom:4,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',opacity:.6}}>TTECH BUSINESS SOLUTIONS</div>
+          <div style={{fontSize:9.5,textAlign:'center',fontWeight:500,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',opacity:.4}}>{'© '}{new Date().getFullYear()}{' Tiryaki Agro — Tüm hakları saklıdır.'}</div>
         </div>}
       </div>
 
@@ -472,12 +478,9 @@ export default function App(){
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={$.ac} strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </div>}
           <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
-            {!mob&&<div style={{width:32,height:32,borderRadius:9,background:'rgba(13,110,79,.07)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {pg==='dash'?<BarChart3 size={15} color={$.ac}/>:pg==='ana'?<Activity size={15} color={$.ac}/>:pg==='yon'?<Briefcase size={15} color={$.ac}/>:pg==='rep'?<FileBarChart size={15} color={$.ac}/>:pg==='raw'?<Database size={15} color={$.ac}/>:pg==='erp'?<Globe size={15} color={$.ac}/>:<Settings size={15} color={$.ac}/>}
-            </div>}
             <div style={{minWidth:0}}>
               <div style={{fontSize:mob?14:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
-              {!mob&&<div style={{fontSize:12,color:'#6e6e73',fontWeight:500,letterSpacing:'-0.01em'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
+              {!mob&&<div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
             </div>
           </div>
           {/* Global Search */}
@@ -839,9 +842,9 @@ export default function App(){
                       </div></BCard>
                     ))}
 
-                    {/* ROW 2: AI İçgörüler (span 2) + Aksiyon Önerileri (span 1) + Risk Radarı (span 1) */}
-                    <BCard span={mob?1:2}>
-                      <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI İçgörüler"/>
+                    {/* ROW 2: AI Insights (span 1) + Aksiyon Önerileri (span 2) + Risk Radarı (span 1) */}
+                    <BCard span={1}>
+                      <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI Insights"/>
                       <div style={{padding:'12px 16px'}}>
                         {insights.map((ins,i)=>(
                           <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:ins.bg,marginBottom:i<insights.length-1?8:0,border:'1px solid '+ins.c+'18'}}>
@@ -854,11 +857,11 @@ export default function App(){
                       </div>
                     </BCard>
 
-                    <BCard span={1}>
+                    <BCard span={mob?1:2}>
                       <BHead icon={Zap} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Aksiyon Önerileri"/>
-                      <div style={{padding:'12px 16px'}}>
+                      <div style={{padding:'12px 16px',display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',gap:8}}>
                         {actions.map((a,i)=>(
-                          <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:a.bg,marginBottom:i<actions.length-1?8:0,border:'1px solid '+a.c+'18'}}>
+                          <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:a.bg,border:'1px solid '+a.c+'18'}}>
                             <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
                               <span style={{fontSize:9,fontWeight:800,color:'#fff',background:a.c,padding:'2px 7px',borderRadius:5,textTransform:'uppercase',letterSpacing:.5}}>{a.pri}</span>
                             </div>
