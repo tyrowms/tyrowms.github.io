@@ -90,9 +90,16 @@ const SegBar=({ag,total,h,rd})=>{const tq=total||1;const hh=h||10;const rr=rd||5
 
 export default function App(){
   const [rows,setRows]=useState(INIT);
-  const D=useMemo(()=>buildD(rows),[rows]);
+  const [gSearch,setGSearch]=useState('');
+  const GS_IDX=[1,3,4,10,12,15,17,19,21,23]; // searchable text column indices
+  const gRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))));},[rows,gSearch]);
+  const D=useMemo(()=>buildD(gRows),[gRows]);
   const [mob,setMob]=useState(typeof window!=='undefined'&&window.innerWidth<768);
   const [sbOpen,setSbOpen]=useState(false);
+  const [sbPinned,setSbPinned]=useState(false);
+  const [sbHov,setSbHov]=useState(false);
+  const sbTimerRef=useRef(null);
+  const sbExpanded=mob?sbOpen:(sbPinned||sbHov);
   useEffect(()=>{const h=()=>{setMob(window.innerWidth<768);if(window.innerWidth>=768)setSbOpen(false);};window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);
   const [pg,setPg]=useState('dash');
   const [anaDetail,setAnaDetail]=useState(null);
@@ -121,9 +128,9 @@ export default function App(){
   const anaData=useMemo(()=>{
     const tq=D.s.totalQty||1;
     const vBk={};BK.forEach(b=>{vBk[b.k]=0;});
-    rows.forEach(r=>{const d=r[27],v=r[8]*r[24];if(d<=30)vBk['0-30']+=v;else if(d<=60)vBk['31-60']+=v;else if(d<=90)vBk['61-90']+=v;else if(d<=120)vBk['91-120']+=v;else if(d<=180)vBk['121-180']+=v;else if(d<=365)vBk['181-365']+=v;else vBk['365+']+=v;});
+    gRows.forEach(r=>{const d=r[27],v=r[8]*r[24];if(d<=30)vBk['0-30']+=v;else if(d<=60)vBk['31-60']+=v;else if(d<=90)vBk['61-90']+=v;else if(d<=120)vBk['91-120']+=v;else if(d<=180)vBk['121-180']+=v;else if(d<=365)vBk['181-365']+=v;else vBk['365+']+=v;});
     const tVal=Object.values(vBk).reduce((s,v)=>s+v,0)||1;
-    const pm={};rows.forEach(r=>{const n=r[3];if(!pm[n])pm[n]={n,q:0,v:0,td:0,tq:0,sites:new Set()};pm[n].q+=r[8];pm[n].v+=r[8]*r[24];pm[n].td+=r[8]*r[27];pm[n].tq+=r[8];pm[n].sites.add(r[9]);});
+    const pm={};gRows.forEach(r=>{const n=r[3];if(!pm[n])pm[n]={n,q:0,v:0,td:0,tq:0,sites:new Set()};pm[n].q+=r[8];pm[n].v+=r[8]*r[24];pm[n].td+=r[8]*r[27];pm[n].tq+=r[8];pm[n].sites.add(r[9]);});
     Object.values(pm).forEach(x=>{x.a=x.tq>0?Math.round(x.td/x.tq):0;x.sc=x.sites.size;});
     const allProds=Object.values(pm);
     const prods1t=[...allProds].filter(p=>p.q>=1000);
@@ -136,19 +143,19 @@ export default function App(){
     const donutSegs=[];let cumAngle=0;
     BK.forEach(b=>{const v=vBk[b.k]||0;const pct=v/tVal;if(pct>0){const a=pct*360;donutSegs.push({k:b.k,c:b.c,start:cumAngle,end:cumAngle+a,pct,v});cumAngle+=a;}});
     return{tq,vBk,tVal,oldest10,youngest10,top10,bot10,mxP,rCounts,donutSegs};
-  },[rows,D]);
+  },[gRows,D]);
 
   // ─── Memoized Yönetim computations ───
   const yonData=useMemo(()=>{
     const tq=D.s.totalQty||1;
-    const compMap={};rows.forEach(r=>{const c=r[1]||r[0]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!compMap[c])compMap[c]={n:c,q:0,v:0,td:0,tq:0,prods:new Set()};compMap[c].q+=q;compMap[c].v+=v;compMap[c].td+=q*d;compMap[c].tq+=q;compMap[c].prods.add(r[3]);});
+    const compMap={};gRows.forEach(r=>{const c=r[1]||r[0]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!compMap[c])compMap[c]={n:c,q:0,v:0,td:0,tq:0,prods:new Set()};compMap[c].q+=q;compMap[c].v+=v;compMap[c].td+=q*d;compMap[c].tq+=q;compMap[c].prods.add(r[3]);});
     const comps=Object.values(compMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,pc:x.prods.size})).sort((a,b)=>b.v-a.v);
-    const heatData=comps.slice(0,10).map(c=>{const ag={};BK.forEach(b=>{ag[b.k]=0;});rows.filter(r=>(r[1]||r[0])===c.n).forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});return{n:c.n,ag,total:c.q};});
+    const heatData=comps.slice(0,10).map(c=>{const ag={};BK.forEach(b=>{ag[b.k]=0;});gRows.filter(r=>(r[1]||r[0])===c.n).forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});return{n:c.n,ag,total:c.q};});
     const facPerf=[...D.f].sort((a,b)=>b.v-a.v).slice(0,12);const maxFV=facPerf[0]?.v||1;
-    const l2Map={};rows.forEach(r=>{const l=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!l2Map[l])l2Map[l]={n:l,q:0,v:0,td:0,tq:0};l2Map[l].q+=q;l2Map[l].v+=v;l2Map[l].td+=q*d;l2Map[l].tq+=q;});
+    const l2Map={};gRows.forEach(r=>{const l=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!l2Map[l])l2Map[l]={n:l,q:0,v:0,td:0,tq:0};l2Map[l].q+=q;l2Map[l].v+=v;l2Map[l].td+=q*d;l2Map[l].tq+=q;});
     const l2s=Object.values(l2Map).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.v-a.v).slice(0,8);const maxL2V=l2s[0]?.v||1;
-    const crit365=rows.filter(r=>r[27]>=365);const critQty=crit365.reduce((s,r)=>s+r[8],0);const critVal=crit365.reduce((s,r)=>s+r[8]*r[24],0);
-    const crit180=rows.filter(r=>r[27]>=180);const c180Qty=crit180.reduce((s,r)=>s+r[8],0);
+    const crit365=gRows.filter(r=>r[27]>=365);const critQty=crit365.reduce((s,r)=>s+r[8],0);const critVal=crit365.reduce((s,r)=>s+r[8]*r[24],0);
+    const crit180=gRows.filter(r=>r[27]>=180);const c180Qty=crit180.reduce((s,r)=>s+r[8],0);
     const topCritProd={};crit365.forEach(r=>{const n=r[3];if(!topCritProd[n])topCritProd[n]={n,q:0,v:0,a:0,td:0,tq:0,sites:new Set()};topCritProd[n].q+=r[8];topCritProd[n].v+=r[8]*r[24];topCritProd[n].td+=r[8]*r[27];topCritProd[n].tq+=r[8];topCritProd[n].sites.add(r[9]);});
     const critProds=Object.values(topCritProd).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,sc:x.sites.size})).sort((a,b)=>b.v-a.v).slice(0,8);
     const typeStats=Object.entries(TI).map(([k,v])=>{const fcs=D.f.filter(f=>f.type===k);return{k,l:v.label,c:v.color,count:fcs.length,q:fcs.reduce((s,f)=>s+f.q,0),v:fcs.reduce((s,f)=>s+f.v,0),a:fcs.length>0?Math.round(fcs.reduce((s,f)=>s+f.a*f.q,0)/(fcs.reduce((s,f)=>s+f.q,0)||1)):0};}).filter(t=>t.count>0);
@@ -168,7 +175,7 @@ export default function App(){
     if(D.s.facilityCount>5)actions.push({pri:'Normal',c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:`${D.s.facilityCount} tesis arasında stok dengeleme analizi`,sub:'Yüksek yaşlı tesislerden düşük yaşlı tesislere transfer değerlendirmesi'});
     actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:'Tüm veriler güncel — sistem nominal durumda'});
     return{comps,heatData,facPerf,maxFV,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions};
-  },[rows,D]);
+  },[gRows,D]);
 
   // ─── MSAL Auth State ───
   const [msalReady,setMsalReady]=useState(false);
@@ -240,7 +247,7 @@ export default function App(){
 
   const mQ=Math.max(...D.ct.map(c=>c.q),1);
 
-  const filtered=useMemo(()=>{if(!search.trim())return rows;const s=search.toLowerCase();return rows.filter(r=>r.some(v=>String(v).toLowerCase().includes(s)));},[rows,search]);
+  const filtered=useMemo(()=>{if(!search.trim())return gRows;const s=search.toLowerCase();return gRows.filter(r=>r.some(v=>String(v).toLowerCase().includes(s)));},[gRows,search]);
   const sorted=useMemo(()=>[...filtered].sort((a,b)=>{const x=a[rC],y=b[rC];return(typeof x==='number'?(x-y):String(x).localeCompare(String(y)))*rD;}),[filtered,rC,rD]);
   useEffect(()=>{setRawPage(0);},[search,rC,rD]);
   useEffect(()=>{setErpPage(0);},[erpSearch]);
@@ -359,8 +366,8 @@ export default function App(){
 
       {/* SIDEBAR */}
       {mob&&sbOpen&&<div className="mob-ov" onClick={()=>setSbOpen(false)}/>}
-      <div className={mob?'mob-sb':''} style={{width:250,background:'rgba(255,255,255,.95)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',display:mob&&!sbOpen?'none':'flex',flexDirection:'column',flexShrink:0,borderRight:'1px solid rgba(226,231,238,.4)',...(mob?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'4px 0 24px rgba(0,0,0,.15)'}:{})}}>
-        <div style={{padding:'20px 20px 16px',display:'flex',alignItems:'center',gap:12}}>
+      <div className={mob?'mob-sb':''} onMouseEnter={()=>{if(!mob&&!sbPinned){clearTimeout(sbTimerRef.current);setSbHov(true);}}} onMouseLeave={()=>{if(!mob&&!sbPinned){sbTimerRef.current=setTimeout(()=>setSbHov(false),250);}}} style={{width:sbExpanded?250:60,background:'rgba(255,255,255,.95)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',display:mob&&!sbOpen?'none':'flex',flexDirection:'column',flexShrink:0,borderRight:'1px solid rgba(226,231,238,.4)',transition:mob?'none':'width .25s cubic-bezier(.4,0,.2,1)',overflow:'hidden',...(mob?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'4px 0 24px rgba(0,0,0,.15)'}:{}),... (!mob&&!sbPinned&&sbHov?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'6px 0 24px rgba(0,0,0,.1)'}:{})}}>
+        <div style={{padding:sbExpanded?'20px 20px 16px':'20px 11px 16px',display:'flex',alignItems:'center',gap:12,position:'relative'}}>
           <svg width="38" height="38" viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
             <defs>
               <linearGradient id="sbwg1" x1="8" y1="56" x2="56" y2="8"><stop offset="0%" stopColor="#0d6e4f"/><stop offset="100%" stopColor="#2dd4a0"/></linearGradient>
@@ -382,45 +389,53 @@ export default function App(){
             <rect x="16" y="29" width="4" height="3" rx="0.5" fill="#fff" opacity=".3" transform="skewY(25) translate(0,-12)"/>
             <rect x="21" y="29" width="3" height="3" rx="0.5" fill="#2dd4a0" opacity=".35" transform="skewY(25) translate(0,-12)"/>
           </svg>
-          <div>
+          {sbExpanded&&<div style={{minWidth:0}}>
             <div style={{color:$.t1,fontWeight:800,fontSize:16,letterSpacing:.3,lineHeight:1.1}}>TYRO</div>
             <div style={{color:$.ac,fontSize:9.5,fontWeight:700,letterSpacing:2.5,textTransform:'uppercase',marginTop:2}}>WMS AGENT</div>
-          </div>
+          </div>}
+          {sbExpanded&&!mob&&<div onClick={()=>{setSbPinned(p=>!p);setSbHov(false);}} title={sbPinned?'Sidebar\'ı serbest bırak':'Sidebar\'ı sabitle'} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)'+(sbPinned?' rotate(0deg)':' rotate(45deg)'),cursor:'pointer',width:26,height:26,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',background:sbPinned?'rgba(13,110,79,.08)':'rgba(0,0,0,.04)',transition:'all .2s',color:sbPinned?$.ac:'#86868b'}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+          </div>}
         </div>
-        <div style={{padding:'0 12px',flex:1,overflowY:'auto'}}>
-          <div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>
+        <div style={{padding:sbExpanded?'0 12px':'0 8px',flex:1,overflowY:'auto'}}>
+          {sbExpanded&&<div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>}
+          {!sbExpanded&&<div style={{height:10}}/>}
           {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
-              {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
-              <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
+            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
+              {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
+              <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
             </div>);})}
-          <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>
+          {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>}
+          {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
           {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
-              {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
-              <p.icon size={16} strokeWidth={isA?2.2:1.8}/>{p.label}
-              {p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
-              {p.id==='erp'&&erpRaw.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.ac,color:'#fff',minWidth:18,textAlign:'center'}}>{erpRaw.length}</span>}
+            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
+              {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
+              <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
+              {sbExpanded&&p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
+              {sbExpanded&&p.id==='erp'&&erpRaw.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.ac,color:'#fff',minWidth:18,textAlign:'center'}}>{erpRaw.length}</span>}
             </div>);})}
-          <div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Sistem'}</div>
+          {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Sistem'}</div>}
+          {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
           {(()=>{const isA=pg==='set';return(
-            <div className="sbn" onClick={()=>{setPg('set');setSel(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 11px',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease'}}>
-              {isA&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
-              <Settings size={16} strokeWidth={isA?2.2:1.8}/>Ayarlar
+            <div className="sbn" title={!sbExpanded?'Ayarlar':undefined} onClick={()=>{setPg('set');setSel(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
+              {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
+              <Settings size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&'Ayarlar'}
             </div>);})()}
         </div>
         {/* Profile */}
         {MSAL_ENABLED&&msalAccount&&(
-          <div style={{padding:'10px 12px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
-            <div onClick={()=>setProfileOpen(p=>!p)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:10,cursor:'pointer',background:profileOpen?'rgba(13,110,79,.06)':'transparent',transition:'all .2s'}}>
+          <div style={{padding:sbExpanded?'10px 12px':'10px 8px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
+            {sbExpanded?<div onClick={()=>setProfileOpen(p=>!p)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:10,cursor:'pointer',background:profileOpen?'rgba(13,110,79,.06)':'transparent',transition:'all .2s'}}>
               <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(13,110,79,.25)',flexShrink:0}}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:11.5,fontWeight:600,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.2}}>{msalAccount.name||msalAccount.username}</div>
                 <div style={{fontSize:9.5,color:$.t3,marginTop:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{msalAccount.username}</div>
               </div>
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{flexShrink:0,transition:'transform .2s',transform:profileOpen?'rotate(180deg)':'rotate(0)'}}><path d="M1 1L5 5L9 1" stroke={$.t3} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-            {profileOpen&&<div style={{marginTop:6,padding:'4px 0'}}>
+            </div>:<div style={{display:'flex',justifyContent:'center',padding:'4px 0'}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:700,fontFamily:$.f,letterSpacing:.5,boxShadow:'0 2px 8px rgba(13,110,79,.25)',cursor:'pointer'}} title={msalAccount.name||msalAccount.username}>{(msalAccount.name||'').split(' ').map(n=>n?.[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR')}</div>
+            </div>}
+            {sbExpanded&&profileOpen&&<div style={{marginTop:6,padding:'4px 0'}}>
               <div onClick={()=>{handleLogout();setProfileOpen(false);}} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',borderRadius:8,cursor:'pointer',fontSize:11.5,fontWeight:500,color:'#e5484d',transition:'all .15s'}} className="sbn">
                 <LogOut size={14} strokeWidth={2}/> Çıkış Yap
               </div>
@@ -428,36 +443,43 @@ export default function App(){
           </div>
         )}
         {/* Copyright */}
-        <div style={{padding:'10px 16px 14px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
+        {sbExpanded&&<div style={{padding:'10px 16px 14px',borderTop:'1px solid rgba(226,231,238,.35)'}}>
           <div style={{fontSize:9,fontWeight:700,color:'rgba(13,110,79,.5)',letterSpacing:2,textAlign:'center',marginBottom:3}}>TTECH BUSINESS SOLUTIONS</div>
           <div style={{fontSize:8,color:$.t3,opacity:.45,textAlign:'center',fontWeight:500}}>{'© '}{new Date().getFullYear()}{' Tiryaki Agro — Tüm hakları saklıdır.'}</div>
-        </div>
+        </div>}
       </div>
 
       {/* MAIN */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         {/* Topbar */}
-        <div style={{height:mob?48:56,background:'rgba(255,255,255,.65)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',borderBottom:'1px solid rgba(226,231,238,.35)',display:'flex',alignItems:'center',padding:mob?'0 14px':'0 26px',flexShrink:0,gap:8}}>
-          {mob&&<div onClick={()=>setSbOpen(!sbOpen)} style={{width:34,height:34,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',background:'rgba(13,110,79,.06)',flexShrink:0}}>
+        <div style={{height:mob?50:56,background:'rgba(255,255,255,.72)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',borderBottom:'1px solid rgba(226,231,238,.4)',display:'flex',alignItems:'center',padding:mob?'0 14px':'0 26px',flexShrink:0,gap:10}}>
+          {mob&&<div onClick={()=>setSbOpen(!sbOpen)} style={{width:36,height:36,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',background:'rgba(13,110,79,.06)',flexShrink:0}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={$.ac} strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </div>}
-          <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:0}}>
-            {!mob&&<div style={{width:32,height:32,borderRadius:9,background:'rgba(13,110,79,.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
+            {!mob&&<div style={{width:32,height:32,borderRadius:9,background:'rgba(13,110,79,.07)',display:'flex',alignItems:'center',justifyContent:'center'}}>
               {pg==='dash'?<BarChart3 size={15} color={$.ac}/>:pg==='ana'?<Activity size={15} color={$.ac}/>:pg==='yon'?<Briefcase size={15} color={$.ac}/>:pg==='rep'?<FileBarChart size={15} color={$.ac}/>:pg==='raw'?<Database size={15} color={$.ac}/>:pg==='erp'?<Globe size={15} color={$.ac}/>:<Settings size={15} color={$.ac}/>}
             </div>}
             <div style={{minWidth:0}}>
-              <div style={{fontSize:mob?13:15,fontWeight:700,color:$.t1,lineHeight:1.2}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
-              {!mob&&<div style={{fontSize:10,color:$.t3,fontWeight:400}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
+              <div style={{fontSize:mob?14:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
+              {!mob&&<div style={{fontSize:12,color:'#6e6e73',fontWeight:500,letterSpacing:'-0.01em'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>}
             </div>
           </div>
+          {/* Global Search */}
+          <div style={{position:'relative',maxWidth:mob?170:340,flex:1,margin:'0 auto'}}>
+            <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
+            <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
+            {gSearch&&<div onClick={()=>{setGSearch('');}} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:18,height:18,borderRadius:9,background:'rgba(0,0,0,.1)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={10} color="#636366"/></div>}
+          </div>
+          {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(rows.length)}</div>}
           {/* ERP Status */}
-          {erpStatus&&<div style={{padding:'4px 10px',borderRadius:7,background:$.grnB,fontSize:10,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
-          {erpError&&<div style={{padding:'4px 10px',borderRadius:7,background:$.redB,fontSize:10,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
-          {!mob&&<div style={{padding:'4px 10px',borderRadius:7,background:'rgba(226,231,238,.06)',fontSize:10,fontFamily:$.mo,fontWeight:500,color:$.t3}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>}
+          {erpStatus&&<div style={{padding:'5px 12px',borderRadius:8,background:$.grnB,fontSize:13,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:6}}>{erpLoading&&<span style={{display:'inline-block',width:12,height:12,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
+          {erpError&&<div style={{padding:'5px 12px',borderRadius:8,background:$.redB,fontSize:13,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
+          {!mob&&<div style={{fontSize:12,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>}
           {/* Verileri Güncelle */}
           {MSAL_ENABLED&&msalAccount&&(
-            <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:5,fontSize:11,padding:'6px 14px',borderRadius:8}}>
-              {erpLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={13}/>}
+            <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:6,fontSize:13,padding:'8px 16px',borderRadius:10}}>
+              {erpLoading?<span style={{display:'inline-block',width:14,height:14,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={14}/>}
               {erpLoading?'Güncelleniyor...':'Verileri Güncelle'}
             </button>
           )}
@@ -469,7 +491,7 @@ export default function App(){
             {pg==='dash'&&(
               <div>
                 {/* KPI Cards */}
-                {(()=>{const critQty=rows.filter(r=>r[27]>=180).reduce((s,r)=>s+r[8],0);const critPct=D.s.totalQty>0?((critQty/D.s.totalQty)*100).toFixed(1):'0';
+                {(()=>{const critQty=gRows.filter(r=>r[27]>=180).reduce((s,r)=>s+r[8],0);const critPct=D.s.totalQty>0?((critQty/D.s.totalQty)*100).toFixed(1):'0';
                 const tips=[
                   'Tüm tesislerdeki toplam envanter miktarı (kg). Formül: Σ Miktar (tüm satırlar)',
                   'Envanterin TL cinsinden toplam değeri. Formül: Σ (Miktar × Birim Fiyat ₺)',
@@ -617,7 +639,7 @@ export default function App(){
                     <div style={{padding:'14px 18px'}}>
                       {anaDetail.type==='product'&&(()=>{
                         const p=anaDetail.data;
-                        const pRows=rows.filter(r=>r[3]===p.n);
+                        const pRows=gRows.filter(r=>r[3]===p.n);
                         const bySite={};pRows.forEach(r=>{const s=r[10]||r[9];if(!bySite[s])bySite[s]={n:s,q:0,v:0,td:0,tq:0};bySite[s].q+=r[8];bySite[s].v+=r[8]*r[24];bySite[s].td+=r[8]*r[27];bySite[s].tq+=r[8];});
                         const sites=Object.values(bySite).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.q-a.q);
                         return(<div>
@@ -654,7 +676,7 @@ export default function App(){
                         const bk=anaDetail.data;
                         const range=bk.k;const ranges={'0-30':[0,30],'31-60':[31,60],'61-90':[61,90],'91-120':[91,120],'121-180':[121,180],'181-365':[181,365],'365+':[365,9999]};
                         const [lo,hi]=ranges[range]||[0,9999];
-                        const bRows=rows.filter(r=>r[27]>=lo&&r[27]<=hi);
+                        const bRows=gRows.filter(r=>r[27]>=lo&&r[27]<=hi);
                         const byProd={};bRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];});
                         const prods=Object.values(byProd).sort((a,b)=>b.v-a.v).slice(0,15);
                         return(<div>
@@ -1445,7 +1467,7 @@ export default function App(){
               </div>
               <div style={{flex:1,overflow:'auto',padding:'14px 16px'}}>
                 {yonDetail.type==='company'&&(()=>{
-                  const c=yonDetail.data;const cRows=rows.filter(r=>(r[1]||r[0])===c.n);
+                  const c=yonDetail.data;const cRows=gRows.filter(r=>(r[1]||r[0])===c.n);
                   const byFac={};cRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
                   const facs=Object.values(byFac).map(s=>({...s,a:s.tq>0?Math.round(s.td/s.tq):0})).sort((a,b)=>b.v-a.v);
                   return(<div>
@@ -1468,7 +1490,7 @@ export default function App(){
                   </div>);
                 })()}
                 {yonDetail.type==='facility'&&(()=>{
-                  const f=yonDetail.data;const fRows=rows.filter(r=>r[9]===f.id);
+                  const f=yonDetail.data;const fRows=gRows.filter(r=>r[9]===f.id);
                   const byProd={};fRows.forEach(r=>{const n=r[3];if(!byProd[n])byProd[n]={n,q:0,v:0,td:0,tq:0};byProd[n].q+=r[8];byProd[n].v+=r[8]*r[24];byProd[n].td+=r[8]*r[27];byProd[n].tq+=r[8];});
                   const prods=Object.values(byProd).map(p=>({...p,a:p.tq>0?Math.round(p.td/p.tq):0})).sort((a,b)=>b.v-a.v).slice(0,15);
                   return(<div>
@@ -1490,7 +1512,7 @@ export default function App(){
                   </div>);
                 })()}
                 {yonDetail.type==='l2'&&(()=>{
-                  const l=yonDetail.data;const lRows=rows.filter(r=>(r[17]||'Diğer')===l.n);
+                  const l=yonDetail.data;const lRows=gRows.filter(r=>(r[17]||'Diğer')===l.n);
                   const byFac={};lRows.forEach(r=>{const s=r[10]||r[9];if(!byFac[s])byFac[s]={n:s,q:0,v:0,td:0,tq:0};byFac[s].q+=r[8];byFac[s].v+=r[8]*r[24];byFac[s].td+=r[8]*r[27];byFac[s].tq+=r[8];});
                   const facs=Object.values(byFac).map(f=>({...f,a:f.tq>0?Math.round(f.td/f.tq):0})).sort((a,b)=>b.q-a.q);
                   return(<div>
