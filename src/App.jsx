@@ -135,7 +135,7 @@ export default function App(){
   const [drillFac,setDrillFac]=useState(null);
   const [drillWh,setDrillWh]=useState(null);
   const [hovTip,setHovTip]=useState(null); // {i, x, y}
-  const [repTab,setRepTab]=useState('comp');
+  const [repTab,setRepTab]=useState('grp');
   const [repSearch,setRepSearch]=useState('');
   const [repSC,setRepSC]=useState('total'); // sort column: n, total, avg, or bucket key
   const [repSD,setRepSD]=useState(-1); // sort direction
@@ -178,18 +178,28 @@ export default function App(){
     const avgAge=D.s.avgAge;const critPct=tq>0?((critQty/tq)*100):0;const c180Pct=tq>0?((c180Qty/tq)*100):0;
     const worstFac=[...D.f].sort((a,b)=>b.a-a.a)[0];const bestFac=[...D.f].sort((a,b)=>a.a-b.a)[0];
     const topComp=comps[0];const worstComp=[...comps].sort((a,b)=>b.a-a.a)[0];
+    // Grup bazlı analiz
+    const grpMap={};gRows.forEach(r=>{const c=r[0]||'';const g=gGrp(c);const q=r[8];const v=r[8]*r[24];const d=r[27];if(!grpMap[g])grpMap[g]={n:g,q:0,v:0,td:0,tq:0,crit:0,critV:0,comps:new Set()};grpMap[g].q+=q;grpMap[g].v+=v;grpMap[g].td+=q*d;grpMap[g].tq+=q;grpMap[g].comps.add(r[1]||r[0]||'');if(d>=365){grpMap[g].crit+=q;grpMap[g].critV+=v;}});
+    const grps=Object.values(grpMap).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0,cc:x.comps.size,critPct:x.q>0?((x.crit/x.q)*100):0})).sort((a,b)=>b.v-a.v);
+    const worstGrp=[...grps].filter(g=>g.n!=='Diğer').sort((a,b)=>b.a-a.a)[0];
+    const topGrp=grps.filter(g=>g.n!=='Diğer')[0];
+    const critGrps=grps.filter(g=>g.critPct>5&&g.n!=='Diğer');
     const insights=[];
-    if(critPct>5)insights.push({icon:AlertTriangle,c:'#e5484d',bg:'rgba(229,72,77,.06)',t:'Kritik Yaşlanma Uyarısı',d:`Toplam stoğun %${critPct.toFixed(1)}'i 365+ gün yaşında. Bu stokların toplam değeri ₺${fmt(critVal)}. Acil değerlendirme gerektirir.`});
-    else if(critPct>0)insights.push({icon:ShieldAlert,c:'#ea580c',bg:'rgba(234,88,12,.06)',t:'Yaşlı Stok İzleme',d:`365+ gün stok oranı %${critPct.toFixed(1)} — kontrol altında. Ancak ${fN(Math.round(critQty))} kg stok hâlâ bu grupta.`});
-    if(c180Pct>20)insights.push({icon:Zap,c:'#f5a623',bg:'rgba(245,166,35,.06)',t:'180+ Gün Yoğunluğu',d:`Stoğun %${c180Pct.toFixed(1)}'i 180 günü aşmış durumda. Toplam ${fmtTon(c180Qty)} stok 6 aydan eski.`});
-    if(worstFac)insights.push({icon:Target,c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:'Tesis Karşılaştırma',d:`En yüksek yaş: ${worstFac.n} (${worstFac.a} gün). En düşük yaş: ${bestFac?.n||'-'} (${bestFac?.a||0} gün). Fark: ${(worstFac.a-(bestFac?.a||0))} gün.`});
-    if(worstComp&&comps.length>1)insights.push({icon:Building2,c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:'Şirket Performansı',d:`${worstComp.n} ortalama ${worstComp.a} gün yaş ile en yüksek. ${topComp.n} ₺${fmt(topComp.v)} değer ile en büyük portföye sahip.`});
+    if(critPct>5)insights.push({icon:AlertTriangle,c:'#e5484d',bg:'rgba(229,72,77,.06)',t:'Kritik Yaşlanma Uyarısı',d:`Toplam stoğun %${critPct.toFixed(1)}'i 365+ gün yaşında. Değeri ₺${fmt(critVal)}. Acil değerlendirme gerektirir.`});
+    else if(critPct>0)insights.push({icon:ShieldAlert,c:'#ea580c',bg:'rgba(234,88,12,.06)',t:'Yaşlı Stok İzleme',d:`365+ gün stok oranı %${critPct.toFixed(1)} — kontrol altında. ${fN(Math.round(critQty))} kg stok bu grupta.`});
+    if(worstGrp&&grps.length>1)insights.push({icon:Building2,c:'#6366f1',bg:'rgba(99,102,241,.06)',t:'Grup Performansı',d:`${worstGrp.n} ort. ${worstGrp.a} gün yaş ile en yüksek (${worstGrp.cc} şirket). ${topGrp?.n||'-'} ₺${fmt(topGrp?.v||0)} ile en büyük portföy.`});
+    if(critGrps.length>0){const cg=critGrps[0];insights.push({icon:AlertTriangle,c:'#e5484d',bg:'rgba(229,72,77,.06)',t:`${cg.n} Grubu Risk Altında`,d:`Grubun %${cg.critPct.toFixed(1)}'i 365+ gün yaşında (${fmtTon(cg.crit)}). ${cg.cc} şirket bu gruptan etkileniyor.`});}
+    if(c180Pct>20)insights.push({icon:Zap,c:'#f5a623',bg:'rgba(245,166,35,.06)',t:'180+ Gün Yoğunluğu',d:`Stoğun %${c180Pct.toFixed(1)}'i 180 günü aşmış. Toplam ${fmtTon(c180Qty)} stok 6 aydan eski.`});
+    if(worstFac)insights.push({icon:Target,c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:'Tesis Karşılaştırma',d:`En yüksek yaş: ${worstFac.n} (${worstFac.a} gün). En düşük: ${bestFac?.n||'-'} (${bestFac?.a||0} gün). Fark: ${(worstFac.a-(bestFac?.a||0))} gün.`});
+    if(worstComp&&comps.length>1)insights.push({icon:Building2,c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:'Şirket Performansı',d:`${worstComp.n} ort. ${worstComp.a} gün yaş ile en yüksek. ${topComp.n} ₺${fmt(topComp.v)} değer ile en büyük portföy.`});
     const actions=[];
     if(critProds.length>0)actions.push({pri:'Yüksek',c:'#e5484d',bg:'rgba(229,72,77,.06)',t:`${critProds.length} ürün 365+ gün yaşında — eritme planı oluşturun`,sub:`En büyük: ${critProds[0].n} (${fmtTon(critProds[0].q)}, ₺${fmt(critProds[0].v)})`});
+    if(critGrps.length>0)actions.push({pri:'Yüksek',c:'#6366f1',bg:'rgba(99,102,241,.06)',t:`${critGrps.map(g=>g.n).join(', ')} grubunda kritik stok yoğunlaşması`,sub:`${critGrps.length} grupta 365+ gün stok oranı %5'in üzerinde — grup bazlı eritme stratejisi gerekli`});
     if(worstFac&&worstFac.a>180)actions.push({pri:'Yüksek',c:'#ea580c',bg:'rgba(234,88,12,.06)',t:`${worstFac.n} tesisi yaş ortalaması ${worstFac.a} gün`,sub:'Tesis bazlı stok devir hızını artırın'});
     if(c180Pct>15)actions.push({pri:'Orta',c:'#f5a623',bg:'rgba(245,166,35,.06)',t:`180+ gün stok oranını %${c180Pct.toFixed(0)}'den düşürün`,sub:'Satış ve lojistik ile koordineli aksiyon planı'});
+    if(grps.filter(g=>g.n!=='Diğer').length>1){const ages=grps.filter(g=>g.n!=='Diğer').map(g=>g.a);const spread=Math.max(...ages)-Math.min(...ages);if(spread>30)actions.push({pri:'Orta',c:'#8b5cf6',bg:'rgba(139,92,246,.06)',t:`Gruplar arası ${spread} gün yaş farkı — dengeleme fırsatı`,sub:'Yüksek yaşlı gruplardan transfer veya öncelikli satış planı'});}
     if(D.s.facilityCount>5)actions.push({pri:'Normal',c:'#3b82f6',bg:'rgba(59,130,246,.06)',t:`${D.s.facilityCount} tesis arasında stok dengeleme analizi`,sub:'Yüksek yaşlı tesislerden düşük yaşlı tesislere transfer değerlendirmesi'});
-    actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:'Tüm veriler güncel — sistem nominal durumda'});
+    actions.push({pri:'Bilgi',c:'#0d6e4f',bg:'rgba(45,212,160,.06)',t:`${D.s.prodCount} ürün, ${D.s.cityCount} şehir, ${D.s.facilityCount} tesis aktif izleniyor`,sub:`${grps.filter(g=>g.n!=='Diğer').length} şirket grubu takipte — sistem nominal durumda`});
     return{comps,heatData,facPerf,maxFV,l2s,maxL2V,critQty,critVal,c180Qty,critProds,typeStats,avgAge,critPct,c180Pct,insights,actions};
   },[gRows,D]);
 
@@ -641,21 +651,20 @@ export default function App(){
                 </div>);
               return(
                 <div>
-                  {/* Drill detail overlay */}
-                  {anaDetail&&(
-                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16,overflow:'hidden'}}>
-                    <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  {/* Slide-in right panel */}
+                  {anaDetail&&<div onClick={()=>setAnaDetail(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.2)',zIndex:998,transition:'opacity .3s'}}/>}
+                  <div style={{position:'fixed',top:0,right:0,width:mob?'92vw':440,height:'100vh',background:$.bg2,borderLeft:'1px solid '+$.bdL,boxShadow:'-8px 0 30px rgba(0,0,0,.08)',zIndex:999,transform:anaDetail?'translateX(0)':'translateX(100%)',transition:'transform .3s cubic-bezier(.4,0,.2,1)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+                    <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <div onClick={()=>setAnaDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
-                        <span style={{fontSize:14,fontWeight:700,color:$.t1}}>{anaDetail.name}</span>
-                        {anaDetail.type==='product'&&<span style={{fontSize:10,color:$.t3,fontWeight:500}}>{anaDetail.data.sc} tesis</span>}
-                        {anaDetail.type==='risk'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.r}</span>}
-                        {anaDetail.type==='value'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.k} gün</span>}
+                        <span style={{fontSize:15,fontWeight:700,color:$.t1}}>{anaDetail?.name}</span>
+                        {anaDetail?.type==='product'&&<span style={{fontSize:10,color:$.t3,fontWeight:500}}>{anaDetail.data.sc} tesis</span>}
+                        {anaDetail?.type==='risk'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.r}</span>}
+                        {anaDetail?.type==='value'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.k} gün</span>}
                       </div>
-                      <X size={16} color={$.t3} style={{cursor:'pointer'}} onClick={()=>setAnaDetail(null)}/>
+                      <X size={18} color={$.t3} style={{cursor:'pointer'}} onClick={()=>setAnaDetail(null)}/>
                     </div>
-                    <div style={{padding:'14px 18px'}}>
-                      {anaDetail.type==='product'&&(()=>{
+                    <div style={{padding:'16px 20px',flex:1,overflowY:'auto'}}>
+                      {anaDetail?.type==='product'&&(()=>{
                         const p=anaDetail.data;
                         const pRows=gRows.filter(r=>r[3]===p.n);
                         const bySite={};pRows.forEach(r=>{const s=r[10]||r[9];if(!bySite[s])bySite[s]={n:s,q:0,v:0,td:0,tq:0};bySite[s].q+=r[8];bySite[s].v+=r[8]*r[24];bySite[s].td+=r[8]*r[27];bySite[s].tq+=r[8];});
@@ -677,12 +686,54 @@ export default function App(){
                             </div>))}
                         </div>);
                       })()}
-                      {anaDetail.type==='risk'&&(()=>{
+                      {anaDetail?.type==='risk'&&(()=>{
                         const facs=anaDetail.data.facs||[];
+                        const df=anaDetail.drillFac;const dt=anaDetail.drillTab||'l3';
+                        if(df){
+                          // Drill into a specific facility
+                          const facRows=gRows.filter(r=>r[9]===df.id||r[10]===df.n);
+                          const tabs=[{id:'l3',l:'Seviye 3',idx:19},{id:'l2',l:'Seviye 2',idx:17},{id:'prod',l:'Ürünler',idx:3}];
+                          const cur=tabs.find(t=>t.id===dt)||tabs[0];
+                          const grp={};facRows.forEach(r=>{const k=r[cur.idx]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!grp[k])grp[k]={n:k,q:0,v:0,td:0,tq:0};grp[k].q+=q;grp[k].v+=v;grp[k].td+=q*d;grp[k].tq+=q;});
+                          const items=Object.values(grp).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q);
+                          return(<div>
+                            <div onClick={()=>setAnaDetail(p=>({...p,drillFac:null}))} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',marginBottom:12,color:$.ac,fontSize:11,fontWeight:600}}>
+                              <ChevronLeft size={14}/> Tesislere Dön
+                            </div>
+                            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                              <div style={{width:8,height:8,borderRadius:4,background:anaDetail.data.c}}/>
+                              <span style={{fontSize:13,fontWeight:700,color:$.t1}}>{df.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(df.a),padding:'1px 6px',borderRadius:4,background:acBg(df.a)}}>{df.a}g</span>
+                            </div>
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:14}}>
+                              {[{l:'Stok',v:fmtTon(df.q),c:$.blu},{l:'Değer',v:'₺'+fmt(df.v),c:'#0d6e4f'},{l:'Yaş',v:df.a+' gün',c:ac(df.a)}].map((k,i)=>(
+                                <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL,textAlign:'center'}}>
+                                  <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                  <div style={{fontSize:14,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                                </div>))}
+                            </div>
+                            {/* Tabs */}
+                            <div style={{display:'flex',gap:4,marginBottom:12,background:$.bg,borderRadius:8,padding:3}}>
+                              {tabs.map(t=>(
+                                <div key={t.id} onClick={()=>setAnaDetail(p=>({...p,drillTab:t.id}))} style={{flex:1,textAlign:'center',padding:'6px 0',borderRadius:6,fontSize:11,fontWeight:dt===t.id?700:500,cursor:'pointer',background:dt===t.id?'#fff':'transparent',color:dt===t.id?$.t1:$.t3,boxShadow:dt===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s'}}>{t.l}</div>
+                              ))}
+                            </div>
+                            {/* Items */}
+                            {items.map((it,i)=>(
+                              <div key={it.n} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}}>
+                                <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{it.n}</span>
+                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(it.q)}</span>
+                                <span style={{fontFamily:$.mo,fontSize:9,fontWeight:600,color:$.t3}}>₺{fmt(it.v)}</span>
+                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(it.a),padding:'1px 6px',borderRadius:4,background:acBg(it.a)}}>{it.a}g</span>
+                              </div>))}
+                            {items.length===0&&<div style={{fontSize:11,color:$.t3,padding:12,textAlign:'center'}}>Bu tesiste veri yok</div>}
+                          </div>);
+                        }
+                        // Facility list
                         return(<div>
                           <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>{facs.length} tesis — {fmtTon(anaDetail.data.qty)}</div>
                           {facs.sort((a,b)=>b.q-a.q).map((f,i)=>(
-                            <div key={f.id} onClick={()=>{setPg('dash');setSelCity(null);setDrillFac(f.id);setAnaDetail(null);}} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                            <div key={f.id} onClick={()=>setAnaDetail(p=>({...p,drillFac:f,drillTab:'l3'}))} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
                               <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1}}>{f.n}</span>
                               <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
                               <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
@@ -690,7 +741,7 @@ export default function App(){
                             </div>))}
                         </div>);
                       })()}
-                      {anaDetail.type==='value'&&(()=>{
+                      {anaDetail?.type==='value'&&(()=>{
                         const bk=anaDetail.data;
                         const range=bk.k;const ranges={'0-30':[0,30],'31-60':[31,60],'61-90':[61,90],'91-120':[91,120],'121-180':[121,180],'181-365':[181,365],'365+':[365,9999]};
                         const [lo,hi]=ranges[range]||[0,9999];
@@ -716,7 +767,7 @@ export default function App(){
                         </div>);
                       })()}
                     </div>
-                  </div>)}
+                  </div>
 
                   {/* Top row: Risk Özeti + Stok Değer Dağılımı */}
                   <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',gap:16,marginBottom:16}}>
