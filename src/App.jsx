@@ -18,6 +18,8 @@ const acBg=d=>d<60?'rgba(45,212,160,.1)':d<90?'rgba(22,163,74,.08)':d<180?'rgba(
 const TI={own:{color:'#0d6e4f',label:'Öz Tesis'},fason:{color:'#8b5cf6',label:'Fason'},dis:{color:'#3b82f6',label:'Dış Tesis'},disticaret:{color:'#f5a623',label:'Dış Ticaret'}};
 const gC=c=>{if(CTM[c])return CTM[c];const p=c.split('-')[0];return CTM[p]||Object.entries(CTM).find(([k])=>c.includes(k))?.[1]||'Yurtdışı';};
 const gT=c=>{if(!c)return'dis';const u=c.toUpperCase();if(u.includes('FSN'))return'fason';if(u==='DISTICARET'||u.includes('DTC'))return'disticaret';if(u.startsWith('TRY-')||u.startsWith('YLD-'))return'own';return'dis';};
+const CGRP={'TAND':'Tiryaki Anadolu','TGFZ':'Tiryaki Anadolu','TSHY':'Tiryaki Anadolu','DNSG':'Tiryaki Anadolu','DPFZ':'Tiryaki Anadolu','THSG':'Tiryaki Anadolu','DANE':'Tiryaki Anadolu','ENUT':'Tiryaki Anadolu','LNUT':'Tiryaki Anadolu','LNCN':'Tiryaki Anadolu','DLDN':'Tiryaki Anadolu','LNFZ':'Tiryaki Anadolu','LSGA':'Tiryaki Anadolu','DYLD':'Tiryaki Anadolu','DLDP':'Tiryaki Anadolu','TSRY':'Tiryaki Anadolu','SUHO':'Tiryaki E.M','SAMA':'Tiryaki E.M','MESQ':'Tiryaki E.M','MFZC':'Tiryaki E.M','HFLT':'Tiryaki E.M','HNLT':'Tiryaki E.M','TOGO':'Tiryaki E.M','TGAN':'Tiryaki E.M','GANA':'Tiryaki E.M','NOVA':'Tiryaki E.M','TNGA':'Tiryaki E.M','DMES':'Tiryaki E.M','DTRK':'Tiryaki E.M','DARG':'Tiryaki E.M','AFZE':'Tiryaki E.M','SARG':'Tiryaki E.M','TARG':'Tiryaki E.M','MERC':'Tiryaki E.M','VMES':'Tiryaki E.M','TMES':'Tiryaki E.M','SRCA':'Tiryaki Organics','SRNL':'Tiryaki Organics','SRUS':'Tiryaki Organics','SRDE':'Tiryaki Organics','SRIL':'Tiryaki Organics','GPOR':'Tiryaki Organics','GLON':'Tiryaki Organics','DSSM':'Tiryaki Organics','DDIA':'Tiryaki Organics','DSSA':'Tiryaki Organics','DIAS':'Tiryaki Organics','TTEC':'Tiryaki Strategic Services','DNAI':'Tiryaki Strategic Services','DTFZ':'Tiryaki Strategic Services','EDGA':'Tiryaki Energy','EGNY':'Tiryaki Energy','EGNS':'Tiryaki Energy','EHUR':'Tiryaki Energy','ENIL':'Tiryaki Energy','EOKL':'Tiryaki Energy','EOZB':'Tiryaki Energy','ESFZ':'Tiryaki Energy','ETRY':'Tiryaki Energy','DTGT':'Tiryaki Energy','EYIL':'Tiryaki Energy','EYZY':'Tiryaki Energy','ASET':'Tiryaki Holding','DHDG':'Tiryaki Holding','MAEP':'Tiryaki Holding','MEFA':'Tiryaki Holding','DTMX':'Tiryaki Holding'};
+const gGrp=code=>{if(!code)return'Diğer';const u=code.toUpperCase().trim();return CGRP[u]||'Diğer';};
 const BK=[{k:'0-30',c:'#0d6e4f'},{k:'31-60',c:'#16a34a'},{k:'61-90',c:'#65a30d'},{k:'91-120',c:'#f5a623'},{k:'121-180',c:'#ea580c'},{k:'181-365',c:'#e5484d'},{k:'365+',c:'#991b1b'}];
 
 function buildD(rows){
@@ -50,6 +52,19 @@ function agingOf(rows,facIds){
   return ag;
 }
 
+function buildGroupPivot(rows,fn){
+  const m={};
+  rows.forEach(r=>{
+    const g=fn(r)||'Diğer';
+    const q=r[8];const d=r[27];const vl=r[8]*r[24];
+    if(!m[g])m[g]={n:g,total:0,totalVal:0,td:0,ag:{}};
+    BK.forEach(b=>{if(!m[g].ag[b.k])m[g].ag[b.k]=0;});
+    m[g].total+=q;m[g].totalVal+=vl;m[g].td+=q*d;
+    if(d<=30)m[g].ag['0-30']+=q;else if(d<=60)m[g].ag['31-60']+=q;else if(d<=90)m[g].ag['61-90']+=q;else if(d<=120)m[g].ag['91-120']+=q;else if(d<=180)m[g].ag['121-180']+=q;else if(d<=365)m[g].ag['181-365']+=q;else m[g].ag['365+']+=q;
+  });
+  return Object.values(m).map(x=>({...x,avg:x.total>0?Math.round(x.td/x.total):0})).sort((a,b)=>b.total-a.total);
+}
+
 function buildPivot(rows,groupIdx,labelIdx){
   const m={};
   rows.forEach(r=>{
@@ -63,7 +78,7 @@ function buildPivot(rows,groupIdx,labelIdx){
   return Object.values(m).map(x=>({...x,avg:x.total>0?Math.round(x.td/x.total):0})).sort((a,b)=>b.total-a.total);
 }
 
-const $={bg:'#f5f7fa',bg2:'#fff',bg3:'#edf1f6',t1:'#1a2332',t2:'#5a6b7f',t3:'#8e9bb3',ac:'#0d6e4f',acL:'#e4f5ee',grn:'#2dd4a0',grnB:'rgba(45,212,160,.1)',blu:'#3b82f6',bluB:'rgba(59,130,246,.08)',red:'#e5484d',redB:'rgba(229,72,77,.08)',pur:'#8b5cf6',purB:'rgba(139,92,246,.08)',org:'#f5a623',orgB:'rgba(245,166,35,.08)',tel:'#14b8a6',telB:'rgba(20,184,166,.08)',bd:'#e2e7ee',bdL:'#eef1f6',sh:'0 1px 3px rgba(0,0,0,.04)',shM:'0 4px 16px rgba(0,0,0,.07)',r:'8px',rM:'12px',rL:'16px',f:"'Plus Jakarta Sans',-apple-system,sans-serif",mo:"'JetBrains Mono',monospace"};
+const $={bg:'#fafbfc',bg2:'#fff',bg3:'#edf1f6',t1:'#1a2332',t2:'#5a6b7f',t3:'#8e9bb3',ac:'#0d6e4f',acL:'#e4f5ee',grn:'#2dd4a0',grnB:'rgba(45,212,160,.1)',blu:'#3b82f6',bluB:'rgba(59,130,246,.08)',red:'#e5484d',redB:'rgba(229,72,77,.08)',pur:'#8b5cf6',purB:'rgba(139,92,246,.08)',org:'#f5a623',orgB:'rgba(245,166,35,.08)',tel:'#14b8a6',telB:'rgba(20,184,166,.08)',bd:'#e2e7ee',bdL:'#eef1f6',sh:'0 1px 3px rgba(0,0,0,.04)',shM:'0 4px 16px rgba(0,0,0,.07)',r:'8px',rM:'12px',rL:'16px',f:"'Plus Jakarta Sans',-apple-system,sans-serif",mo:"'JetBrains Mono',monospace"};
 
 const KI=({children,bg,color})=><div style={{width:30,height:30,borderRadius:8,background:bg,color,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{children}</div>;
 const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
@@ -280,7 +295,7 @@ export default function App(){
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(MSAL_ENABLED&&!msalAccount){
     return(
-      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#f5f7fa',position:'relative',overflow:'hidden'}}>
+      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'#f8fafb',position:'relative',overflow:'hidden'}}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
         <style>{`
           @keyframes liquidA{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(40px,-50px) scale(1.1) rotate(10deg)}66%{transform:translate(-20px,30px) scale(.95) rotate(-5deg)}}
@@ -366,8 +381,8 @@ export default function App(){
 
       {/* SIDEBAR */}
       {mob&&sbOpen&&<div className="mob-ov" onClick={()=>setSbOpen(false)}/>}
-      <div className={mob?'mob-sb':''} onMouseEnter={()=>{if(!mob&&!sbPinned){clearTimeout(sbTimerRef.current);setSbHov(true);}}} onMouseLeave={()=>{if(!mob&&!sbPinned){sbTimerRef.current=setTimeout(()=>setSbHov(false),250);}}} style={{width:sbExpanded?250:60,background:'rgba(255,255,255,.95)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',display:mob&&!sbOpen?'none':'flex',flexDirection:'column',flexShrink:0,borderRight:'1px solid rgba(226,231,238,.4)',transition:mob?'none':'width .25s cubic-bezier(.4,0,.2,1)',overflow:'hidden',...(mob?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'4px 0 24px rgba(0,0,0,.15)'}:{}),... (!mob&&!sbPinned&&sbHov?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'6px 0 24px rgba(0,0,0,.1)'}:{})}}>
-        <div style={{padding:sbExpanded?'20px 20px 16px':'20px 11px 16px',display:'flex',alignItems:'center',gap:12,position:'relative'}}>
+      <div className={mob?'mob-sb':''} onMouseEnter={()=>{if(!mob&&!sbPinned){clearTimeout(sbTimerRef.current);setSbHov(true);}}} onMouseLeave={()=>{if(!mob&&!sbPinned){sbTimerRef.current=setTimeout(()=>setSbHov(false),250);}}} style={{width:sbExpanded?250:60,minWidth:sbExpanded?250:60,background:'rgba(255,255,255,.95)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',display:mob&&!sbOpen?'none':'flex',flexDirection:'column',flexShrink:0,borderRadius:mob?0:18,border:'1px solid rgba(226,231,238,.35)',margin:mob?0:'10px 0 10px 10px',transition:mob?'none':'width .25s cubic-bezier(.4,0,.2,1), min-width .25s cubic-bezier(.4,0,.2,1)',overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,.04)',...(mob?{position:'fixed',left:0,top:0,bottom:0,zIndex:1000,boxShadow:'4px 0 24px rgba(0,0,0,.15)'}:{})}}>
+        <div style={{padding:sbExpanded?'10px 20px 16px':'10px 11px 16px',display:'flex',alignItems:'center',gap:12,position:'relative'}}>
           <svg width="38" height="38" viewBox="0 0 64 64" fill="none" style={{flexShrink:0}}>
             <defs>
               <linearGradient id="sbwg1" x1="8" y1="56" x2="56" y2="8"><stop offset="0%" stopColor="#0d6e4f"/><stop offset="100%" stopColor="#2dd4a0"/></linearGradient>
@@ -452,7 +467,7 @@ export default function App(){
       {/* MAIN */}
       <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         {/* Topbar */}
-        <div style={{height:mob?50:56,background:'rgba(255,255,255,.72)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',borderBottom:'1px solid rgba(226,231,238,.4)',display:'flex',alignItems:'center',padding:mob?'0 14px':'0 26px',flexShrink:0,gap:10}}>
+        <div style={{height:mob?54:64,background:'transparent',display:'flex',alignItems:'center',padding:mob?'0 14px':'8px 26px 0',flexShrink:0,gap:10}}>
           {mob&&<div onClick={()=>setSbOpen(!sbOpen)} style={{width:36,height:36,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',background:'rgba(13,110,79,.06)',flexShrink:0}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={$.ac} strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </div>}
@@ -466,20 +481,20 @@ export default function App(){
             </div>
           </div>
           {/* Global Search */}
-          <div style={{position:'relative',maxWidth:mob?170:340,flex:1,margin:'0 auto'}}>
+          <div style={{position:'relative',width:'100%',maxWidth:mob?170:340,flex:1,margin:'0 auto'}}>
             <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
-            <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
+            <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
             {gSearch&&<div onClick={()=>{setGSearch('');}} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:18,height:18,borderRadius:9,background:'rgba(0,0,0,.1)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={10} color="#636366"/></div>}
           </div>
           {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(rows.length)}</div>}
           {/* ERP Status */}
-          {erpStatus&&<div style={{padding:'5px 12px',borderRadius:8,background:$.grnB,fontSize:13,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:6}}>{erpLoading&&<span style={{display:'inline-block',width:12,height:12,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
-          {erpError&&<div style={{padding:'5px 12px',borderRadius:8,background:$.redB,fontSize:13,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
-          {!mob&&<div style={{fontSize:12,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>}
+          {erpStatus&&<div style={{padding:'3px 9px',borderRadius:7,background:$.grnB,fontSize:11,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
+          {erpError&&<div style={{padding:'3px 9px',borderRadius:7,background:$.redB,fontSize:11,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
+          {!mob&&<div style={{fontSize:11,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>}
           {/* Verileri Güncelle */}
           {MSAL_ENABLED&&msalAccount&&(
-            <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:6,fontSize:13,padding:'8px 16px',borderRadius:10}}>
-              {erpLoading?<span style={{display:'inline-block',width:14,height:14,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={14}/>}
+            <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:5,fontSize:11,padding:'6px 12px',borderRadius:8}}>
+              {erpLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={13}/>}
               {erpLoading?'Güncelleniyor...':'Verileri Güncelle'}
             </button>
           )}
@@ -824,8 +839,65 @@ export default function App(){
                       </div></BCard>
                     ))}
 
-                    {/* ROW 2: Heatmap (span 3) + Risk Radar (span 1) */}
-                    <BCard span={mob?1:3}>
+                    {/* ROW 2: AI İçgörüler (span 2) + Aksiyon Önerileri (span 1) + Risk Radarı (span 1) */}
+                    <BCard span={mob?1:2}>
+                      <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI İçgörüler"/>
+                      <div style={{padding:'12px 16px'}}>
+                        {insights.map((ins,i)=>(
+                          <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:ins.bg,marginBottom:i<insights.length-1?8:0,border:'1px solid '+ins.c+'18'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                              <ins.icon size={13} color={ins.c}/>
+                              <span style={{fontSize:11,fontWeight:700,color:ins.c}}>{ins.t}</span>
+                            </div>
+                            <div style={{fontSize:10.5,color:$.t2,lineHeight:1.5,fontWeight:500}}>{ins.d}</div>
+                          </div>))}
+                      </div>
+                    </BCard>
+
+                    <BCard span={1}>
+                      <BHead icon={Zap} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Aksiyon Önerileri"/>
+                      <div style={{padding:'12px 16px'}}>
+                        {actions.map((a,i)=>(
+                          <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:a.bg,marginBottom:i<actions.length-1?8:0,border:'1px solid '+a.c+'18'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
+                              <span style={{fontSize:9,fontWeight:800,color:'#fff',background:a.c,padding:'2px 7px',borderRadius:5,textTransform:'uppercase',letterSpacing:.5}}>{a.pri}</span>
+                            </div>
+                            <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:3,lineHeight:1.4}}>{a.t}</div>
+                            <div style={{fontSize:10,color:$.t3,fontWeight:500,lineHeight:1.4}}>{a.sub}</div>
+                          </div>))}
+                      </div>
+                    </BCard>
+
+                    <BCard span={1}>
+                      <BHead icon={ShieldAlert} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Risk Radarı"/>
+                      <div style={{padding:'12px 16px'}}>
+                        <div onClick={()=>setYonDetail({type:'critical',name:'Kritik Stok Detayı (365+ Gün)',badge:critProds.length+' ürün',badgeC:'#e5484d',badgeBg:'rgba(229,72,77,.08)'})} style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(229,72,77,.05)',marginBottom:8,cursor:'pointer',border:'1px solid rgba(229,72,77,.12)'}} className="rh">
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#e5484d'}}>365+ Gün</span>
+                            <ChevronRight size={12} color={$.t3}/>
+                          </div>
+                          <div style={{fontFamily:$.mo,fontSize:16,fontWeight:800,color:'#e5484d',marginBottom:2}}>{fmtTon(critQty)}</div>
+                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>₺{fmt(critVal)} · %{critPct.toFixed(1)}</div>
+                        </div>
+                        <div style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(234,88,12,.04)',marginBottom:8,border:'1px solid rgba(234,88,12,.1)'}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#ea580c',marginBottom:2}}>180+ Gün</div>
+                          <div style={{fontFamily:$.mo,fontSize:14,fontWeight:800,color:'#ea580c'}}>{fmtTon(c180Qty)}</div>
+                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>%{c180Pct.toFixed(1)} oran</div>
+                        </div>
+                        <div style={{marginTop:8}}>
+                          <div style={{fontSize:10,fontWeight:700,color:$.t2,marginBottom:6}}>Tesis Tipi Dağılımı</div>
+                          {typeStats.map(t=>(
+                            <div key={t.k} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
+                              <div style={{width:7,height:7,borderRadius:3,background:t.c,flexShrink:0}}/>
+                              <span style={{fontSize:10,color:$.t2,flex:1}}>{t.l}</span>
+                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:t.c}}>{t.count}</span>
+                            </div>))}
+                        </div>
+                      </div>
+                    </BCard>
+
+                    {/* ROW 3: Heatmap (span 4) */}
+                    <BCard span={mob?1:4}>
                       <BHead icon={Layers} color={$.org} bg={$.orgB} title="Şirket × Yaş Grubu Isı Haritası"/>
                       <div style={{padding:'12px 16px',overflowX:'auto'}}>
                         <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0,fontSize:10.5}}>
@@ -849,36 +921,7 @@ export default function App(){
                       </div>
                     </BCard>
 
-                    <BCard span={1} rSpan={mob?1:1}>
-                      <BHead icon={ShieldAlert} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Risk Radarı"/>
-                      <div style={{padding:'12px 16px'}}>
-                        <div onClick={()=>setYonDetail({type:'critical',name:'Kritik Stok Detayı (365+ Gün)',badge:critProds.length+' ürün',badgeC:'#e5484d',badgeBg:'rgba(229,72,77,.08)'})} style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(229,72,77,.05)',marginBottom:8,cursor:'pointer',border:'1px solid rgba(229,72,77,.12)'}} className="rh">
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                            <span style={{fontSize:11,fontWeight:700,color:'#e5484d'}}>365+ Gün</span>
-                            <ChevronRight size={12} color={$.t3}/>
-                          </div>
-                          <div style={{fontFamily:$.mo,fontSize:16,fontWeight:800,color:'#e5484d',marginBottom:2}}>{fmtTon(critQty)}</div>
-                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>₺{fmt(critVal)} · %{critPct.toFixed(1)}</div>
-                        </div>
-                        <div style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(234,88,12,.04)',marginBottom:8,border:'1px solid rgba(234,88,12,.1)'}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#ea580c',marginBottom:2}}>180+ Gün</div>
-                          <div style={{fontFamily:$.mo,fontSize:14,fontWeight:800,color:'#ea580c'}}>{fmtTon(c180Qty)}</div>
-                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>%{c180Pct.toFixed(1)} oran</div>
-                        </div>
-                        {/* Type distribution mini */}
-                        <div style={{marginTop:8}}>
-                          <div style={{fontSize:10,fontWeight:700,color:$.t2,marginBottom:6}}>Tesis Tipi Dağılımı</div>
-                          {typeStats.map(t=>(
-                            <div key={t.k} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
-                              <div style={{width:7,height:7,borderRadius:3,background:t.c,flexShrink:0}}/>
-                              <span style={{fontSize:10,color:$.t2,flex:1}}>{t.l}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:t.c}}>{t.count}</span>
-                            </div>))}
-                        </div>
-                      </div>
-                    </BCard>
-
-                    {/* ROW 3: Tesis Performance (span 2) + L2 Portfolio (span 2) */}
+                    {/* ROW 4: Tesis Performance (span 2) + L2 Portfolio (span 2) */}
                     <BCard span={mob?1:2}>
                       <BHead icon={Building2} color={$.pur} bg={$.purB} title="Tesis Performansı (Değer)"/>
                       <div style={{padding:'12px 16px'}}>
@@ -910,38 +953,6 @@ export default function App(){
                             <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(l.a),padding:'1px 5px',borderRadius:4,background:acBg(l.a)}}>{l.a}g</span>
                             <ChevronRight size={11} color={$.t3}/>
                           </div>))}
-                      </div>
-                    </BCard>
-
-                    {/* ROW 4: AI Insights (span 2) + Action items (span 2) */}
-                    <BCard span={mob?1:2}>
-                      <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI İçgörüler"/>
-                      <div style={{padding:'12px 16px'}}>
-                        {insights.map((ins,i)=>(
-                          <div key={i} style={{padding:'10px 12px',borderRadius:$.rM,background:ins.bg,marginBottom:i<insights.length-1?8:0,border:'1px solid '+ins.c+'18'}}>
-                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                              <ins.icon size={13} color={ins.c}/>
-                              <span style={{fontSize:11,fontWeight:700,color:ins.c}}>{ins.t}</span>
-                            </div>
-                            <div style={{fontSize:10.5,color:$.t2,lineHeight:1.5,fontWeight:500}}>{ins.d}</div>
-                          </div>))}
-                      </div>
-                    </BCard>
-
-                    {/* ROW 4: Action items (span 2) */}
-                    <BCard span={mob?1:2}>
-                      <BHead icon={Zap} color={'#e5484d'} bg={'rgba(229,72,77,.06)'} title="Aksiyon Önerileri"/>
-                      <div style={{padding:'12px 16px'}}>
-                        <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat('+Math.min(actions.length,3)+',1fr)',gap:mob?8:10}}>
-                          {actions.map((a,i)=>(
-                            <div key={i} style={{padding:'12px 14px',borderRadius:$.rM,background:a.bg,border:'1px solid '+a.c+'18'}}>
-                              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
-                                <span style={{fontSize:9,fontWeight:800,color:'#fff',background:a.c,padding:'2px 7px',borderRadius:5,textTransform:'uppercase',letterSpacing:.5}}>{a.pri}</span>
-                              </div>
-                              <div style={{fontSize:11.5,fontWeight:700,color:$.t1,marginBottom:4,lineHeight:1.4}}>{a.t}</div>
-                              <div style={{fontSize:10,color:$.t3,fontWeight:500,lineHeight:1.4}}>{a.sub}</div>
-                            </div>))}
-                        </div>
                       </div>
                     </BCard>
 
@@ -1017,9 +1028,9 @@ export default function App(){
 
             {/* ===== RAPORLAR ===== */}
             {pg==='rep'&&(()=>{
-              const tabs=[{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4},{id:'prod',l:'Ürünler',idx:3,lbl:3}];
+              const tabs=[{id:'grp',l:'Grup',idx:-1,lbl:-1},{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4},{id:'prod',l:'Ürünler',idx:3,lbl:3}];
               const cur=tabs.find(t=>t.id===repTab)||tabs[0];
-              const pv=buildPivot(rows,cur.idx,cur.lbl).filter(r=>!repSearch.trim()||r.n.toLowerCase().includes(repSearch.toLowerCase())).sort((a,b)=>{
+              const pv=(cur.id==='grp'?buildGroupPivot(gRows,r=>gGrp(r[0])):buildPivot(gRows,cur.idx,cur.lbl)).sort((a,b)=>{
                 let va,vb;
                 if(repSC==='n'){va=a.n;vb=b.n;return va.localeCompare(vb)*repSD;}
                 else if(repSC==='total'){va=a.total;vb=b.total;}
@@ -1039,10 +1050,6 @@ export default function App(){
                       {tabs.map(t=>(
                         <div key={t.id} onClick={()=>{setRepTab(t.id);setRepSearch('');setRepSC('total');setRepSD(-1);}} style={{padding:'7px 16px',borderRadius:8,fontSize:11.5,fontWeight:repTab===t.id?700:500,cursor:'pointer',background:repTab===t.id?'#fff':'transparent',color:repTab===t.id?$.t1:$.t3,boxShadow:repTab===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s',userSelect:'none'}}>{t.l}</div>
                       ))}
-                    </div>
-                    <div style={{marginLeft:'auto',position:'relative',width:220}}>
-                      <Search size={14} color={$.t3} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)'}}/>
-                      <input className="fi" value={repSearch} onChange={e=>setRepSearch(e.target.value)} placeholder={cur.l+' ara...'} style={{paddingLeft:30,height:34}}/>
                     </div>
                   </div>
 
