@@ -113,7 +113,7 @@ function ProvinceBorders() {
   );
 }
 
-function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, onSelect, onHover, onHoverEnd }) {
+function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, fmtTon, fN, onSelect, onHover, onHoverEnd }) {
   const [x, y] = projection([city.lng, city.lat]);
   const color = acFn(city.a);
   const ref = useRef();
@@ -216,7 +216,7 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, onSelect
             minWidth: 120,
           }}>
             <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4, color: '#1a2332' }}>{city.n}</div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 13, color: '#5a6b7f', marginBottom: 2 }}>{fmt(city.q)} ton</div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 13, color: '#5a6b7f', marginBottom: 2 }}>{fmtTon(city.q)}</div>
             <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, fontSize: 13, color, marginBottom: 2 }}>{city.a} gün FIFO</div>
             <div style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, fontStyle: 'italic', marginTop: 3 }}>Detay icin tiklayin</div>
           </div>
@@ -238,8 +238,8 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, onSelect
             minWidth: 140,
           }}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 5, color: '#1a2332' }}>{city.n}</div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 14, color: '#5a6b7f', marginBottom: 3 }}>{fmt(city.q)} ton</div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 13, color: '#5a6b7f', marginBottom: 3 }}>₺{fmt(city.v)}</div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 14, color: '#5a6b7f', marginBottom: 3 }}>{fmtTon(city.q)}</div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, fontSize: 13, color: '#5a6b7f', marginBottom: 3 }}>₺{fN(city.v)}</div>
             <div style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, fontSize: 14, color, marginBottom: 3 }}>{city.a} gün FIFO</div>
             <div style={{ fontSize: 12, color: '#8e9bb3', fontWeight: 500, marginTop: 4 }}>{city.fc} tesis · {city.wc} depo</div>
           </div>
@@ -268,7 +268,7 @@ function ZoomTracker({ onZoomChange }) {
   return null;
 }
 
-function Scene({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt }) {
+function Scene({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN }) {
   const [labelCount, setLabelCount] = useState(5);
 
   // Sort cities by quantity descending, assign rank
@@ -295,6 +295,8 @@ function Scene({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, 
           showLabel={c._rank < labelCount}
           acFn={acFn}
           fmt={fmt}
+          fmtTon={fmtTon}
+          fN={fN}
           onSelect={onSelect}
           onHover={onHover}
           onHoverEnd={onHoverEnd}
@@ -411,7 +413,7 @@ function SpinGlobe() {
   );
 }
 
-export default function TurkeyMap3D({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, yurtdisi }) {
+export default function TurkeyMap3D({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, yurtdisi }) {
   const ydActive = sel === 'Yurtdışı';
   return (
     <div style={{ height: 450, overflow: 'hidden', background: 'linear-gradient(180deg,#f0f4f8,#f5f7fa)', borderRadius: '0 0 16px 16px', position: 'relative' }}>
@@ -430,6 +432,8 @@ export default function TurkeyMap3D({ cities, maxQty, sel, hov, onSelect, onHove
           onHoverEnd={onHoverEnd}
           acFn={acFn}
           fmt={fmt}
+          fmtTon={fmtTon}
+          fN={fN}
         />
         <OrbitControls
           enablePan={true}

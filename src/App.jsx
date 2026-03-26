@@ -521,6 +521,8 @@ export default function App(){
                       onHoverEnd={()=>setHov(null)}
                       acFn={ac}
                       fmt={fmt}
+                      fmtTon={fmtTon}
+                      fN={fN}
                       yurtdisi={D.ct.find(c=>c.n==='Yurtdışı')||null}
                     />
                   </Suspense>
