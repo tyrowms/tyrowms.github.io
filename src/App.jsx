@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from "react";
-import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye, MoreHorizontal } from "lucide-react";
+import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye, MoreHorizontal, SlidersHorizontal, RotateCcw } from "lucide-react";
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
@@ -109,22 +109,26 @@ export default function App(){
   const [gSearch,setGSearch]=useState('');
   const [gSearchFocus,setGSearchFocus]=useState(false);
   const GS_IDX=[1,3,4,10,12,15,17,19,21,23]; // searchable text column indices
-  const gRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[rows,gSearch]);
+  // calcRows: only rows where madde kodu (index 2) starts with 1, 2 or 3 — used in all calculations
+  const calcRows=useMemo(()=>rows.filter(r=>/^[123]/.test(String(r[2]||''))),[rows]);
+  const gRows=useMemo(()=>{if(!gSearch.trim())return calcRows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return calcRows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[calcRows,gSearch]);
+  // rawRows: all rows (unfiltered by madde kodu) for Rapor Satırları only
+  const rawRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[rows,gSearch]);
   const D=useMemo(()=>buildD(gRows),[gRows]);
   const gSuggestions=useMemo(()=>{
-    if(!gSearch.trim()||rows.length===0)return[];
+    if(!gSearch.trim()||calcRows.length===0)return[];
     const t=gSearch.toLowerCase();
     const cats=[
-      {id:'grp',l:'Grup',icon:'layers',vals:[...new Set(rows.map(r=>gGrp(r[0])))]},
-      {id:'comp',l:'Şirket',icon:'building',vals:[...new Set(rows.map(r=>r[1]||r[0]||''))]},
-      {id:'prod',l:'Ürün',icon:'package',vals:[...new Set(rows.map(r=>r[3]||''))]},
-      {id:'fac',l:'Tesis',icon:'map-pin',vals:[...new Set(rows.map(r=>r[10]||''))]},
-      {id:'l2',l:'Seviye 2',icon:'git-branch',vals:[...new Set(rows.map(r=>r[17]||''))]},
-      {id:'l3',l:'Seviye 3',icon:'git-merge',vals:[...new Set(rows.map(r=>r[19]||''))]},
-      {id:'origin',l:'Menşe',icon:'globe',vals:[...new Set(rows.map(r=>r[4]||''))]},
+      {id:'grp',l:'Grup',icon:'layers',vals:[...new Set(calcRows.map(r=>gGrp(r[0])))]},
+      {id:'comp',l:'Şirket',icon:'building',vals:[...new Set(calcRows.map(r=>r[1]||r[0]||''))]},
+      {id:'prod',l:'Ürün',icon:'package',vals:[...new Set(calcRows.map(r=>r[3]||''))]},
+      {id:'fac',l:'Tesis',icon:'map-pin',vals:[...new Set(calcRows.map(r=>r[10]||''))]},
+      {id:'l2',l:'Seviye 2',icon:'git-branch',vals:[...new Set(calcRows.map(r=>r[17]||''))]},
+      {id:'l3',l:'Seviye 3',icon:'git-merge',vals:[...new Set(calcRows.map(r=>r[19]||''))]},
+      {id:'origin',l:'Menşe',icon:'globe',vals:[...new Set(calcRows.map(r=>r[4]||''))]},
     ];
     return cats.map(c=>({...c,matches:c.vals.filter(v=>v&&v.toLowerCase().includes(t)).slice(0,5)})).filter(c=>c.matches.length>0);
-  },[rows,gSearch]);
+  },[calcRows,gSearch]);
   const [mob,setMob]=useState(typeof window!=='undefined'&&window.innerWidth<768);
   const [sbOpen,setSbOpen]=useState(false);
   const [sbPinned,setSbPinned]=useState(false);
@@ -232,6 +236,9 @@ export default function App(){
   const [erpSearch,setErpSearch]=useState('');
   const [rawPage,setRawPage]=useState(0);
   const [erpPage,setErpPage]=useState(0);
+  const RAWF_INIT={grp:'',comp:'',madde:'',urun:'',mense:'',tesis:'',l2:'',l3:'',miktarMin:'',miktarMax:'',gunMin:'',gunMax:'',risk:''};
+  const [rawFilter,setRawFilter]=useState(RAWF_INIT);
+  const [showRawFilter,setShowRawFilter]=useState(false);
   const [pageSize,setPageSize]=useState(100);
   const ERP_KEEP=useMemo(()=>new Set(['mserp_inventcolorid','mserp_closingpricemst','mserp_purchlifo','mserp_purchpricemst','mserp_amountmst','mserp_qty','mserp_itemname','mserp_headerreportdate','mserp_companyid','mserp_etgproductlevel03name','mserp_sfilotid','mserp_purchweav','mserp_amountsec','mserp_itemid','mserp_inventsizeid','mserp_inventdimension1','mserp_etgproductlevel02name','mserp_inventlocationid','mserp_prodweav','mserp_purchfifo','mserp_purchpricesec','mserp_prodfifo','mserp_prodlifo','mserp_vesselassignmentid','mserp_etgproductlevel01name','mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname','mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name','mserp_inventbatchid','mserp_inventdimension2','versionnumber','mserp_inventlocationname']),[]);
 
@@ -289,9 +296,35 @@ export default function App(){
 
   const mQ=Math.max(...D.ct.map(c=>c.q),1);
 
-  const filtered=useMemo(()=>{if(!search.trim())return gRows;const s=search.toLowerCase();return gRows.filter(r=>r.some(v=>String(v).toLowerCase().includes(s)));},[gRows,search]);
+  const rawFilterOpts=useMemo(()=>({
+    grps:[...new Set(rows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),
+    comps:[...new Set(rows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),
+    menses:[...new Set(rows.map(r=>r[4]||''))].filter(v=>v).sort(),
+    tesisler:[...new Set(rows.map(r=>r[10]||''))].filter(v=>v).sort(),
+    l2s:[...new Set(rows.map(r=>r[17]||''))].filter(v=>v).sort(),
+    l3s:[...new Set(rows.map(r=>r[19]||''))].filter(v=>v).sort(),
+  }),[rows]);
+  const activeFilterCount=useMemo(()=>Object.values(rawFilter).filter(v=>v!=='').length,[rawFilter]);
+  const filtered=useMemo(()=>{
+    let r=rawRows;
+    if(search.trim()){const s=search.toLowerCase();r=r.filter(row=>row.some(v=>String(v).toLowerCase().includes(s)));}
+    if(rawFilter.grp)r=r.filter(row=>gGrp(row[0])===rawFilter.grp);
+    if(rawFilter.comp)r=r.filter(row=>(row[1]||row[0]||'')===rawFilter.comp);
+    if(rawFilter.madde)r=r.filter(row=>String(row[2]||'').toLowerCase().includes(rawFilter.madde.toLowerCase()));
+    if(rawFilter.urun)r=r.filter(row=>String(row[3]||'').toLowerCase().includes(rawFilter.urun.toLowerCase()));
+    if(rawFilter.mense)r=r.filter(row=>row[4]===rawFilter.mense);
+    if(rawFilter.tesis)r=r.filter(row=>row[10]===rawFilter.tesis);
+    if(rawFilter.l2)r=r.filter(row=>row[17]===rawFilter.l2);
+    if(rawFilter.l3)r=r.filter(row=>row[19]===rawFilter.l3);
+    if(rawFilter.miktarMin!=='')r=r.filter(row=>row[8]>=Number(rawFilter.miktarMin));
+    if(rawFilter.miktarMax!=='')r=r.filter(row=>row[8]<=Number(rawFilter.miktarMax));
+    if(rawFilter.gunMin!=='')r=r.filter(row=>row[27]>=Number(rawFilter.gunMin));
+    if(rawFilter.gunMax!=='')r=r.filter(row=>row[27]<=Number(rawFilter.gunMax));
+    if(rawFilter.risk){const rng={fresh:[0,60],normal:[60,180],risky:[180,365],critical:[365,1e9]};const[mn,mx]=rng[rawFilter.risk]||[0,1e9];r=r.filter(row=>row[27]>=mn&&row[27]<mx);}
+    return r;
+  },[rawRows,search,rawFilter]);
   const sorted=useMemo(()=>[...filtered].sort((a,b)=>{const x=a[rC],y=b[rC];return(typeof x==='number'?(x-y):String(x).localeCompare(String(y)))*rD;}),[filtered,rC,rD]);
-  useEffect(()=>{setRawPage(0);},[search,rC,rD]);
+  useEffect(()=>{setRawPage(0);},[search,rC,rD,rawFilter]);
   useEffect(()=>{setErpPage(0);},[erpSearch]);
 
   const handleDelete=()=>{if(selRows.size===0)return;setRows(prev=>prev.filter((_,i)=>!selRows.has(i)));setSelRows(new Set());};
@@ -505,7 +538,7 @@ export default function App(){
             <div style={{textAlign:'center',marginBottom:8}}>
               <div style={{fontWeight:800,fontSize:20,letterSpacing:.3,lineHeight:1.1}}><span style={{color:$.t1}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
               {(gSearch&&rows.length>0||erpStatus||erpError)&&<div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginTop:4}}>
-                {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:11,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(rows.length)}</div>}
+                {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:11,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
                 {erpStatus&&<div style={{padding:'3px 7px',borderRadius:7,background:$.grnB,fontSize:10,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:4}}>{erpLoading&&<span style={{display:'inline-block',width:8,height:8,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
                 {erpError&&<div style={{padding:'3px 7px',borderRadius:7,background:$.redB,fontSize:10,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
               </div>}
@@ -559,7 +592,7 @@ export default function App(){
                 </div>
               )}
             </div>
-            {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(rows.length)}</div>}
+            {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
             {erpStatus&&<div style={{padding:'3px 9px',borderRadius:7,background:$.grnB,fontSize:11,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
             {erpError&&<div style={{padding:'3px 9px',borderRadius:7,background:$.redB,fontSize:11,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
             <div style={{fontSize:11,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>
@@ -1076,17 +1109,21 @@ export default function App(){
             {/* ===== RAW DATA ===== */}
             {pg==='raw'&&(
               <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,overflow:'hidden',boxShadow:$.sh}}>
-                <div style={{padding:'12px 16px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                <div style={{padding:'12px 16px',borderBottom:showRawFilter?'none':'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
                   <div style={{display:'flex',alignItems:'center',gap:8,flex:1,minWidth:200}}>
                     <Database size={16} color={$.blu}/>
                     <span style={{fontSize:13,fontWeight:700,color:$.t1}}>Rapor Satırları</span>
-                    {rows.length>0&&<span style={{fontSize:11,color:$.t3,fontWeight:500}}>{filtered.length}/{rows.length} kayıt</span>}
+                    {rows.length>0&&<span style={{fontSize:11,color:$.t3,fontWeight:500}}>{filtered.length}/{rawRows.length} kayıt</span>}
+                    {activeFilterCount>0&&<span style={{fontSize:10,fontWeight:700,color:'#fff',background:$.ac,padding:'1px 7px',borderRadius:10}}>{activeFilterCount} filtre</span>}
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <div style={{position:'relative'}}>
                       <Search size={13} style={{position:'absolute',left:8,top:'50%',transform:'translateY(-50%)',color:$.t3}}/>
-                      <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara..." style={{paddingLeft:28,width:180}}/>
+                      <input className="fi" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ara..." style={{paddingLeft:28,width:160}}/>
                     </div>
+                    <button className="tb-b" onClick={()=>setShowRawFilter(v=>!v)} style={{gap:5,background:showRawFilter||activeFilterCount>0?$.acL:'',borderColor:showRawFilter||activeFilterCount>0?$.ac:'',color:showRawFilter||activeFilterCount>0?$.ac:''}}>
+                      <SlidersHorizontal size={13}/>Filtrele{activeFilterCount>0?` (${activeFilterCount})`:''}
+                    </button>
                     <button className="tb-b" onClick={()=>fR.current?.click()} style={{gap:6}}><Upload size={13}/>İçeri Aktar</button>
                     {rows.length>0&&<button className="tb-b" onClick={()=>{
                       const doIt=()=>{const ws=window.XLSX.utils.aoa_to_sheet([HDR,...rows]);const wb=window.XLSX.utils.book_new();window.XLSX.utils.book_append_sheet(wb,ws,'Rapor');window.XLSX.writeFile(wb,'TYRO_RaporSatirlari_'+new Date().toISOString().slice(0,10)+'.xlsx');};
@@ -1095,6 +1132,102 @@ export default function App(){
                     {selRows.size>0&&<button className="tb-b" onClick={handleDelete} style={{color:$.red,borderColor:$.red,gap:6}}><Trash2 size={13}/>Sil ({selRows.size})</button>}
                   </div>
                 </div>
+                {/* Advanced Filter Panel */}
+                {showRawFilter&&(
+                  <div style={{padding:'14px 16px',borderBottom:'1px solid '+$.bdL,background:'rgba(248,250,252,0.8)'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                      <span style={{fontSize:12,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:6}}><SlidersHorizontal size={13} color={$.ac}/>Gelişmiş Filtre</span>
+                      {activeFilterCount>0&&<button className="tb-b" onClick={()=>setRawFilter(RAWF_INIT)} style={{gap:5,fontSize:11,padding:'4px 10px',color:$.red,borderColor:$.red}}><RotateCcw size={11}/>Sıfırla</button>}
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:'10px 12px'}}>
+                      {/* Şirket Grubu */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket Grubu</div>
+                        <select className="fi" value={rawFilter.grp} onChange={e=>setRawFilter(p=>({...p,grp:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.grps.map(g=><option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                      {/* Şirket */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket</div>
+                        <select className="fi" value={rawFilter.comp} onChange={e=>setRawFilter(p=>({...p,comp:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.comps.map(c=><option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      {/* Madde Kodu */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Madde Kodu</div>
+                        <input className="fi" value={rawFilter.madde} onChange={e=>setRawFilter(p=>({...p,madde:e.target.value}))} placeholder="Kod içerir..." style={{width:'100%',fontSize:11,boxSizing:'border-box'}}/>
+                      </div>
+                      {/* Ürün Adı */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ürün Adı</div>
+                        <input className="fi" value={rawFilter.urun} onChange={e=>setRawFilter(p=>({...p,urun:e.target.value}))} placeholder="Ürün içerir..." style={{width:'100%',fontSize:11,boxSizing:'border-box'}}/>
+                      </div>
+                      {/* Menşe */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Menşe</div>
+                        <select className="fi" value={rawFilter.mense} onChange={e=>setRawFilter(p=>({...p,mense:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.menses.map(m=><option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      {/* Tesis */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Tesis</div>
+                        <select className="fi" value={rawFilter.tesis} onChange={e=>setRawFilter(p=>({...p,tesis:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.tesisler.map(t=><option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      {/* L2 Adı */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 2</div>
+                        <select className="fi" value={rawFilter.l2} onChange={e=>setRawFilter(p=>({...p,l2:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.l2s.map(l=><option key={l} value={l}>{l}</option>)}
+                        </select>
+                      </div>
+                      {/* L3 Adı */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 3</div>
+                        <select className="fi" value={rawFilter.l3} onChange={e=>setRawFilter(p=>({...p,l3:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.l3s.map(l=><option key={l} value={l}>{l}</option>)}
+                        </select>
+                      </div>
+                      {/* Miktar Aralığı */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Miktar (min – maks)</div>
+                        <div style={{display:'flex',gap:6}}>
+                          <input className="fi" type="number" value={rawFilter.miktarMin} onChange={e=>setRawFilter(p=>({...p,miktarMin:e.target.value}))} placeholder="Min" style={{width:'50%',fontSize:11}}/>
+                          <input className="fi" type="number" value={rawFilter.miktarMax} onChange={e=>setRawFilter(p=>({...p,miktarMax:e.target.value}))} placeholder="Maks" style={{width:'50%',fontSize:11}}/>
+                        </div>
+                      </div>
+                      {/* Gün Aralığı */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Yaş / Gün (min – maks)</div>
+                        <div style={{display:'flex',gap:6}}>
+                          <input className="fi" type="number" value={rawFilter.gunMin} onChange={e=>setRawFilter(p=>({...p,gunMin:e.target.value}))} placeholder="Min" style={{width:'50%',fontSize:11}}/>
+                          <input className="fi" type="number" value={rawFilter.gunMax} onChange={e=>setRawFilter(p=>({...p,gunMax:e.target.value}))} placeholder="Maks" style={{width:'50%',fontSize:11}}/>
+                        </div>
+                      </div>
+                      {/* Risk Kategorisi */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Risk Kategorisi</div>
+                        <select className="fi" value={rawFilter.risk} onChange={e=>setRawFilter(p=>({...p,risk:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          <option value="fresh">Taze (0–60 gün)</option>
+                          <option value="normal">Normal (60–180 gün)</option>
+                          <option value="risky">Riskli (180–365 gün)</option>
+                          <option value="critical">Kritik (365+ gün)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {addMode&&newRow&&(
                   <div style={{padding:'10px 18px',background:$.acL,borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
                     {HDR.slice(0,9).map((h,ci)=><input key={ci} className="fi" placeholder={h} value={newRow[ci]} onChange={e=>{const nr=[...newRow];nr[ci]=NC.has(ci)?Number(e.target.value)||0:e.target.value;setNewRow(nr);}} style={{width:ci===3?120:80,fontSize:10}}/>)}
