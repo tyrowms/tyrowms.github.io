@@ -5,56 +5,7 @@ const WorldMap3D = lazy(() => import('./WorldMap3D'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
 const INIT=[];
-const _DEMO=(()=>{
-  const comps=[['TAND','Tiryaki Anadolu Tarım A.Ş.'],['TSRY','Tiryaki Süryani Tarım'],['DANE','Dane Tarım A.Ş.'],['ENUT','Enut Gıda A.Ş.'],['SUHO','Suho Trading Ltd.'],['SAMA','Sama Agriculture Co.'],['MESQ','Mesq Trading'],['SRCA','Sarıca Organics'],['GPOR','Giresun Port Organics'],['ETRY','Etry Enerji A.Ş.'],['TTEC','Tiryaki Teknoloji A.Ş.'],['ASET','Aset Holding A.Ş.'],['TOGO','Togo Agri Ltd.'],['NOVA','Nova Trading']];
-  const facs=[
-    // Türkiye tesisleri (gerçek ERP kodları)
-    ['ADN-DTS','Adana Dış Tesis','ADN-D01'],['BND-DTS','Bandırma Dış Tesis','BND-D01'],['BRS-DTS','Bursa Dış Tesis','BRS-D01'],
-    ['CRM','Corum','CRM_001'],['CRM-FSN','Çorum Fason','CRM-F01'],
-    ['GRS-L','Giresun Liman','GRL_003'],['GRS-U','Giresun Uretim','GRU_101'],['GRS-S','Giresun Silo','GRS-S01'],
-    ['GZT-DTS','Gaziantep Dış Tesis','GZT-D01'],['GZT-FSN','Gaziantep Fason','GZT-F01'],
-    ['ISK-DTS','İskenderun Dış Tesis','ISK-D01'],['IZM-DTS','İzmir Dış Tesis','IZM-D01'],
-    ['KON-DTS','Konya Dış Tesis','KON-D01'],['MRS-DTS','Mersin Dış Tesis','MRS-D01'],
-    ['SMS-SH','Samsun SH Yesilyurt','SSH_043'],['SMS-DTS','Samsun Dış Tesis','SMS-D01'],
-    ['TRY-BND','Bandırma Öz Tesis','TRY-B01'],['TRY-GZT','Gaziantep Öz Tesis','TRY-G01'],
-    ['YLD-KON','Konya Öz Tesis','YLD-K01'],['YLD-MUS','Muş Öz Tesis','YLD-M01'],
-    ['TKR-L','Tekirdag Port','TKL_GIT'],['DTC','İstanbul Merkez','DTC-01'],
-    // ABD tesisleri
-    ['NOLA3','New Orleans Terminal 3','NOLA3-01'],['NOLA4','New Orleans Terminal 4','NOLA4-01'],
-    ['PHIL','Philadelphia Terminal','PHIL-01'],['OAK','Oakland Terminal','OAK-01'],
-    ['HUNT','Huntsville Depot','HUNT-01'],['DESM','Des Moines Elevator','DESM-01'],
-    ['SIOUX','Sioux City Terminal','SIOX-01'],['COLU','Columbus Depot','COLU-01'],
-    ['DELTA','Delta Terminal','DELT-01'],['LONGB','Long Beach Port','LNGB-01'],
-    // Kanada tesisleri
-    ['VANC','Vancouver Port','VANC-01'],['MONTR','Montreal Terminal','MNTR-01'],['REG','Regina Elevator','REG-01'],
-    // Avrupa tesisleri
-    ['ANTW','Antwerp Molenbergnatie','ANTW-01'],['MARSE','Marseilles Port','MARS-01'],
-    // Irak tesisleri
-    ['BGD','Baghdad Depot','BGD-01'],['BSR','Basra Port','BSR-01'],['BBL','Babil Depot','BBL-01'],
-    // Diğer
-    ['GHANA','Ghana Depot','GHA-01'],['LEBAN','Lebanon Terminal','LBN-01']
-  ];
-  const cats=[
-    {pfx:'1',l2:'06',l2n:'Tahıl',l3:'0601',l3n:'Hububat',prods:[['Buğday','TR'],['Mısır','UA'],['Arpa','DE'],['Yulaf','TR'],['Sorgum','AR'],['Çeltik','VN'],['Tritikale','TR']],price:8.5,priceU:0.25},
-    {pfx:'2',l2:'07',l2n:'Yağlı Tohum ve Yemle',l3:'0701',l3n:'Yemeklik Yağ Tohumu',prods:[['Ayçiçeği','TR'],['Kanola','DE'],['Soya Fasulyesi','BR'],['Aspir','TR'],['Ham Ayçiçek Yağı','RU'],['Kolza','FR'],['Susam','ET']],price:22,priceU:0.65},
-    {pfx:'3',l2:'08',l2n:'Kuruyemiş',l3:'0801',l3n:'Sert Kabuklu Meyveler',prods:[['Fındık İç','TR'],['Ceviz İç','TR'],['Antep Fıstığı','TR'],['Badem İç','US'],['Çam Fıstığı','TR'],['Kaju','VN'],['Makademya','ZA']],price:95,priceU:2.8},
-    {pfx:'1',l2:'09',l2n:'Bakliyat',l3:'0901',l3n:'Yemeklik Tane Baklagiller',prods:[['Nohut','TR'],['Kırmızı Mercimek','TR'],['Kuru Fasulye','AR'],['Bakla','TR'],['Bezelye','DE'],['Yeşil Mercimek','CA'],['Börülce','TR']],price:18,priceU:0.53},
-    {pfx:'2',l2:'10',l2n:'Diğer',l3:'1001',l3n:'Çeşitli İşlenmiş',prods:[['Pirinç','VN'],['Buğday Unu','TR'],['Kepek','TR'],['Mısır Nişastası','TR'],['Hayvan Yemi','TR'],['Gluten','TR'],['Razmol','TR']],price:12,priceU:0.35},
-  ];
-  const ambalaj=['Big-Bag','Dökme','Çuval 50kg','Çuval 25kg','Konteyner','Dökme-Gemi'];
-  let seed=7391;
-  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0xffffffff;};
-  const ri=(a)=>Math.floor(rnd()*a.length);
-  const rn=(min,max)=>Math.round(min+rnd()*(max-min));
-  const rows=[];
-  for(let i=0;i<100;i++){
-    const comp=comps[ri(comps)];const fac=facs[ri(facs)];const cat=cats[ri(cats)];const prod=cat.prods[ri(cat.prods)];
-    const madde=cat.pfx+String(1000+rn(1,99)).padStart(6,'0').slice(-5);
-    const days=rn(0,500);const qty=rn(1000,120000);const pTL=parseFloat((cat.price*(0.75+rnd()*0.5)).toFixed(2));const pUSD=parseFloat((cat.priceU*(0.75+rnd()*0.5)).toFixed(2));const depNo=rn(1,4);
-    rows.push([comp[0],comp[1],madde,prod[0],prod[1],'P'+String(100+i).slice(1),ambalaj[ri(ambalaj)],'%'+rn(0,18),qty,fac[0],fac[1],fac[2].replace('01',String(depNo).padStart(2,'0')),'Ambar '+depNo,'PTR-'+String(10000+i),'L1-'+cat.pfx,'Grup '+cat.pfx,cat.l2,cat.l2n,cat.l3,cat.l3n,'','','','',pTL,pUSD,parseFloat((pTL*0.98).toFixed(2)),days,parseFloat((pTL*1.02).toFixed(2)),parseFloat((pTL*0.97).toFixed(2)),days,parseFloat((pTL*1.01).toFixed(2)),days]);
-  }
-  return rows;
-})();
+const DEMO=INIT; // Canlıda ERP'den veri çekilir, demo-data.json local-only
 const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IST":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TKR":"Tekirdağ","KOC":"Kocaeli","TRB":"Trabzon","SILAM":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-DTS":"İstanbul","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","TRY-SDN":"İstanbul","YLD-KON":"Konya","YLD-MUS":"Muş","YLD-TKD":"Tekirdağ"};
@@ -93,27 +44,39 @@ function buildD(rows){
 // ── Emerging Markets: Ülke bazlı mapping ──
 // Uluslararası tesis kodu → Ülke (gerçek ERP verisinden)
 const FCTM={
-  // ABD (50+ tesis)
-  'ALEX':'ABD','ARMIL':'ABD','AUS':'ABD','BWC':'ABD','CHERO':'ABD','COLDZ':'ABD','COLU':'ABD','COZAD':'ABD','DEJON':'ABD','DELTA':'ABD','DESM':'ABD','ECHO':'ABD','FIVER':'ABD','GALVA':'ABD','GLADS':'ABD','GNGT':'ABD','GRAN':'ABD','GROV':'ABD','HAMM':'ABD','HEP':'ABD','HERC':'ABD','HUNT':'ABD','LANG':'ABD','LATHR':'ABD','LONGB':'ABD','MANLY':'ABD','MANOR':'ABD','MHC':'ABD','NEWC':'ABD','NOLA3':'ABD','NOLA4':'ABD','NOLA6':'ABD','NOLA7':'ABD','OAK':'ABD','ONT':'ABD','OZARK':'ABD','PASA':'ABD','PENN':'ABD','PHIL':'ABD','PHOE':'ABD','PLEAS':'ABD','PROG':'ABD','RED':'ABD','ROCH':'ABD','SIOUX':'ABD','SUMN':'ABD','SWEDE':'ABD','VALLA':'ABD','WILM':'ABD',
+  // ABD
+  'ALEX':'ABD','ARMIL':'ABD','BWC':'ABD','BORD':'ABD','BRIDG':'ABD','CHERO':'ABD','COLDZ':'ABD','COLU':'ABD','COZAD':'ABD','DEJON':'ABD','DELTA':'ABD','DESM':'ABD','ECHO':'ABD','FIVER':'ABD','GALVA':'ABD','GLADS':'ABD','GRAN':'ABD','GROV':'ABD','HAMM':'ABD','HERC':'ABD','HUNT':'ABD','LANG':'ABD','LATHR':'ABD','LONGB':'ABD','MANLY':'ABD','MANOR':'ABD','MHC':'ABD','MARSE':'ABD','NEWC':'ABD','NOLA3':'ABD','NOLA4':'ABD','NOLA6':'ABD','NOLA7':'ABD','OAK':'ABD','ONT':'ABD','OTT':'ABD','OZARK':'ABD','PASA':'ABD','PENN':'ABD','PHIL':'ABD','PHOE':'ABD','PLEAS':'ABD','PROG':'ABD','RED':'ABD','ROCH':'ABD','SIOUX':'ABD','SUMN':'ABD','SWEDE':'ABD','VALLA':'ABD','VANCO':'ABD','WILM':'ABD',
   // Kanada
-  'MONTR':'Kanada','OTT':'Kanada','REG':'Kanada','SAS':'Kanada','VANC':'Kanada','VANCO':'Kanada','VANCP':'Kanada',
+  'AUS':'Kanada','GNGT':'Kanada','HEP':'Kanada','MONTR':'Kanada','REG':'Kanada','SAS':'Kanada','VANC':'Kanada','VANCP':'Kanada',
   // Avrupa
-  'ANTW':'Belçika','MARSE':'Fransa','CALINESTI':'Romanya','MARACINENI':'Romanya','GBI':'Romanya',
+  'ANTW':'Belçika','CALINESTI':'Romanya','MARACINENI':'Romanya','GBI':'Romanya',
   // Orta Doğu / Irak
-  'BBL':'Irak','BGD':'Irak','BSR':'Irak','KBR':'Irak','NJF':'Irak',
-  'LEBAN':'Lübnan',
+  'BBL':'Irak','BGD':'Irak','BSR':'Irak','KBR':'Irak','KUT':'Irak','NJF':'Irak',
+  'LEBAN':'ABD',
   // Afrika
   'GHANA':'Gana',
-  // Eski demo tesisleri (geriye uyumluluk)
-  'DXB':'BAE','ACC':'Gana','MOZ':'Mozambik','JED':'Suudi Arabistan','SPL':'Brezilya','HMB':'Almanya','ODN':'Ukrayna','MUM':'Hindistan','NBO':'Kenya','JNB':'Güney Afrika'
+  // Özel Türk kodları (TRY- prefix ama yurtdışı)
+  'TRY-SDN':'Sudan',
+  // Sistem kodları → Diğer
+  'P2SALE':'Diğer','IMPORT':'Diğer','INTER':'Diğer','VSL':'Diğer','RJCT':'Diğer','Cust Site':'Diğer'
 };
 const COUNTRY_LL={
-  'Türkiye':[39,35],'ABD':[39,-98],'Kanada':[56,-106],'Belçika':[50.8,4.4],'Fransa':[46.6,2.2],'Romanya':[46,25],
-  'Irak':[33,44],'Lübnan':[33.9,35.5],'Gana':[7.9,-1],
-  'BAE':[24,54],'Mozambik':[-18.7,35.5],'Suudi Arabistan':[24,45],'Brezilya':[-14,-51],'Almanya':[51,10],
-  'Ukrayna':[49,32],'Hindistan':[20,77],'Kenya':[-1,38],'Güney Afrika':[-29,24]
+  'Türkiye':[39,35],'ABD':[39,-98],'Kanada':[56,-106],'Belçika':[50.8,4.4],'Romanya':[46,25],
+  'Irak':[33,44],'Gana':[7.9,-1],'Sudan':[15.6,32.5],
+  'Diğer':[18,-30]
 };
-const gCountry=c=>{if(CTM[c])return'Türkiye';const p=c.split('-')[0];if(CTM[p])return'Türkiye';return FCTM[c]||FCTM[p]||'Diğer';};
+const gCountry=c=>{
+  // Önce tam kodu FCTM'de ara (TRY-SDN gibi özel durumlar)
+  if(FCTM[c])return FCTM[c];
+  // Sonra tam kodu CTM'de ara
+  if(CTM[c])return'Türkiye';
+  const p=c.split('-')[0];
+  // Prefix'i FCTM'de ara
+  if(FCTM[p])return FCTM[p];
+  // Prefix'i CTM'de ara
+  if(CTM[p])return'Türkiye';
+  return'Diğer';
+};
 
 function buildDWorld(rows){
   const fm={},wm={};
@@ -196,7 +159,7 @@ const SegBar=({ag,total,h,rd})=>{const tq=total||1;const hh=h||10;const rr=rd||5
 );};
 
 export default function App(){
-  const [rows,setRows]=useState(()=>{try{const s=localStorage.getItem('tyrowms_rows');if(s){const p=JSON.parse(s);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return INIT;});
+  const [rows,setRows]=useState(()=>{if(DEMO&&DEMO.length>0)return DEMO;try{const s=localStorage.getItem('tyrowms_rows');if(s){const p=JSON.parse(s);if(Array.isArray(p)&&p.length>0)return p;}}catch(e){}return INIT;});
   useEffect(()=>{try{if(rows.length>0)localStorage.setItem('tyrowms_rows',JSON.stringify(rows));else localStorage.removeItem('tyrowms_rows');}catch(e){}},[rows]);
   const [gSearch,setGSearch]=useState('');
   const [gSearchFocus,setGSearchFocus]=useState(false);
@@ -617,7 +580,7 @@ export default function App(){
         <div style={{padding:sbExpanded?'0 12px':'0 8px',flex:1,overflowY:'auto'}}>
           {sbExpanded&&<div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>}
           {!sbExpanded&&<div style={{height:10}}/>}
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'},{id:'em',icon:Globe,label:'Emerging Markets'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'},{id:'em',icon:Globe,label:'Harita'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
@@ -705,8 +668,8 @@ export default function App(){
             {/* Desktop: original single-row layout */}
             <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','em':'Emerging Markets','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
-                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','em':'Küresel Operasyonlar ve Uluslararası Tesisler','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','em':'Harita','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
+                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','em':'Küresel Operasyonlar','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
               </div>
             </div>
             <div style={{position:'relative',width:'100%',maxWidth:340,flex:1,margin:'0 auto'}}>
@@ -1245,7 +1208,7 @@ export default function App(){
 
             {/* ===== EMERGING MARKETS ===== */}
             {pg==='em'&&(
-              <div style={{display:'flex',gap:16,flexDirection:mob?'column':'row'}}>
+              <div style={{display:'flex',gap:16,flexDirection:mob?'column':'row',alignItems:'flex-start'}}>
                 <div style={{flex:1,minWidth:0}}>
                   {/* KPI Cards */}
                   <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(6,1fr)',gap:10,marginBottom:16}}>
@@ -1275,10 +1238,12 @@ export default function App(){
                         maxQty={mQW}
                         sel={emSel}
                         hov={emHov}
-                        onSelect={(name)=>{setEmSel(emSel===name?null:name);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}}
+                        onSelect={(name)=>{setEmSel(name===null?null:(emSel===name?null:name));setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}}
                         onHover={n=>setEmHov(n)}
                         onHoverEnd={()=>setEmHov(null)}
                         acFn={ac} fmt={fmt} fmtTon={fmtTon} fN={fN}
+                        onGlobalClick={()=>{setEmSel('__global__');setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}}
+                        globalActive={emSel==='__global__'}
                       />
                     </Suspense>
                   </div>
@@ -1328,9 +1293,9 @@ export default function App(){
                   </div>
                 </div>
 
-                {/* ── EM Right Panel ── */}
-                {emSD&&!mob&&(
-                  <div style={{width:440,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',borderRadius:$.rL,border:'1px solid rgba(226,231,238,.4)',boxShadow:$.shM,display:'flex',flexDirection:'column',overflow:'hidden',maxHeight:'calc(100vh - 140px)',position:'sticky',top:80}}>
+                {/* EM Right Panel → scroll dışında, aşağıda render edilir */}
+                {false&&(
+                  <div>
                     <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
                       <div>
                         <div style={{fontWeight:700,fontSize:17,color:$.t1,lineHeight:1.2}}>{emSel}</div>
@@ -2197,13 +2162,146 @@ export default function App(){
             </div>
           )}
 
+          {/* ===== EM RIGHT DRAWER ===== */}
+          {(emSel==='__global__'||emSD)&&pg==='em'&&!mob&&(()=>{
+            const emFacName=DW.f.find(f=>f.id===(emDrillFac||emDrillWh))?.n||(emDrillFac||emDrillWh);
+            const GBC=({children})=><div style={{display:'flex',alignItems:'center',gap:0,marginBottom:14,background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px) saturate(180%)',WebkitBackdropFilter:'blur(20px) saturate(180%)',border:'1px solid rgba(255,255,255,0.85)',boxShadow:'0 2px 12px rgba(0,0,0,0.05),inset 0 1px 0 rgba(255,255,255,0.9)',borderRadius:12,overflow:'hidden',flexWrap:'wrap'}}>{children}</div>;
+            const BCBack=({onClick})=><div onClick={onClick} className="rh" style={{display:'flex',alignItems:'center',gap:4,padding:'10px 13px',cursor:'pointer',borderRight:'1px solid rgba(0,0,0,0.06)',flexShrink:0,transition:'background .15s'}}><ChevronLeft size={14} color={$.blu}/><span style={{fontSize:12,fontWeight:700,color:$.blu}}>Geri</span></div>;
+            const BCItem=({label,onClick,active})=><><span className={onClick?'rh':''} style={{cursor:onClick?'pointer':'default',color:onClick?$.blu:$.t1,fontWeight:active?600:500,padding:'2px 0'}} onClick={onClick||undefined}>{label}</span><ChevronRight size={10} color={$.t3} style={{flexShrink:0}}/></>;
+            const isGlobal=emSel==='__global__';
+            // Seviye belirle: global → ülke → tesis → l2 → ürün
+            const level=isGlobal?'global':emProdData?'product':emL2Data?'l2':(emSD?'country':null);
+            return(
+            <div style={{width:440,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(24px) saturate(160%)',WebkitBackdropFilter:'blur(24px) saturate(160%)',borderLeft:'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+              <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+                <div style={{minWidth:0,flex:1}}>
+                  <div style={{fontWeight:700,fontSize:17,color:$.t1,lineHeight:1.2}}>{isGlobal?'Küresel Operasyonlar':emSel}</div>
+                  <div style={{fontSize:13,color:$.t2,fontWeight:500,marginTop:2}}>{isGlobal?DW.countries.length+' ülke · '+DW.s.facilityCount+' tesis':emSD?.facs.length+' tesis · '+emSD?.tWh+' depo'}</div>
+                </div>
+                <div onClick={()=>{setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background .15s'}} className="rh"><X size={15} color={$.t2}/></div>
+              </div>
+              <div style={{flex:1,overflowY:'auto',padding:'16px 18px'}}>
+
+                {/* ── GLOBAL: Ülke listesi ── */}
+                {level==='global'&&(
+                  <div>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+                      {[{l:'Toplam Stok',v:fmtTon(DW.s.totalQty),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(DW.s.totalVal),c:'#0d6e4f'},{l:'Ort. Yaş',v:DW.s.avgAge+' gün',c:ac(DW.s.avgAge)}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                          <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>Ülke Bazlı Kırılım ({DW.countries.length})</div>
+                    {[...DW.countries].sort((a,b)=>b.q-a.q).map(c=>(
+                      <div key={c.n} onClick={()=>{setEmSel(c.n);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}} style={{padding:'10px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                        <div style={{width:8,height:8,borderRadius:4,background:ac(c.a),flexShrink:0}}/>
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(c.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(c.a),padding:'2px 7px',borderRadius:4,background:acBg(c.a)}}>{c.a}g</span>
+                        <span style={{fontSize:10,color:$.t2}}>{c.fc}</span>
+                        <ChevronRight size={13} color={$.t2}/>
+                      </div>))}
+                  </div>
+                )}
+
+                {/* ── ÜLKE: Tesis/Depo listesi ── */}
+                {level==='country'&&emSD&&(
+                  <div>
+                    <GBC>
+                      <BCBack onClick={()=>{setEmSel('__global__');setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}/>
+                      <div style={{display:'flex',alignItems:'center',gap:4,padding:'10px 13px',fontSize:12,color:$.t2,fontWeight:500}}>
+                        <BCItem label="Küresel" onClick={()=>{setEmSel('__global__');setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}/>
+                        <span style={{color:$.t1,fontWeight:600}}>{emSel}</span>
+                      </div>
+                    </GBC>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+                      {[{l:'Stok',v:fmtTon(emSD.tQ),c:$.blu},{l:'Değer',v:'₺'+fmt(emSD.tV),c:'#0d6e4f'},{l:'Depo',v:emSD.tWh,c:$.pur},{l:'Ürün',v:emSD.tPc,c:$.org}].map((k,i)=>(
+                        <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                          <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                          <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                        </div>))}
+                    </div>
+                    <div style={{marginBottom:14}}><SegBar ag={emSD.countryAg} total={emSD.tQ} h={10} rd={5}/><div style={{textAlign:'center',marginTop:4,fontSize:11,fontFamily:$.mo,fontWeight:700,color:ac(emSD.avgA)}}>{emSD.avgA} gün ort.</div></div>
+                    <div style={{display:'flex',gap:4,marginBottom:12,background:$.bg,borderRadius:8,padding:3}}>
+                      {[{id:'f',l:'Tesisler'},{id:'w',l:'Depolar'}].map(t=>(
+                        <div key={t.id} onClick={()=>setEmTab(t.id)} style={{flex:1,textAlign:'center',padding:'7px 0',borderRadius:6,fontSize:12,fontWeight:emTab===t.id?700:500,cursor:'pointer',background:emTab===t.id?'#fff':'transparent',color:emTab===t.id?$.t1:$.t2,boxShadow:emTab===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s'}}>{t.l}</div>))}
+                    </div>
+                    {emTab==='f'&&emSD.facs.sort((a,b)=>b.q-a.q).map(f=>(
+                      <div key={f.id} onClick={()=>{setEmDrillFac(f.id);setEmDrillWh(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL,borderLeft:'3px solid '+(TI[f.type]?.color||$.t3)}} className="rh">
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f.n||f.id}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                        <ChevronRight size={13} color={$.t2}/>
+                      </div>))}
+                    {emTab==='w'&&emSD.whs.sort((a,b)=>b.q-a.q).map(w=>(
+                      <div key={w.id} onClick={()=>{setEmDrillWh(w.id);setEmDrillFac(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{w.n||w.id}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(w.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:4,background:acBg(w.a)}}>{w.a}g</span>
+                        <ChevronRight size={13} color={$.t2}/>
+                      </div>))}
+                  </div>
+                )}
+
+                {/* ── L2: Seviye 2 listesi ── */}
+                {level==='l2'&&(
+                  <div>
+                    <GBC>
+                      <BCBack onClick={()=>{setEmDrillFac(null);setEmDrillWh(null);}}/>
+                      <div style={{display:'flex',alignItems:'center',gap:4,padding:'10px 13px',fontSize:12,color:$.t2,fontWeight:500,flexWrap:'wrap'}}>
+                        <BCItem label="Küresel" onClick={()=>{setEmSel('__global__');setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}/>
+                        <BCItem label={emSel} onClick={()=>{setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}/>
+                        <span style={{color:$.t1,fontWeight:600}}>{emFacName}</span>
+                      </div>
+                    </GBC>
+                    <div style={{fontSize:12,color:$.t2,fontWeight:600,marginBottom:8}}>{emL2Data.length} kategori</div>
+                    {emL2Data.map(l=>(
+                      <div key={l.n} onClick={()=>setEmDrillL2(l.n)} style={{padding:'9px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(l.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(l.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(l.a),padding:'2px 7px',borderRadius:4,background:acBg(l.a)}}>{l.a}g</span>
+                        <ChevronRight size={13} color={$.t2}/>
+                      </div>))}
+                  </div>
+                )}
+
+                {/* ── ÜRÜN: Ürün listesi ── */}
+                {level==='product'&&(
+                  <div>
+                    <GBC>
+                      <BCBack onClick={()=>setEmDrillL2(null)}/>
+                      <div style={{display:'flex',alignItems:'center',gap:4,padding:'10px 13px',fontSize:12,color:$.t2,fontWeight:500,flexWrap:'wrap'}}>
+                        <BCItem label="Küresel" onClick={()=>{setEmSel('__global__');setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}/>
+                        <BCItem label={emSel} onClick={()=>{setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}/>
+                        <BCItem label={emFacName} onClick={()=>setEmDrillL2(null)}/>
+                        <span style={{color:$.t1,fontWeight:600}}>{emDrillL2}</span>
+                      </div>
+                    </GBC>
+                    <div style={{fontSize:12,color:$.t2,fontWeight:600,marginBottom:8}}>{emProdData.length} ürün</div>
+                    {emProdData.map(p=>(
+                      <div key={p.n} style={{padding:'9px 10px',borderRadius:8,marginBottom:4,display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}}>
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(p.a),padding:'2px 7px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                      </div>))}
+                  </div>
+                )}
+
+              </div>
+            </div>);
+          })()}
+
         </div>
       </div>
       {/* MOBILE BOTTOM NAV */}
       {mob&&<>
         {mobMenu&&<div style={{position:'fixed',inset:0,zIndex:1099}} onClick={()=>setMobMenu(false)}/>}
         <div style={{position:'fixed',bottom:12,left:12,right:12,zIndex:1100,background:'rgba(255,255,255,.92)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',borderRadius:22,boxShadow:'0 4px 24px rgba(0,0,0,.1), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px 8px',display:'flex',alignItems:'center',justifyContent:'space-around'}}>
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz'},{id:'yon',icon:Briefcase,label:'Yönetim'},{id:'em',icon:Globe,label:'Emerging Markets'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz'},{id:'yon',icon:Briefcase,label:'Yönetim'},{id:'em',icon:Globe,label:'Harita'}].map(p=>{const isA=pg===p.id;return(
             <button key={p.id} className={'bnav-btn'+(isA?' active':'')} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}}>
               <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:isA?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><p.icon size={20} strokeWidth={isA?2.2:1.6}/></div>
               <span>{p.label}</span>
@@ -2215,7 +2313,7 @@ export default function App(){
               <span>Diğer</span>
             </button>
             {mobMenu&&<div style={{position:'absolute',bottom:'100%',right:-8,marginBottom:12,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,.12), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px',minWidth:180,animation:'mobMenuUp .2s ease'}}>
-              {[{id:'em',icon:Globe,label:'Emerging Markets'},{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Database,label:'ERP Verileri'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
+              {[{id:'em',icon:Globe,label:'Harita'},{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Database,label:'ERP Verileri'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
                 <div key={p.id} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,cursor:'pointer',background:isA?'rgba(13,110,79,.07)':'transparent',color:isA?$.ac:$.t1,fontWeight:isA?600:500,fontSize:13,transition:'all .15s'}} className="rh">
                   <p.icon size={17} strokeWidth={isA?2.2:1.6}/>{p.label}
                   {p.id==='raw'&&rows.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff'}}>{rows.length}</span>}
