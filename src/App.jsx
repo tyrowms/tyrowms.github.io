@@ -1,12 +1,13 @@
 import { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from "react";
 import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye, MoreHorizontal, SlidersHorizontal, RotateCcw } from "lucide-react";
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
+const WorldMap3D = lazy(() => import('./WorldMap3D'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
 const INIT=[];
 const _DEMO=(()=>{
   const comps=[['TAND','Tiryaki Anadolu Tarım A.Ş.'],['TSRY','Tiryaki Süryani Tarım'],['DANE','Dane Tarım A.Ş.'],['ENUT','Enut Gıda A.Ş.'],['SUHO','Suho Trading Ltd.'],['SAMA','Sama Agriculture Co.'],['MESQ','Mesq Trading'],['SRCA','Sarıca Organics'],['GPOR','Giresun Port Organics'],['ETRY','Etry Enerji A.Ş.'],['TTEC','Tiryaki Teknoloji A.Ş.'],['ASET','Aset Holding A.Ş.'],['TOGO','Togo Agri Ltd.'],['NOVA','Nova Trading']];
-  const facs=[['ADN','Adana Silolu Tesis','ADN-01'],['BRS','Bursa Depo Tesisi','BRS-01'],['GRS','Giresun Fındık Tesisi','GRS-01'],['ISK','İskenderun Liman Tesisi','ISK-01'],['DTC','İstanbul Merkez Depo','DTC-01'],['IZM','İzmir Liman Tesisi','IZM-01'],['KON','Konya Tahıl Tesisi','KON-01'],['MRS','Mersin Liman Tesisi','MRS-01'],['MUS','Muş Silo Tesisi','MUS-01'],['SMS','Samsun Liman Tesisi','SMS-01'],['BND','Bandırma Tesisi','BND-01'],['GZT','Gaziantep Tesisi','GZT-01'],['TRY-BND','Bandırma Öz Tesis','TRY-BND-01'],['YLD-KON','Konya Öz Tesis','YLD-KON-01'],['YLD-MUS','Muş Öz Tesis','YLD-MUS-01']];
+  const facs=[['ADN','Adana Silolu Tesis','ADN-01'],['BRS','Bursa Depo Tesisi','BRS-01'],['GRS','Giresun Fındık Tesisi','GRS-01'],['ISK','İskenderun Liman Tesisi','ISK-01'],['DTC','İstanbul Merkez Depo','DTC-01'],['IZM','İzmir Liman Tesisi','IZM-01'],['KON','Konya Tahıl Tesisi','KON-01'],['MRS','Mersin Liman Tesisi','MRS-01'],['MUS','Muş Silo Tesisi','MUS-01'],['SMS','Samsun Liman Tesisi','SMS-01'],['BND','Bandırma Tesisi','BND-01'],['GZT','Gaziantep Tesisi','GZT-01'],['TRY-BND','Bandırma Öz Tesis','TRY-BND-01'],['YLD-KON','Konya Öz Tesis','YLD-KON-01'],['YLD-MUS','Muş Öz Tesis','YLD-MUS-01'],['DXB','Dubai Liman Tesisi','DXB-01'],['ACC','Accra Depo','ACC-01'],['MOZ','Maputo Silo','MOZ-01'],['JED','Cidde Tesisi','JED-01'],['SPL','Sao Paulo Depo','SPL-01'],['HMB','Hamburg Depo','HMB-01'],['ODN','Odessa Liman','ODN-01'],['MUM','Mumbai Tesisi','MUM-01'],['NBO','Nairobi Depo','NBO-01'],['JNB','Johannesburg Tesisi','JNB-01']];
   const cats=[
     {pfx:'1',l2:'06',l2n:'Tahıl',l3:'0601',l3n:'Hububat',prods:[['Buğday','TR'],['Mısır','UA'],['Arpa','DE'],['Yulaf','TR'],['Sorgum','AR'],['Çeltik','VN'],['Tritikale','TR']],price:8.5,priceU:0.25},
     {pfx:'2',l2:'07',l2n:'Yağlı Tohum ve Yemle',l3:'0701',l3n:'Yemeklik Yağ Tohumu',prods:[['Ayçiçeği','TR'],['Kanola','DE'],['Soya Fasulyesi','BR'],['Aspir','TR'],['Ham Ayçiçek Yağı','RU'],['Kolza','FR'],['Susam','ET']],price:22,priceU:0.65},
@@ -63,6 +64,27 @@ function buildD(rows){
   return{f,w,ct,ag,s:{totalQty:tQ,totalVal:tV,totalValUsd:tVU,facilityCount:f.length,whCount:w.length,prodCount:new Set(rows.map(r=>r[3])).size,avgAge:tQ>0?Math.round(f.reduce((s,x)=>s+x.a*x.q,0)/tQ):0,cityCount:ct.length}};
 }
 
+// ── Emerging Markets: Ülke bazlı mapping ──
+const FCTM={'DXB':'BAE','ACC':'Gana','MOZ':'Mozambik','JED':'Suudi Arabistan','SPL':'Brezilya','HMB':'Almanya','ODN':'Ukrayna','MUM':'Hindistan','NBO':'Kenya','DAR':'Tanzanya','ABJ':'Fildişi Sahili','LOS':'Nijerya','MPT':'Mozambik','CAS':'Fas','TUN':'Tunus','ALG':'Cezayir','JNB':'Güney Afrika','SNP':'Singapur','SHA':'Çin','RUS':'Rusya'};
+const COUNTRY_LL={'Türkiye':[39,35],'BAE':[24,54],'Gana':[7.9,-1],'Mozambik':[-18.7,35.5],'Suudi Arabistan':[24,45],'Brezilya':[-14,-51],'Almanya':[51,10],'Ukrayna':[49,32],'Hindistan':[20,77],'Kenya':[-1,38],'Tanzanya':[-6.4,34.9],'Fildişi Sahili':[7.5,-5.5],'Nijerya':[9.1,7.5],'Fas':[32,-5],'Tunus':[34,9],'Cezayir':[28,1.7],'Güney Afrika':[-29,24],'Singapur':[1.35,103.8],'Çin':[35,105],'Rusya':[61,105]};
+const gCountry=c=>{if(CTM[c])return'Türkiye';const p=c.split('-')[0];return FCTM[c]||FCTM[p]||'Diğer';};
+
+function buildDWorld(rows){
+  const fm={},wm={};
+  rows.forEach(r=>{const mi=r[8],ts=r[9],ta=r[10],dp=r[11],da=r[12],ua=r[3],ft=r[24],fu=r[25],fifo=r[27];
+    if(!fm[ts])fm[ts]={id:ts,n:ta,country:gCountry(ts),type:gT(ts),q:0,v:0,vu:0,ws:new Set(),ps:new Set(),td:0,tq:0};
+    const f=fm[ts];f.q+=mi;f.v+=mi*ft;f.vu+=mi*fu;f.ws.add(dp);f.ps.add(ua);f.td+=mi*fifo;f.tq+=mi;
+    const wk=ts+'|'+dp;if(!wm[wk])wm[wk]={fc:ts,id:dp,n:da,q:0,v:0,ps:new Set(),td:0,tq:0};
+    const w=wm[wk];w.q+=mi;w.v+=mi*ft;w.ps.add(ua);w.td+=mi*fifo;w.tq+=mi;});
+  const f=Object.values(fm).map(x=>({id:x.id,n:x.n,country:x.country,type:x.type,q:x.q,v:x.v,vu:x.vu,wc:x.ws.size,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
+  const w=Object.values(wm).map(x=>({fc:x.fc,id:x.id,n:x.n,q:x.q,v:x.v,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
+  const cm={};f.forEach(fc=>{const c=fc.country;if(!cm[c])cm[c]={n:c,q:0,v:0,fc:0,wc:0,fcs:[],td:0,tq:0};const o=cm[c];o.q+=fc.q;o.v+=fc.v;o.fc++;o.wc+=fc.wc;o.fcs.push(fc.id);o.td+=fc.a*fc.q;o.tq+=fc.q;});
+  const countries=Object.values(cm).map(c=>{const ll=COUNTRY_LL[c.n]||[20,0];return{n:c.n,q:c.q,v:c.v,fc:c.fc,wc:c.wc,fcs:c.fcs,a:c.tq>0?Math.round(c.td/c.tq):0,lat:ll[0],lng:ll[1]};});
+  const ag={};BK.forEach(b=>{ag[b.k]=0;});
+  rows.forEach(r=>{const d=r[27],q=r[8];if(d<=30)ag['0-30']+=q;else if(d<=60)ag['31-60']+=q;else if(d<=90)ag['61-90']+=q;else if(d<=120)ag['91-120']+=q;else if(d<=180)ag['121-180']+=q;else if(d<=365)ag['181-365']+=q;else ag['365+']+=q;});
+  const tQ=f.reduce((s,x)=>s+x.q,0),tV=f.reduce((s,x)=>s+x.v,0),tVU=f.reduce((s,x)=>s+x.vu,0);
+  return{f,w,countries,ag,s:{totalQty:tQ,totalVal:tV,totalValUsd:tVU,facilityCount:f.length,whCount:w.length,prodCount:new Set(rows.map(r=>r[3])).size,avgAge:tQ>0?Math.round(f.reduce((s,x)=>s+x.a*x.q,0)/tQ):0,countryCount:countries.length}};
+}
 
 function getL2(rows,filterFn){
   const m={};
@@ -139,6 +161,8 @@ export default function App(){
   // rawRows: all rows (unfiltered by madde kodu) for Rapor Satırları only
   const rawRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[rows,gSearch]);
   const D=useMemo(()=>buildD(gRows),[gRows]);
+  const DW=useMemo(()=>buildDWorld(gRows),[gRows]);
+  const mQW=useMemo(()=>Math.max(...DW.countries.map(c=>c.q),1),[DW]);
   const gSuggestions=useMemo(()=>{
     if(!gSearch.trim()||calcRows.length===0)return[];
     const t=gSearch.toLowerCase();
@@ -166,6 +190,13 @@ export default function App(){
   const [sel,setSel]=useState(null);
   const [hov,setHov]=useState(null);
   const [tab,setTab]=useState('f');
+  // Emerging Markets state
+  const [emSel,setEmSel]=useState(null);
+  const [emHov,setEmHov]=useState(null);
+  const [emDrillFac,setEmDrillFac]=useState(null);
+  const [emDrillWh,setEmDrillWh]=useState(null);
+  const [emDrillL2,setEmDrillL2]=useState(null);
+  const [emTab,setEmTab]=useState('f');
   const [rC,setRC]=useState(27);
   const [rD,setRD]=useState(-1);
   const fR=useRef(null);
@@ -381,6 +412,33 @@ export default function App(){
     return{ct,facs,whs,tQ,tV,tWh,tPc,avgA,cityAg};
   },[sel,D,calcRows]);
 
+  // Emerging Markets selected country data
+  const emSD=useMemo(()=>{
+    if(!emSel)return null;const ct=DW.countries.find(c=>c.n===emSel);if(!ct)return null;
+    const facs=DW.f.filter(f=>ct.fcs.includes(f.id));
+    const whs=DW.w.filter(w=>ct.fcs.includes(w.fc));
+    const tQ=facs.reduce((s,f)=>s+f.q,0);
+    const tV=facs.reduce((s,f)=>s+f.v,0);
+    const tWh=facs.reduce((s,f)=>s+f.wc,0);
+    const tPc=facs.reduce((s,f)=>s+f.pc,0);
+    const avgA=tQ>0?Math.round(facs.reduce((s,f)=>s+f.a*f.q,0)/tQ):0;
+    const countryAg=agingOf(calcRows,facs.map(f=>f.id));
+    return{ct,facs,whs,tQ,tV,tWh,tPc,avgA,countryAg};
+  },[emSel,DW,calcRows]);
+
+  const emL2Data=useMemo(()=>{
+    if(emDrillWh)return getL2(calcRows,r=>r[11]===emDrillWh);
+    if(emDrillFac)return getL2(calcRows,r=>r[9]===emDrillFac);
+    return null;
+  },[emDrillFac,emDrillWh,calcRows]);
+
+  const emProdData=useMemo(()=>{
+    if(!emDrillL2)return null;
+    const base=calcRows.filter(r=>(emDrillWh?r[11]===emDrillWh:emDrillFac?r[9]===emDrillFac:false)&&r[17]===emDrillL2);
+    const m={};base.forEach(r=>{const n=r[3]||'Bilinmiyor';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!m[n])m[n]={n,q:0,v:0,td:0,tq:0};m[n].q+=q;m[n].v+=v;m[n].td+=q*d;m[n].tq+=q;});
+    return Object.values(m).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q);
+  },[emDrillL2,emDrillFac,emDrillWh,calcRows]);
+
   const clr=(cls)=>({blu:{c:$.blu,bg:$.bluB},grn:{c:'#0d6e4f',bg:$.grnB},pur:{c:$.pur,bg:$.purB},org:{c:$.org,bg:$.orgB},red:{c:$.red,bg:$.redB},tel:{c:$.tel,bg:$.telB}}[cls]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -513,15 +571,15 @@ export default function App(){
         <div style={{padding:sbExpanded?'0 12px':'0 8px',flex:1,overflowY:'auto'}}>
           {sbExpanded&&<div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>}
           {!sbExpanded&&<div style={{height:10}}/>}
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'},{id:'em',icon:Globe,label:'Emerging Markets'}].map(p=>{const isA=pg===p.id;return(
+            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
             </div>);})}
           {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>}
           {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
           {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'}].map(p=>{const isA=pg===p.id;return(
-            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
+            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
               {sbExpanded&&p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
@@ -579,7 +637,7 @@ export default function App(){
             {/* Mobile: Row 2 — Full-width search */}
             <div style={{position:'relative',width:'100%',marginBottom:4}}>
               <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
-              <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'9px 32px 9px 34px',borderRadius:12,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
+              <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'9px 32px 9px 34px',borderRadius:12,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
               {gSearch&&<div onClick={()=>{setGSearch('');}} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:20,height:20,borderRadius:10,background:'rgba(0,0,0,.1)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={11} color="#636366"/></div>}
               {gSearchFocus&&gSearch.trim()&&gSuggestions.length>0&&(
                 <div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:6,background:'#fff',borderRadius:14,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.12)',zIndex:100,maxHeight:320,overflowY:'auto',padding:'8px 0'}}>
@@ -601,13 +659,13 @@ export default function App(){
             {/* Desktop: original single-row layout */}
             <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
-                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','em':'Emerging Markets','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
+                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','em':'Küresel Operasyonlar ve Uluslararası Tesisler','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
               </div>
             </div>
             <div style={{position:'relative',width:'100%',maxWidth:340,flex:1,margin:'0 auto'}}>
               <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
-              <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
+              <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
               {gSearch&&<div onClick={()=>{setGSearch('');}} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:18,height:18,borderRadius:9,background:'rgba(0,0,0,.1)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={10} color="#636366"/></div>}
               {gSearchFocus&&gSearch.trim()&&gSuggestions.length>0&&(
                 <div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:6,background:'#fff',borderRadius:14,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.12)',zIndex:100,maxHeight:360,overflowY:'auto',padding:'8px 0'}}>
@@ -1138,6 +1196,199 @@ export default function App(){
                   </div>
                 </div>
               );})()}
+
+            {/* ===== EMERGING MARKETS ===== */}
+            {pg==='em'&&(
+              <div style={{display:'flex',gap:16,flexDirection:mob?'column':'row'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  {/* KPI Cards */}
+                  <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(6,1fr)',gap:10,marginBottom:16}}>
+                    {[
+                      {l:'Toplam Stok',v:fmtTon(DW.s.totalQty),sub:'Küresel stok',c:$.blu,bg:$.bluB,icon:Package},
+                      {l:'Stok Değeri',v:'₺'+fmt(DW.s.totalVal),sub:'Toplam değer',c:'#0d6e4f',bg:$.grnB,icon:TrendingUp},
+                      {l:'Ülke / Tesis',v:DW.s.countryCount+' / '+DW.s.facilityCount,sub:'Aktif lokasyon',c:$.pur,bg:$.purB,icon:Globe},
+                      {l:'Depo',v:DW.s.whCount,sub:'Toplam depo',c:$.org,bg:$.orgB,icon:Building2},
+                      {l:'Ort. Yaşlanma',v:DW.s.avgAge+' gün',sub:'FIFO bazlı',c:ac(DW.s.avgAge),bg:acBg(DW.s.avgAge),icon:Clock},
+                      {l:'Ürün Çeşidi',v:DW.s.prodCount,sub:'Aktif ürün',c:$.tel,bg:$.telB,icon:Layers}
+                    ].map((k,i)=>(
+                      <div key={i} style={{background:$.bg2,borderRadius:$.rL,padding:'14px 16px',border:'1px solid '+$.bdL,boxShadow:$.sh,position:'relative',overflow:'hidden'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                          <div style={{width:26,height:26,borderRadius:7,background:k.bg,display:'flex',alignItems:'center',justifyContent:'center'}}><k.icon size={13} color={k.c}/></div>
+                          <span style={{fontSize:11,fontWeight:600,color:$.t2}}>{k.l}</span>
+                        </div>
+                        <div style={{fontSize:20,fontWeight:700,fontFamily:$.mo,color:k.c,letterSpacing:'-0.02em'}}>{k.v}</div>
+                        <div style={{fontSize:12,color:$.t2,marginTop:2}}>{k.sub}</div>
+                      </div>))}
+                  </div>
+
+                  {/* World Map */}
+                  <div style={{background:$.bg2,borderRadius:$.rL,border:'1px solid '+$.bdL,boxShadow:$.sh,overflow:'hidden',marginBottom:16}}>
+                    <Suspense fallback={<div style={{height:450,display:'flex',alignItems:'center',justifyContent:'center',color:$.t3}}>Dünya haritası yükleniyor...</div>}>
+                      <WorldMap3D
+                        countries={DW.countries}
+                        maxQty={mQW}
+                        sel={emSel}
+                        hov={emHov}
+                        onSelect={(name)=>{setEmSel(emSel===name?null:name);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}}
+                        onHover={n=>setEmHov(n)}
+                        onHoverEnd={()=>setEmHov(null)}
+                        acFn={ac} fmt={fmt} fmtTon={fmtTon} fN={fN}
+                      />
+                    </Suspense>
+                  </div>
+
+                  {/* Aging + Type Distribution */}
+                  <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'1fr 1fr',gap:16}}>
+                    <div style={{background:$.bg2,borderRadius:$.rL,border:'1px solid '+$.bdL,boxShadow:$.sh,overflow:'hidden'}}>
+                      <div style={{padding:'12px 16px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{width:26,height:26,borderRadius:7,background:$.orgB,color:$.org,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><BarChart3 size={14}/></div>
+                        {'Yaşlanma Dağılımı'}
+                      </div>
+                      <div style={{padding:'16px 18px'}}>
+                        <SegBar ag={DW.ag} total={DW.s.totalQty} h={14} rd={7}/>
+                        <div style={{display:'flex',justifyContent:'space-between',marginTop:10}}>
+                          {BK.map(b=>{const v=DW.ag[b.k]||0;const pct=DW.s.totalQty>0?((v/DW.s.totalQty)*100):0;return pct>0?(
+                            <div key={b.k} style={{textAlign:'center'}}>
+                              <div style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:b.c}}>{pct.toFixed(1)}%</div>
+                              <div style={{fontSize:10,color:$.t2,marginTop:1}}>{b.k}</div>
+                            </div>):null;})}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{background:$.bg2,borderRadius:$.rL,border:'1px solid '+$.bdL,boxShadow:$.sh,overflow:'hidden'}}>
+                      <div style={{padding:'12px 16px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{width:26,height:26,borderRadius:7,background:$.purB,color:$.pur,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Layers size={14}/></div>
+                        {'Tesis Tipi Dağılımı'}
+                      </div>
+                      <div style={{padding:'16px 18px'}}>
+                        {(()=>{const tq=DW.s.totalQty||1;const types=Object.entries(TI).map(([k,v])=>({k,c:v.color,l:v.label,q:DW.f.filter(f=>f.type===k).reduce((s,f)=>s+f.q,0)})).filter(t=>t.q>0);const mx=Math.max(...types.map(t=>t.q),1);return(
+                          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                            {types.map(t=>{const pct=((t.q/tq)*100).toFixed(1);return(
+                              <div key={t.k}>
+                                <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                    <div style={{width:10,height:10,borderRadius:3,background:t.c}}/>
+                                    <span style={{fontSize:12,color:$.t2,fontWeight:600}}>{t.l}</span>
+                                  </div>
+                                  <span style={{fontSize:12,fontFamily:$.mo,fontWeight:700,color:t.c}}>{pct}%</span>
+                                </div>
+                                <div style={{height:10,borderRadius:5,background:$.bdL,overflow:'hidden'}}>
+                                  <div style={{height:'100%',width:(t.q/mx)*100+'%',borderRadius:5,background:t.c,opacity:.65,transition:'width .5s ease'}}/>
+                                </div>
+                              </div>);})}
+                          </div>)})()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── EM Right Panel ── */}
+                {emSD&&!mob&&(
+                  <div style={{width:440,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',borderRadius:$.rL,border:'1px solid rgba(226,231,238,.4)',boxShadow:$.shM,display:'flex',flexDirection:'column',overflow:'hidden',maxHeight:'calc(100vh - 140px)',position:'sticky',top:80}}>
+                    <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:17,color:$.t1,lineHeight:1.2}}>{emSel}</div>
+                        <div style={{fontSize:13,color:$.t2,fontWeight:500,marginTop:2}}>{emSD.facs.length} tesis · {emSD.tWh} depo</div>
+                      </div>
+                      <div onClick={()=>{setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background .15s'}} className="rh"><X size={15} color={$.t2}/></div>
+                    </div>
+
+                    <div style={{flex:1,overflowY:'auto',padding:'16px 18px'}}>
+                      {/* Drill-down: Products level */}
+                      {emProdData?(
+                        <div>
+                          <div style={{display:'flex',alignItems:'center',gap:0,marginBottom:16,background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px) saturate(180%)',WebkitBackdropFilter:'blur(20px) saturate(180%)',border:'1px solid rgba(255,255,255,0.85)',boxShadow:'0 2px 16px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.9)',borderRadius:12,overflow:'hidden'}}>
+                            <div onClick={()=>setEmDrillL2(null)} className="rh" style={{display:'flex',alignItems:'center',gap:4,padding:'11px 13px',cursor:'pointer',borderRight:'1px solid rgba(0,0,0,0.06)',flexShrink:0,transition:'background .15s'}}>
+                              <ChevronLeft size={14} color={$.blu}/><span style={{fontSize:12,fontWeight:700,color:$.blu}}>Geri</span>
+                            </div>
+                            <div style={{display:'flex',alignItems:'center',gap:4,padding:'11px 13px',fontSize:12,color:$.t2,fontWeight:500,overflow:'hidden'}}>
+                              <span className="rh" style={{cursor:'pointer',color:$.blu}} onClick={()=>{setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}>{emSel}</span>
+                              <ChevronRight size={10}/>
+                              <span className="rh" style={{cursor:'pointer',color:$.blu}} onClick={()=>setEmDrillL2(null)}>{DW.f.find(f=>f.id===(emDrillFac||emDrillWh))?.n||emDrillFac}</span>
+                              <ChevronRight size={10}/>
+                              <span style={{cursor:'pointer',color:$.blu}} onClick={()=>setEmDrillL2(null)}>{emDrillL2}</span>
+                              <ChevronRight size={10}/>
+                              <span style={{color:$.t1,fontWeight:600}}>Ürünler</span>
+                            </div>
+                          </div>
+                          <div style={{fontSize:12,color:$.t2,fontWeight:600,marginBottom:8}}>{emProdData.length} ürün</div>
+                          {emProdData.map((p,i)=>(
+                            <div key={p.n} style={{padding:'9px 10px',borderRadius:8,marginBottom:4,display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}}>
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(p.a),padding:'2px 7px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                            </div>))}
+                        </div>
+                      ):emL2Data?(
+                        <div>
+                          <div style={{display:'flex',alignItems:'center',gap:0,marginBottom:16,background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px) saturate(180%)',WebkitBackdropFilter:'blur(20px) saturate(180%)',border:'1px solid rgba(255,255,255,0.85)',boxShadow:'0 2px 16px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.9)',borderRadius:12,overflow:'hidden'}}>
+                            <div onClick={()=>{setEmDrillFac(null);setEmDrillWh(null);}} className="rh" style={{display:'flex',alignItems:'center',gap:4,padding:'11px 13px',cursor:'pointer',borderRight:'1px solid rgba(0,0,0,0.06)',flexShrink:0,transition:'background .15s'}}>
+                              <ChevronLeft size={14} color={$.blu}/><span style={{fontSize:12,fontWeight:700,color:$.blu}}>Geri</span>
+                            </div>
+                            <div style={{display:'flex',alignItems:'center',gap:4,padding:'11px 13px',fontSize:12,color:$.t2,fontWeight:500}}>
+                              <span className="rh" style={{cursor:'pointer',color:$.blu}} onClick={()=>{setEmDrillFac(null);setEmDrillWh(null);}}>{emSel}</span>
+                              <ChevronRight size={10}/>
+                              <span style={{color:$.t1,fontWeight:600}}>{DW.f.find(f=>f.id===(emDrillFac||emDrillWh))?.n||emDrillFac}</span>
+                              <ChevronRight size={10}/>
+                              <span style={{color:$.t1,fontWeight:600}}>Seviye 2</span>
+                            </div>
+                          </div>
+                          <div style={{fontSize:12,color:$.t2,fontWeight:600,marginBottom:8}}>{emL2Data.length} kategori</div>
+                          {emL2Data.map((l,i)=>(
+                            <div key={l.n} onClick={()=>setEmDrillL2(l.n)} style={{padding:'9px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{l.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(l.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(l.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(l.a),padding:'2px 7px',borderRadius:4,background:acBg(l.a)}}>{l.a}g</span>
+                              <ChevronRight size={13} color={$.t2}/>
+                            </div>))}
+                        </div>
+                      ):(
+                        <div>
+                          {/* Mini KPIs */}
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:14}}>
+                            {[{l:'Stok',v:fmtTon(emSD.tQ),c:$.blu},{l:'Değer',v:'₺'+fmt(emSD.tV),c:'#0d6e4f'},{l:'Depo',v:emSD.tWh,c:$.pur},{l:'Ürün',v:emSD.tPc,c:$.org}].map((k,i)=>(
+                              <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                                <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                              </div>))}
+                          </div>
+                          {/* Aging bar */}
+                          <div style={{marginBottom:14}}>
+                            <SegBar ag={emSD.countryAg} total={emSD.tQ} h={10} rd={5}/>
+                            <div style={{textAlign:'center',marginTop:4,fontSize:11,fontFamily:$.mo,fontWeight:700,color:ac(emSD.avgA)}}>{emSD.avgA} gün ort.</div>
+                          </div>
+                          {/* Tabs */}
+                          <div style={{display:'flex',gap:4,marginBottom:12,background:$.bg,borderRadius:8,padding:3}}>
+                            {[{id:'f',l:'Tesisler'},{id:'w',l:'Depolar'}].map(t=>(
+                              <div key={t.id} onClick={()=>setEmTab(t.id)} style={{flex:1,textAlign:'center',padding:'7px 0',borderRadius:6,fontSize:12,fontWeight:emTab===t.id?700:500,cursor:'pointer',background:emTab===t.id?'#fff':'transparent',color:emTab===t.id?$.t1:$.t2,boxShadow:emTab===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s'}}>{t.l}</div>
+                            ))}
+                          </div>
+                          {/* Facility list */}
+                          {emTab==='f'&&emSD.facs.sort((a,b)=>b.q-a.q).map((f,i)=>(
+                            <div key={f.id} onClick={()=>{setEmDrillFac(f.id);setEmDrillWh(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL,borderLeft:'3px solid '+(TI[f.type]?.color||$.t3)}} className="rh">
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f.n||f.id}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                              <ChevronRight size={13} color={$.t2}/>
+                            </div>))}
+                          {/* Warehouse list */}
+                          {emTab==='w'&&emSD.whs.sort((a,b)=>b.q-a.q).map((w,i)=>(
+                            <div key={w.id} onClick={()=>{setEmDrillWh(w.id);setEmDrillFac(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{w.n||w.id}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(w.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:4,background:acBg(w.a)}}>{w.a}g</span>
+                              <ChevronRight size={13} color={$.t2}/>
+                            </div>))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ===== RAW DATA ===== */}
             {pg==='raw'&&(
@@ -1906,20 +2157,20 @@ export default function App(){
       {mob&&<>
         {mobMenu&&<div style={{position:'fixed',inset:0,zIndex:1099}} onClick={()=>setMobMenu(false)}/>}
         <div style={{position:'fixed',bottom:12,left:12,right:12,zIndex:1100,background:'rgba(255,255,255,.92)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',borderRadius:22,boxShadow:'0 4px 24px rgba(0,0,0,.1), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px 8px',display:'flex',alignItems:'center',justifyContent:'space-around'}}>
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz'},{id:'yon',icon:Briefcase,label:'Yönetim'}].map(p=>{const isA=pg===p.id;return(
-            <button key={p.id} className={'bnav-btn'+(isA?' active':'')} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setMobMenu(false);}}>
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz'},{id:'yon',icon:Briefcase,label:'Yönetim'},{id:'em',icon:Globe,label:'Emerging Markets'}].map(p=>{const isA=pg===p.id;return(
+            <button key={p.id} className={'bnav-btn'+(isA?' active':'')} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}}>
               <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:isA?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><p.icon size={20} strokeWidth={isA?2.2:1.6}/></div>
               <span>{p.label}</span>
             </button>);})}
           {/* Three-dot menu */}
           <div style={{position:'relative'}}>
-            <button className={'bnav-btn'+(['rep','raw','erp','set'].includes(pg)?' active':'')} onClick={()=>setMobMenu(m=>!m)}>
-              <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:mobMenu||['rep','raw','erp','set'].includes(pg)?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><MoreHorizontal size={20} strokeWidth={['rep','raw','erp','set'].includes(pg)?2.2:1.6}/></div>
+            <button className={'bnav-btn'+(['rep','raw','erp','set','em'].includes(pg)?' active':'')} onClick={()=>setMobMenu(m=>!m)}>
+              <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:mobMenu||['rep','raw','erp','set','em'].includes(pg)?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><MoreHorizontal size={20} strokeWidth={['rep','raw','erp','set','em'].includes(pg)?2.2:1.6}/></div>
               <span>Diğer</span>
             </button>
             {mobMenu&&<div style={{position:'absolute',bottom:'100%',right:-8,marginBottom:12,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,.12), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px',minWidth:180,animation:'mobMenuUp .2s ease'}}>
-              {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
-                <div key={p.id} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setMobMenu(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,cursor:'pointer',background:isA?'rgba(13,110,79,.07)':'transparent',color:isA?$.ac:$.t1,fontWeight:isA?600:500,fontSize:13,transition:'all .15s'}} className="rh">
+              {[{id:'em',icon:Globe,label:'Emerging Markets'},{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Database,label:'ERP Verileri'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
+                <div key={p.id} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,cursor:'pointer',background:isA?'rgba(13,110,79,.07)':'transparent',color:isA?$.ac:$.t1,fontWeight:isA?600:500,fontSize:13,transition:'all .15s'}} className="rh">
                   <p.icon size={17} strokeWidth={isA?2.2:1.6}/>{p.label}
                   {p.id==='raw'&&rows.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff'}}>{rows.length}</span>}
                 </div>);})}
