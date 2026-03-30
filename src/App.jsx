@@ -7,7 +7,33 @@ import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './d
 const INIT=[];
 const _DEMO=(()=>{
   const comps=[['TAND','Tiryaki Anadolu Tarım A.Ş.'],['TSRY','Tiryaki Süryani Tarım'],['DANE','Dane Tarım A.Ş.'],['ENUT','Enut Gıda A.Ş.'],['SUHO','Suho Trading Ltd.'],['SAMA','Sama Agriculture Co.'],['MESQ','Mesq Trading'],['SRCA','Sarıca Organics'],['GPOR','Giresun Port Organics'],['ETRY','Etry Enerji A.Ş.'],['TTEC','Tiryaki Teknoloji A.Ş.'],['ASET','Aset Holding A.Ş.'],['TOGO','Togo Agri Ltd.'],['NOVA','Nova Trading']];
-  const facs=[['ADN','Adana Silolu Tesis','ADN-01'],['BRS','Bursa Depo Tesisi','BRS-01'],['GRS','Giresun Fındık Tesisi','GRS-01'],['ISK','İskenderun Liman Tesisi','ISK-01'],['DTC','İstanbul Merkez Depo','DTC-01'],['IZM','İzmir Liman Tesisi','IZM-01'],['KON','Konya Tahıl Tesisi','KON-01'],['MRS','Mersin Liman Tesisi','MRS-01'],['MUS','Muş Silo Tesisi','MUS-01'],['SMS','Samsun Liman Tesisi','SMS-01'],['BND','Bandırma Tesisi','BND-01'],['GZT','Gaziantep Tesisi','GZT-01'],['TRY-BND','Bandırma Öz Tesis','TRY-BND-01'],['YLD-KON','Konya Öz Tesis','YLD-KON-01'],['YLD-MUS','Muş Öz Tesis','YLD-MUS-01'],['DXB','Dubai Liman Tesisi','DXB-01'],['ACC','Accra Depo','ACC-01'],['MOZ','Maputo Silo','MOZ-01'],['JED','Cidde Tesisi','JED-01'],['SPL','Sao Paulo Depo','SPL-01'],['HMB','Hamburg Depo','HMB-01'],['ODN','Odessa Liman','ODN-01'],['MUM','Mumbai Tesisi','MUM-01'],['NBO','Nairobi Depo','NBO-01'],['JNB','Johannesburg Tesisi','JNB-01']];
+  const facs=[
+    // Türkiye tesisleri (gerçek ERP kodları)
+    ['ADN-DTS','Adana Dış Tesis','ADN-D01'],['BND-DTS','Bandırma Dış Tesis','BND-D01'],['BRS-DTS','Bursa Dış Tesis','BRS-D01'],
+    ['CRM','Corum','CRM_001'],['CRM-FSN','Çorum Fason','CRM-F01'],
+    ['GRS-L','Giresun Liman','GRL_003'],['GRS-U','Giresun Uretim','GRU_101'],['GRS-S','Giresun Silo','GRS-S01'],
+    ['GZT-DTS','Gaziantep Dış Tesis','GZT-D01'],['GZT-FSN','Gaziantep Fason','GZT-F01'],
+    ['ISK-DTS','İskenderun Dış Tesis','ISK-D01'],['IZM-DTS','İzmir Dış Tesis','IZM-D01'],
+    ['KON-DTS','Konya Dış Tesis','KON-D01'],['MRS-DTS','Mersin Dış Tesis','MRS-D01'],
+    ['SMS-SH','Samsun SH Yesilyurt','SSH_043'],['SMS-DTS','Samsun Dış Tesis','SMS-D01'],
+    ['TRY-BND','Bandırma Öz Tesis','TRY-B01'],['TRY-GZT','Gaziantep Öz Tesis','TRY-G01'],
+    ['YLD-KON','Konya Öz Tesis','YLD-K01'],['YLD-MUS','Muş Öz Tesis','YLD-M01'],
+    ['TKR-L','Tekirdag Port','TKL_GIT'],['DTC','İstanbul Merkez','DTC-01'],
+    // ABD tesisleri
+    ['NOLA3','New Orleans Terminal 3','NOLA3-01'],['NOLA4','New Orleans Terminal 4','NOLA4-01'],
+    ['PHIL','Philadelphia Terminal','PHIL-01'],['OAK','Oakland Terminal','OAK-01'],
+    ['HUNT','Huntsville Depot','HUNT-01'],['DESM','Des Moines Elevator','DESM-01'],
+    ['SIOUX','Sioux City Terminal','SIOX-01'],['COLU','Columbus Depot','COLU-01'],
+    ['DELTA','Delta Terminal','DELT-01'],['LONGB','Long Beach Port','LNGB-01'],
+    // Kanada tesisleri
+    ['VANC','Vancouver Port','VANC-01'],['MONTR','Montreal Terminal','MNTR-01'],['REG','Regina Elevator','REG-01'],
+    // Avrupa tesisleri
+    ['ANTW','Antwerp Molenbergnatie','ANTW-01'],['MARSE','Marseilles Port','MARS-01'],
+    // Irak tesisleri
+    ['BGD','Baghdad Depot','BGD-01'],['BSR','Basra Port','BSR-01'],['BBL','Babil Depot','BBL-01'],
+    // Diğer
+    ['GHANA','Ghana Depot','GHA-01'],['LEBAN','Lebanon Terminal','LBN-01']
+  ];
   const cats=[
     {pfx:'1',l2:'06',l2n:'Tahıl',l3:'0601',l3n:'Hububat',prods:[['Buğday','TR'],['Mısır','UA'],['Arpa','DE'],['Yulaf','TR'],['Sorgum','AR'],['Çeltik','VN'],['Tritikale','TR']],price:8.5,priceU:0.25},
     {pfx:'2',l2:'07',l2n:'Yağlı Tohum ve Yemle',l3:'0701',l3n:'Yemeklik Yağ Tohumu',prods:[['Ayçiçeği','TR'],['Kanola','DE'],['Soya Fasulyesi','BR'],['Aspir','TR'],['Ham Ayçiçek Yağı','RU'],['Kolza','FR'],['Susam','ET']],price:22,priceU:0.65},
@@ -31,8 +57,8 @@ const _DEMO=(()=>{
 })();
 const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
-const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","YLD-KON":"Konya","YLD-MUS":"Muş"};
-const CLL={"Adana":[37,35.33],"Adapazarı":[40.68,30.4],"Bandırma":[40.35,27.97],"Bursa":[40.19,29.06],"Çorum":[40.55,34.96],"Edirne":[41.68,26.56],"Gaziantep":[37.07,37.38],"Giresun":[40.91,38.39],"Hatay":[36.2,36.16],"İskenderun":[36.59,36.17],"İstanbul":[41.01,28.98],"İzmir":[38.42,27.14],"Karaman":[37.18,33.23],"Konya":[37.87,32.48],"Mersin":[36.81,34.64],"Muş":[38.74,41.49],"Ordu":[40.99,37.88],"Samsun":[41.29,36.33]};
+const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IST":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TKR":"Tekirdağ","KOC":"Kocaeli","TRB":"Trabzon","SILAM":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-DTS":"İstanbul","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","TRY-SDN":"İstanbul","YLD-KON":"Konya","YLD-MUS":"Muş","YLD-TKD":"Tekirdağ"};
+const CLL={"Adana":[37,35.33],"Adapazarı":[40.68,30.4],"Bandırma":[40.35,27.97],"Bursa":[40.19,29.06],"Çorum":[40.55,34.96],"Edirne":[41.68,26.56],"Gaziantep":[37.07,37.38],"Giresun":[40.91,38.39],"Hatay":[36.2,36.16],"İskenderun":[36.59,36.17],"İstanbul":[41.01,28.98],"İzmir":[38.42,27.14],"Karaman":[37.18,33.23],"Konya":[37.87,32.48],"Mersin":[36.81,34.64],"Muş":[38.74,41.49],"Ordu":[40.99,37.88],"Samsun":[41.29,36.33],"Tekirdağ":[41.0,27.52],"Kocaeli":[40.76,29.92],"Trabzon":[41.0,39.72]};
 const fmt=n=>n>=1e12?(n/1e12).toFixed(1)+' Trilyon':n>=1e9?(n/1e9).toFixed(1)+' Milyar':n>=1e6?(n/1e6).toFixed(1)+' Milyon':n>=1e3?(n/1e3).toFixed(1)+' Bin':String(Math.round(n));
 const fmtTon=n=>{const t=n/1000;return t>=1e6?(t/1e6).toFixed(1)+' Milyon Ton':t>=1e3?(t/1e3).toFixed(1)+' Bin Ton':t>=1?Math.round(t)+' Ton':fN(n)+' kg';};
 const fN=n=>new Intl.NumberFormat('tr-TR').format(Math.round(n));
@@ -65,9 +91,29 @@ function buildD(rows){
 }
 
 // ── Emerging Markets: Ülke bazlı mapping ──
-const FCTM={'DXB':'BAE','ACC':'Gana','MOZ':'Mozambik','JED':'Suudi Arabistan','SPL':'Brezilya','HMB':'Almanya','ODN':'Ukrayna','MUM':'Hindistan','NBO':'Kenya','DAR':'Tanzanya','ABJ':'Fildişi Sahili','LOS':'Nijerya','MPT':'Mozambik','CAS':'Fas','TUN':'Tunus','ALG':'Cezayir','JNB':'Güney Afrika','SNP':'Singapur','SHA':'Çin','RUS':'Rusya'};
-const COUNTRY_LL={'Türkiye':[39,35],'BAE':[24,54],'Gana':[7.9,-1],'Mozambik':[-18.7,35.5],'Suudi Arabistan':[24,45],'Brezilya':[-14,-51],'Almanya':[51,10],'Ukrayna':[49,32],'Hindistan':[20,77],'Kenya':[-1,38],'Tanzanya':[-6.4,34.9],'Fildişi Sahili':[7.5,-5.5],'Nijerya':[9.1,7.5],'Fas':[32,-5],'Tunus':[34,9],'Cezayir':[28,1.7],'Güney Afrika':[-29,24],'Singapur':[1.35,103.8],'Çin':[35,105],'Rusya':[61,105]};
-const gCountry=c=>{if(CTM[c])return'Türkiye';const p=c.split('-')[0];return FCTM[c]||FCTM[p]||'Diğer';};
+// Uluslararası tesis kodu → Ülke (gerçek ERP verisinden)
+const FCTM={
+  // ABD (50+ tesis)
+  'ALEX':'ABD','ARMIL':'ABD','AUS':'ABD','BWC':'ABD','CHERO':'ABD','COLDZ':'ABD','COLU':'ABD','COZAD':'ABD','DEJON':'ABD','DELTA':'ABD','DESM':'ABD','ECHO':'ABD','FIVER':'ABD','GALVA':'ABD','GLADS':'ABD','GNGT':'ABD','GRAN':'ABD','GROV':'ABD','HAMM':'ABD','HEP':'ABD','HERC':'ABD','HUNT':'ABD','LANG':'ABD','LATHR':'ABD','LONGB':'ABD','MANLY':'ABD','MANOR':'ABD','MHC':'ABD','NEWC':'ABD','NOLA3':'ABD','NOLA4':'ABD','NOLA6':'ABD','NOLA7':'ABD','OAK':'ABD','ONT':'ABD','OZARK':'ABD','PASA':'ABD','PENN':'ABD','PHIL':'ABD','PHOE':'ABD','PLEAS':'ABD','PROG':'ABD','RED':'ABD','ROCH':'ABD','SIOUX':'ABD','SUMN':'ABD','SWEDE':'ABD','VALLA':'ABD','WILM':'ABD',
+  // Kanada
+  'MONTR':'Kanada','OTT':'Kanada','REG':'Kanada','SAS':'Kanada','VANC':'Kanada','VANCO':'Kanada','VANCP':'Kanada',
+  // Avrupa
+  'ANTW':'Belçika','MARSE':'Fransa','CALINESTI':'Romanya','MARACINENI':'Romanya','GBI':'Romanya',
+  // Orta Doğu / Irak
+  'BBL':'Irak','BGD':'Irak','BSR':'Irak','KBR':'Irak','NJF':'Irak',
+  'LEBAN':'Lübnan',
+  // Afrika
+  'GHANA':'Gana',
+  // Eski demo tesisleri (geriye uyumluluk)
+  'DXB':'BAE','ACC':'Gana','MOZ':'Mozambik','JED':'Suudi Arabistan','SPL':'Brezilya','HMB':'Almanya','ODN':'Ukrayna','MUM':'Hindistan','NBO':'Kenya','JNB':'Güney Afrika'
+};
+const COUNTRY_LL={
+  'Türkiye':[39,35],'ABD':[39,-98],'Kanada':[56,-106],'Belçika':[50.8,4.4],'Fransa':[46.6,2.2],'Romanya':[46,25],
+  'Irak':[33,44],'Lübnan':[33.9,35.5],'Gana':[7.9,-1],
+  'BAE':[24,54],'Mozambik':[-18.7,35.5],'Suudi Arabistan':[24,45],'Brezilya':[-14,-51],'Almanya':[51,10],
+  'Ukrayna':[49,32],'Hindistan':[20,77],'Kenya':[-1,38],'Güney Afrika':[-29,24]
+};
+const gCountry=c=>{if(CTM[c])return'Türkiye';const p=c.split('-')[0];if(CTM[p])return'Türkiye';return FCTM[c]||FCTM[p]||'Diğer';};
 
 function buildDWorld(rows){
   const fm={},wm={};
