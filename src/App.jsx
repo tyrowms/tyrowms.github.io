@@ -289,10 +289,10 @@ export default function App(){
 
 
   const l2Data=useMemo(()=>{
-    if(drillWh)return getL2(rows,r=>r[11]===drillWh);
-    if(drillFac)return getL2(rows,r=>r[9]===drillFac);
+    if(drillWh)return getL2(calcRows,r=>r[11]===drillWh);
+    if(drillFac)return getL2(calcRows,r=>r[9]===drillFac);
     return null;
-  },[drillFac,drillWh,rows]);
+  },[drillFac,drillWh,calcRows]);
 
   const mQ=Math.max(...D.ct.map(c=>c.q),1);
 
@@ -344,9 +344,9 @@ export default function App(){
     const tWh=facs.reduce((s,f)=>s+f.wc,0);
     const tPc=facs.reduce((s,f)=>s+f.pc,0);
     const avgA=tQ>0?Math.round(facs.reduce((s,f)=>s+f.a*f.q,0)/tQ):0;
-    const cityAg=agingOf(rows,facs.map(f=>f.id));
+    const cityAg=agingOf(calcRows,facs.map(f=>f.id));
     return{ct,facs,whs,tQ,tV,tWh,tPc,avgA,cityAg};
-  },[sel,D,rows]);
+  },[sel,D,calcRows]);
 
   const clr=(cls)=>({blu:{c:$.blu,bg:$.bluB},grn:{c:'#0d6e4f',bg:$.grnB},pur:{c:$.pur,bg:$.purB},org:{c:$.org,bg:$.orgB},red:{c:$.red,bg:$.redB},tel:{c:$.tel,bg:$.telB}}[cls]);
 
