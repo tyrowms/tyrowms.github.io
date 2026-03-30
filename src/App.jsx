@@ -735,19 +735,19 @@ export default function App(){
               const prodRow=(p,i,mode,last)=>(
                 <div key={p.n+mode} onClick={()=>setAnaDetail({type:'product',name:p.n,data:p})} style={{padding:'8px 12px',borderRadius:8,marginBottom:i<last?6:0,cursor:'pointer',transition:'background .15s',background:'transparent'}} className="rh">
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                    <span style={{fontSize:11,fontWeight:600,color:$.t1,maxWidth:mob?120:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                    <span style={{fontSize:12,fontWeight:600,color:$.t1,maxWidth:mob?120:190,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
                     <div style={{display:'flex',alignItems:'center',gap:6}}>
                       {mode==='age'&&<span style={{fontFamily:$.mo,fontSize:12,fontWeight:800,color:ac(p.a),padding:'2px 8px',borderRadius:5,background:acBg(p.a)}}>{p.a}g</span>}
-                      {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:$.t1}}>{fmtTon(p.q)}</span>}
-                      <ChevronRight size={12} color={$.t3}/>
+                      {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fmtTon(p.q)}</span>}
+                      <ChevronRight size={13} color={$.t2}/>
                     </div>
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
                       <div style={{height:'100%',width:mode==='age'?Math.min(100,(p.a/500)*100)+'%':(p.q/mxP)*100+'%',borderRadius:3,background:ac(p.a),opacity:.5,transition:'width .5s'}}/>
                     </div>
-                    {mode==='age'&&<span style={{fontFamily:$.mo,fontSize:9,color:$.t3,fontWeight:600,minWidth:50,textAlign:'right'}}>{fmtTon(p.q)}</span>}
-                    {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:9,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>}
+                    {mode==='age'&&<span style={{fontFamily:$.mo,fontSize:11,color:$.t2,fontWeight:600,minWidth:50,textAlign:'right'}}>{fmtTon(p.q)}</span>}
+                    {mode==='qty'&&<span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(p.a),padding:'2px 6px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>}
                   </div>
                 </div>);
               return(
@@ -758,11 +758,11 @@ export default function App(){
                     <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
                       <div style={{display:'flex',alignItems:'center',gap:8}}>
                         <span style={{fontSize:15,fontWeight:700,color:$.t1}}>{anaDetail?.name}</span>
-                        {anaDetail?.type==='product'&&<span style={{fontSize:10,color:$.t3,fontWeight:500}}>{anaDetail.data.sc} tesis</span>}
-                        {anaDetail?.type==='risk'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.r}</span>}
-                        {anaDetail?.type==='value'&&<span style={{fontSize:10,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.k} gün</span>}
+                        {anaDetail?.type==='product'&&<span style={{fontSize:12,color:$.t2,fontWeight:500}}>{anaDetail.data.sc} tesis</span>}
+                        {anaDetail?.type==='risk'&&<span style={{fontSize:12,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.r}</span>}
+                        {anaDetail?.type==='value'&&<span style={{fontSize:12,color:anaDetail.data.c,fontWeight:600}}>{anaDetail.data.k} gün</span>}
                       </div>
-                      <X size={18} color={$.t3} style={{cursor:'pointer'}} onClick={()=>setAnaDetail(null)}/>
+                      <div onClick={()=>setAnaDetail(null)} style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background .15s'}} className="rh"><X size={15} color={$.t2}/></div>
                     </div>
                     <div style={{padding:'16px 20px',flex:1,overflowY:'auto'}}>
                       {anaDetail?.type==='product'&&(()=>{
@@ -778,12 +778,12 @@ export default function App(){
                                 <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                               </div>))}
                           </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı</div>
+                          <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı</div>
                           {sites.map((s,i)=>(
-                            <div key={s.n} style={{padding:'7px 0',borderBottom:i<sites.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(s.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(s.a),padding:'1px 6px',borderRadius:4,background:acBg(s.a)}}>{s.a}g</span>
+                            <div key={s.n} style={{padding:'8px 0',borderBottom:i<sites.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(s.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(s.a),padding:'2px 7px',borderRadius:4,background:acBg(s.a)}}>{s.a}g</span>
                             </div>))}
                         </div>);
                       })()}
@@ -804,41 +804,41 @@ export default function App(){
                             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
                               <div style={{width:8,height:8,borderRadius:4,background:anaDetail.data.c}}/>
                               <span style={{fontSize:13,fontWeight:700,color:$.t1}}>{df.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:ac(df.a),padding:'1px 6px',borderRadius:4,background:acBg(df.a)}}>{df.a}g</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(df.a),padding:'2px 7px',borderRadius:4,background:acBg(df.a)}}>{df.a}g</span>
                             </div>
                             <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:14}}>
                               {[{l:'Stok',v:fmtTon(df.q),c:$.blu},{l:'Değer',v:'₺'+fmt(df.v),c:'#0d6e4f'},{l:'Yaş',v:df.a+' gün',c:ac(df.a)}].map((k,i)=>(
                                 <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL,textAlign:'center'}}>
-                                  <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                                  <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:2}}>{k.l}</div>
                                   <div style={{fontSize:14,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                                 </div>))}
                             </div>
                             {/* Tabs */}
                             <div style={{display:'flex',gap:4,marginBottom:12,background:$.bg,borderRadius:8,padding:3}}>
                               {tabs.map(t=>(
-                                <div key={t.id} onClick={()=>setAnaDetail(p=>({...p,drillTab:t.id}))} style={{flex:1,textAlign:'center',padding:'6px 0',borderRadius:6,fontSize:11,fontWeight:dt===t.id?700:500,cursor:'pointer',background:dt===t.id?'#fff':'transparent',color:dt===t.id?$.t1:$.t3,boxShadow:dt===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s'}}>{t.l}</div>
+                                <div key={t.id} onClick={()=>setAnaDetail(p=>({...p,drillTab:t.id}))} style={{flex:1,textAlign:'center',padding:'7px 0',borderRadius:6,fontSize:12,fontWeight:dt===t.id?700:500,cursor:'pointer',background:dt===t.id?'#fff':'transparent',color:dt===t.id?$.t1:$.t2,boxShadow:dt===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s'}}>{t.l}</div>
                               ))}
                             </div>
                             {/* Items */}
                             {items.map((it,i)=>(
-                              <div key={it.n} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}}>
-                                <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{it.n}</span>
-                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(it.q)}</span>
-                                <span style={{fontFamily:$.mo,fontSize:9,fontWeight:600,color:$.t3}}>₺{fmt(it.v)}</span>
-                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(it.a),padding:'1px 6px',borderRadius:4,background:acBg(it.a)}}>{it.a}g</span>
+                              <div key={it.n} style={{padding:'9px 10px',borderRadius:8,marginBottom:4,display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}}>
+                                <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{it.n}</span>
+                                <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(it.q)}</span>
+                                <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>₺{fmt(it.v)}</span>
+                                <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(it.a),padding:'2px 7px',borderRadius:4,background:acBg(it.a)}}>{it.a}g</span>
                               </div>))}
-                            {items.length===0&&<div style={{fontSize:11,color:$.t3,padding:12,textAlign:'center'}}>Bu tesiste veri yok</div>}
+                            {items.length===0&&<div style={{fontSize:12,color:$.t2,padding:12,textAlign:'center'}}>Bu tesiste veri yok</div>}
                           </div>);
                         }
                         // Facility list
                         return(<div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>{facs.length} tesis — {fmtTon(anaDetail.data.qty)}</div>
+                          <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>{facs.length} tesis — {fmtTon(anaDetail.data.qty)}</div>
                           {facs.sort((a,b)=>b.q-a.q).map((f,i)=>(
-                            <div key={f.id} onClick={()=>setAnaDetail(p=>({...p,drillFac:f,drillTab:'l3'}))} style={{padding:'8px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1}}>{f.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(f.a),padding:'1px 6px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                              <ChevronRight size={12} color={$.t3}/>
+                            <div key={f.id} onClick={()=>setAnaDetail(p=>({...p,drillFac:f,drillTab:'l3'}))} style={{padding:'9px 10px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                              <ChevronRight size={13} color={$.t2}/>
                             </div>))}
                         </div>);
                       })()}
@@ -857,13 +857,13 @@ export default function App(){
                                 <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                               </div>))}
                           </div>
-                          <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>En Yüksek Değerli Ürünler</div>
+                          <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>En Yüksek Değerli Ürünler</div>
                           {prods.map((p,i)=>(
-                            <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
-                              <span style={{fontSize:10,fontWeight:700,color:$.t3,width:16,textAlign:'right'}}>{i+1}</span>
-                              <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:bk.c}}>₺{fmt(p.v)}</span>
+                            <div key={p.n} style={{padding:'8px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                              <span style={{fontSize:11,fontWeight:700,color:$.t2,width:18,textAlign:'right'}}>{i+1}</span>
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:bk.c}}>₺{fmt(p.v)}</span>
                             </div>))}
                         </div>);
                       })()}
@@ -884,18 +884,18 @@ export default function App(){
                             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
                               <div>
                                 <span style={{fontSize:12.5,fontWeight:700,color:r.c}}>{r.l}</span>
-                                <span style={{fontSize:10,color:$.t3,marginLeft:8}}>{r.r}</span>
+                                <span style={{fontSize:11,color:$.t2,marginLeft:8}}>{r.r}</span>
                               </div>
                               <div style={{display:'flex',alignItems:'center',gap:6}}>
                                 <span style={{fontFamily:$.mo,fontSize:13,fontWeight:800,color:r.c}}>{r.count} tesis</span>
-                                <ChevronRight size={12} color={$.t3}/>
+                                <ChevronRight size={13} color={$.t2}/>
                               </div>
                             </div>
                             <div style={{display:'flex',alignItems:'center',gap:8}}>
                               <div style={{flex:1,height:8,borderRadius:4,background:'rgba(0,0,0,.04)',overflow:'hidden'}}>
                                 <div style={{height:'100%',width:D.f.length>0?(r.count/D.f.length)*100+'%':'0%',borderRadius:4,background:r.c,opacity:.6,transition:'width .5s'}}/>
                               </div>
-                              <span style={{fontFamily:$.mo,fontSize:10,color:$.t2,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmtTon(r.qty)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,color:$.t2,fontWeight:600,minWidth:55,textAlign:'right'}}>{fmtTon(r.qty)}</span>
                             </div>
                           </div>))}
                       </div>
@@ -909,16 +909,16 @@ export default function App(){
                       <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16}}>
                         <svg width={mob?100:140} height={mob?100:140} viewBox="0 0 140 140" style={{cursor:'pointer',flexShrink:0}}>
                           {donutSegs.map(s=><path key={s.k} d={arcFn(70,70,55,s.start-90,s.end-90)} fill="none" stroke={s.c} strokeWidth="18" strokeLinecap="round" opacity=".8" style={{cursor:'pointer'}} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})}/>)}
-                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="JetBrains Mono">₺{fmt(tVal)}</text>
-                          <text x="70" y="82" textAnchor="middle" fontSize="9" fill={$.t3} fontWeight="500">{'Toplam Değer'}</text>
+                          <text x="70" y="65" textAnchor="middle" fontSize="12" fontWeight="800" fill={$.t1} fontFamily="Plus Jakarta Sans">₺{fmt(tVal)}</text>
+                          <text x="70" y="82" textAnchor="middle" fontSize="10" fill={$.t2} fontWeight="500">{'Toplam Değer'}</text>
                         </svg>
                         <div style={{display:'flex',flexDirection:'column',gap:4,flex:1}}>
                           {donutSegs.map(s=>(
                             <div key={s.k} onClick={()=>setAnaDetail({type:'value',name:s.k+' Gün — Değer Detayı',data:s})} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 8px',borderRadius:6,cursor:'pointer',transition:'background .15s'}} className="rh">
                               <div style={{width:8,height:8,borderRadius:3,background:s.c,flexShrink:0}}/>
-                              <span style={{fontSize:11,color:$.t2,flex:1}}>{s.k} Gün</span>
-                              <span style={{fontSize:11,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
-                              <ChevronRight size={10} color={$.t3}/>
+                              <span style={{fontSize:12,color:$.t1,fontWeight:500,flex:1}}>{s.k} Gün</span>
+                              <span style={{fontSize:12,fontFamily:$.mo,fontWeight:700,color:$.t1}}>₺{fmt(s.v)}</span>
+                              <ChevronRight size={11} color={$.t2}/>
                             </div>))}
                         </div>
                       </div>
