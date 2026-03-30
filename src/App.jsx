@@ -27,10 +27,10 @@ function buildD(rows){
   rows.forEach(r=>{const mi=r[8],ts=r[9],ta=r[10],dp=r[11],da=r[12],ua=r[3],ft=r[24],fu=r[25],fifo=r[27];
     if(!fm[ts])fm[ts]={id:ts,n:ta,city:gC(ts),type:gT(ts),q:0,v:0,vu:0,ws:new Set(),ps:new Set(),td:0,tq:0};
     const f=fm[ts];f.q+=mi;f.v+=mi*ft;f.vu+=mi*fu;f.ws.add(dp);f.ps.add(ua);f.td+=mi*fifo;f.tq+=mi;
-    const wk=ts+'|'+dp;if(!wm[wk])wm[wk]={fc:ts,id:dp,n:da,q:0,ps:new Set(),td:0,tq:0};
-    const w=wm[wk];w.q+=mi;w.ps.add(ua);w.td+=mi*fifo;w.tq+=mi;});
+    const wk=ts+'|'+dp;if(!wm[wk])wm[wk]={fc:ts,id:dp,n:da,q:0,v:0,ps:new Set(),td:0,tq:0};
+    const w=wm[wk];w.q+=mi;w.v+=mi*ft;w.ps.add(ua);w.td+=mi*fifo;w.tq+=mi;});
   const f=Object.values(fm).map(x=>({id:x.id,n:x.n,city:x.city,type:x.type,q:x.q,v:x.v,vu:x.vu,wc:x.ws.size,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
-  const w=Object.values(wm).map(x=>({fc:x.fc,id:x.id,n:x.n,q:x.q,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
+  const w=Object.values(wm).map(x=>({fc:x.fc,id:x.id,n:x.n,q:x.q,v:x.v,pc:x.ps.size,a:x.tq>0?Math.round(x.td/x.tq):0}));
   const cm={};f.forEach(fc=>{const c=fc.city;if(!cm[c])cm[c]={n:c,q:0,v:0,fc:0,wc:0,fcs:[],td:0,tq:0};const o=cm[c];o.q+=fc.q;o.v+=fc.v;o.fc++;o.wc+=fc.wc;o.fcs.push(fc.id);o.td+=fc.a*fc.q;o.tq+=fc.q;});
   const ct=Object.values(cm).map(c=>{const ll=CLL[c.n]||[39,35];return{n:c.n,q:c.q,v:c.v,fc:c.fc,wc:c.wc,fcs:c.fcs,a:c.tq>0?Math.round(c.td/c.tq):0,lat:ll[0],lng:ll[1]};});
   const ag={};BK.forEach(b=>{ag[b.k]=0;});
@@ -42,8 +42,8 @@ function buildD(rows){
 
 function getL2(rows,filterFn){
   const m={};
-  rows.filter(filterFn).forEach(r=>{const l2=r[17]||'Diğer';const q=r[8];const fifo=r[27];if(!m[l2])m[l2]={n:l2,q:0,td:0,tq:0};m[l2].q+=q;m[l2].td+=q*fifo;m[l2].tq+=q;});
-  return Object.values(m).map(x=>({n:x.n,q:Math.round(x.q),a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q);
+  rows.filter(filterFn).forEach(r=>{const l2=r[17]||'Diğer';const q=r[8];const v=r[8]*r[24];const fifo=r[27];if(!m[l2])m[l2]={n:l2,q:0,v:0,td:0,tq:0};m[l2].q+=q;m[l2].v+=v;m[l2].td+=q*fifo;m[l2].tq+=q;});
+  return Object.values(m).map(x=>({n:x.n,q:Math.round(x.q),v:Math.round(x.v),a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q);
 }
 
 function agingOf(rows,facIds){
@@ -78,15 +78,15 @@ function buildPivot(rows,groupIdx,labelIdx){
   return Object.values(m).map(x=>({...x,avg:x.total>0?Math.round(x.td/x.total):0})).sort((a,b)=>b.total-a.total);
 }
 
-const $={bg:'#fafbfc',bg2:'#fff',bg3:'#edf1f6',t1:'#1a2332',t2:'#5a6b7f',t3:'#8e9bb3',ac:'#0d6e4f',acL:'#e4f5ee',grn:'#2dd4a0',grnB:'rgba(45,212,160,.1)',blu:'#3b82f6',bluB:'rgba(59,130,246,.08)',red:'#e5484d',redB:'rgba(229,72,77,.08)',pur:'#8b5cf6',purB:'rgba(139,92,246,.08)',org:'#f5a623',orgB:'rgba(245,166,35,.08)',tel:'#14b8a6',telB:'rgba(20,184,166,.08)',bd:'#e2e7ee',bdL:'#eef1f6',sh:'0 1px 3px rgba(0,0,0,.04)',shM:'0 4px 16px rgba(0,0,0,.07)',r:'8px',rM:'12px',rL:'16px',f:"'Plus Jakarta Sans',-apple-system,sans-serif",mo:"'JetBrains Mono',monospace"};
+const $={bg:'#fafbfc',bg2:'#fff',bg3:'#edf1f6',t1:'#1a2332',t2:'#5a6b7f',t3:'#8e9bb3',ac:'#0d6e4f',acL:'#e4f5ee',grn:'#2dd4a0',grnB:'rgba(45,212,160,.1)',blu:'#3b82f6',bluB:'rgba(59,130,246,.08)',red:'#e5484d',redB:'rgba(229,72,77,.08)',pur:'#8b5cf6',purB:'rgba(139,92,246,.08)',org:'#f5a623',orgB:'rgba(245,166,35,.08)',tel:'#14b8a6',telB:'rgba(20,184,166,.08)',bd:'#e2e7ee',bdL:'#eef1f6',sh:'0 1px 3px rgba(0,0,0,.04)',shM:'0 4px 16px rgba(0,0,0,.07)',r:'8px',rM:'12px',rL:'16px',f:"'Plus Jakarta Sans',-apple-system,sans-serif",mo:"'Plus Jakarta Sans',-apple-system,sans-serif"};
 
 const KI=({children,bg,color})=><div style={{width:30,height:30,borderRadius:8,background:bg,color,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{children}</div>;
 const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
 const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
 
-const AgBar=({ag,total,big})=>{const tq=total||1;const sz=big?12:10.5;const dt=big?9:7;const gp=big?'5px 14px':'4px 10px';const bh=big?12:8;return(<div><div style={{display:'flex',height:bh,borderRadius:bh/2,overflow:'hidden',background:$.bdL,marginBottom:big?10:6}}>{BK.map(b=>{const p=(ag[b.k]||0)/tq*100;return p>0?<div key={b.k} style={{width:p+'%',background:b.c,transition:'width .4s'}}/>:null;})}</div><div style={{display:'flex',flexWrap:'wrap',gap:gp}}>{BK.map(b=>{const v=ag[b.k]||0;return v>0?<div key={b.k} style={{display:'flex',alignItems:'center',gap:big?5:3,fontSize:sz,color:$.t2}}><div style={{width:dt,height:dt,borderRadius:3,background:b.c}}/><span style={{fontFamily:$.mo,fontWeight:700}}>{((v/tq)*100).toFixed(0)}%</span><span style={{color:$.t3,fontWeight:500}}>{b.k}</span></div>:null;})}</div></div>);};
+const AgBar=({ag,total,big})=>{const tq=total||1;const sz=big?12:11;const dt=big?9:8;const gp=big?'6px 16px':'6px 14px';const bh=big?12:8;return(<div><div style={{display:'flex',height:bh,borderRadius:bh/2,overflow:'hidden',background:$.bdL,marginBottom:big?10:8}}>{BK.map(b=>{const p=(ag[b.k]||0)/tq*100;return p>0?<div key={b.k} style={{width:p+'%',background:b.c,transition:'width .4s'}}/>:null;})}</div><div style={{display:'flex',flexWrap:'wrap',gap:gp}}>{BK.map(b=>{const v=ag[b.k]||0;return v>0?<div key={b.k} style={{display:'flex',alignItems:'center',gap:big?5:4,fontSize:sz,color:$.t2}}><div style={{width:dt,height:dt,borderRadius:3,background:b.c,flexShrink:0}}/><span style={{fontWeight:700}}>{((v/tq)*100).toFixed(0)}%</span><span style={{color:$.t3,fontWeight:500}}>{b.k}</span></div>:null;})}</div></div>);};
 
-const TypeBar=({facs,total,big})=>{const tq=total||1;const sz=big?12:10.5;const dt=big?9:7;const gp=big?'5px 14px':'4px 10px';const bh=big?12:8;const types=Object.entries(TI).map(([k,v])=>({k,c:v.color,l:v.label,q:facs.filter(f=>f.type===k).reduce((s,f)=>s+f.q,0)})).filter(t=>t.q>0);if(types.length<1)return null;return(<div><div style={{display:'flex',height:bh,borderRadius:bh/2,overflow:'hidden',background:$.bdL,marginBottom:big?10:6}}>{types.map(t=><div key={t.k} style={{width:(t.q/tq)*100+'%',background:t.c,transition:'width .4s'}}/>)}</div><div style={{display:'flex',flexWrap:'wrap',gap:gp}}>{types.map(t=><div key={t.k} style={{display:'flex',alignItems:'center',gap:big?5:3,fontSize:sz,color:$.t2}}><div style={{width:dt,height:dt,borderRadius:3,background:t.c}}/><span style={{fontFamily:$.mo,fontWeight:700}}>{((t.q/tq)*100).toFixed(0)}%</span><span style={{color:$.t3,fontWeight:500}}>{t.l}</span></div>)}</div></div>);};
+const TypeBar=({facs,total,big})=>{const tq=total||1;const sz=big?12:11;const dt=big?9:8;const gp=big?'6px 16px':'6px 14px';const bh=big?12:8;const types=Object.entries(TI).map(([k,v])=>({k,c:v.color,l:v.label,q:facs.filter(f=>f.type===k).reduce((s,f)=>s+f.q,0)})).filter(t=>t.q>0);if(types.length<1)return null;return(<div><div style={{display:'flex',height:bh,borderRadius:bh/2,overflow:'hidden',background:$.bdL,marginBottom:big?10:6}}>{types.map(t=><div key={t.k} style={{width:(t.q/tq)*100+'%',background:t.c,transition:'width .4s'}}/>)}</div><div style={{display:'flex',flexWrap:'wrap',gap:gp}}>{types.map(t=><div key={t.k} style={{display:'flex',alignItems:'center',gap:big?5:3,fontSize:sz,color:$.t2}}><div style={{width:dt,height:dt,borderRadius:3,background:t.c}}/><span style={{fontFamily:$.mo,fontWeight:700}}>{((t.q/tq)*100).toFixed(0)}%</span><span style={{color:$.t3,fontWeight:500}}>{t.l}</span></div>)}</div></div>);};
 
 const SegBar=({ag,total,h,rd})=>{const tq=total||1;const hh=h||10;const rr=rd||5;return(
   <div style={{flex:1,height:hh,borderRadius:rr,background:$.bdL,display:'flex',position:'relative',overflow:'visible'}}>
@@ -461,7 +461,7 @@ export default function App(){
 
   return(
     <div style={{display:'flex',height:'100vh',fontFamily:$.f,background:$.bg,color:$.t1,overflow:'hidden',WebkitFontSmoothing:'antialiased',fontSize:13}}>
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes sbIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}.ks{animation:slideIn .3s cubic-bezier(.16,1,.3,1)}.fu{animation:fadeUp .35s ease both}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#c8cdd5;border-radius:10px}.rh:hover{background:#f0f3f8!important}.kp{transition:all .2s}.kp:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-2px)}input.fi,select.fi{border:1px solid rgba(226,231,238,.6);border-radius:8px;padding:5px 8px;font-size:11px;font-family:inherit;outline:none;width:100%;background:rgba(255,255,255,.85);backdrop-filter:blur(6px);color:#1a1a1a;transition:border-color .15s,background .15s}input.fi:focus,select.fi:focus{border-color:#0d6e4f;background:#fff;box-shadow:0 0 0 3px rgba(13,110,79,.08)}select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;cursor:pointer}select.fi:hover{border-color:rgba(13,110,79,.3);background-color:rgba(255,255,255,.95)}.tb-b{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid rgba(226,231,238,.5);background:rgba(255,255,255,.7);backdrop-filter:blur(6px);color:#5a6b7f;font-size:11.5px;font-family:inherit;font-weight:500;cursor:pointer;transition:all .15s}.tb-b:hover{background:rgba(255,255,255,.95);border-color:#d0d6df}.tb-b.pr{background:#0d6e4f;color:#fff;border-color:#0d6e4f}.tb-b.pr:hover{background:#0a5a40}.sg:hover{opacity:1!important}.sg:hover .sgt{opacity:1!important}.sbn:hover{background:rgba(13,110,79,.04)!important}.mob-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:999;backdrop-filter:blur(2px)}.mob-sb{animation:sbIn .25s ease}@keyframes spin{to{transform:rotate(360deg)}}@keyframes mobMenuUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.bnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;cursor:pointer;border:none;background:none;font-family:inherit;font-size:10px;font-weight:500;color:#86868b;transition:color .2s}.bnav-btn.active{color:#0d6e4f;font-weight:600}`}</style>
       <input ref={fR} type="file" accept=".xlsx,.xls" onChange={handleImport} style={{display:'none'}}/>
 
@@ -647,8 +647,8 @@ export default function App(){
                           i
                         </div>
                       </div>
-                      <div style={{fontSize:19,fontWeight:800,marginBottom:1,fontFamily:$.mo,fontVariantNumeric:'tabular-nums',color:k.cls==='red'?$.red:$.t1}}>{k.v}</div>
-                      <div style={{fontSize:10,color:$.t3,fontWeight:500}}>{k.sub||k.l}</div>
+                      <div style={{fontSize:19,fontWeight:700,marginBottom:1,fontFamily:$.mo,fontVariantNumeric:'tabular-nums',color:k.cls==='red'?$.red:$.t1}}>{k.v}</div>
+                      <div style={{fontSize:12,color:$.t2,fontWeight:500}}>{k.sub||k.l}</div>
                     </div>);})}
                 </div>);})()}
 
@@ -774,8 +774,8 @@ export default function App(){
                           <div style={{display:'grid',gridTemplateColumns:mob?'1fr 1fr':'repeat(4,1fr)',gap:8,marginBottom:14}}>
                             {[{l:'Toplam Stok',v:fmtTon(p.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(p.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:p.a+' gün',c:ac(p.a)},{l:'Tesis Sayısı',v:p.sc,c:$.pur}].map((k,i)=>(
                               <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                                <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                               </div>))}
                           </div>
                           <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı</div>
@@ -798,8 +798,8 @@ export default function App(){
                           const grp={};facRows.forEach(r=>{const k=r[cur.idx]||'Diğer';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!grp[k])grp[k]={n:k,q:0,v:0,td:0,tq:0};grp[k].q+=q;grp[k].v+=v;grp[k].td+=q*d;grp[k].tq+=q;});
                           const items=Object.values(grp).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q);
                           return(<div>
-                            <div onClick={()=>setAnaDetail(p=>({...p,drillFac:null}))} style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',marginBottom:12,color:$.ac,fontSize:11,fontWeight:600}}>
-                              <ChevronLeft size={14}/> Tesislere Dön
+                            <div onClick={()=>setAnaDetail(p=>({...p,drillFac:null}))} style={{display:'inline-flex',alignItems:'center',gap:6,cursor:'pointer',padding:'8px 14px',borderRadius:10,background:$.grnB,border:'1px solid rgba(13,110,79,.15)',marginBottom:14,transition:'all .15s'}} className="rh">
+                              <ChevronLeft size={15} color={$.ac}/><span style={{fontSize:12,fontWeight:700,color:$.ac}}>Tesislere Dön</span>
                             </div>
                             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
                               <div style={{width:8,height:8,borderRadius:4,background:anaDetail.data.c}}/>
@@ -810,7 +810,7 @@ export default function App(){
                               {[{l:'Stok',v:fmtTon(df.q),c:$.blu},{l:'Değer',v:'₺'+fmt(df.v),c:'#0d6e4f'},{l:'Yaş',v:df.a+' gün',c:ac(df.a)}].map((k,i)=>(
                                 <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL,textAlign:'center'}}>
                                   <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                  <div style={{fontSize:14,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                                  <div style={{fontSize:14,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                                 </div>))}
                             </div>
                             {/* Tabs */}
@@ -853,8 +853,8 @@ export default function App(){
                           <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat(3,1fr)',gap:8,marginBottom:14}}>
                             {[{l:'Toplam Değer',v:'₺'+fmt(bk.v),c:bk.c},{l:'Satır Sayısı',v:fN(bRows.length),c:$.blu},{l:'Oran',v:(bk.pct*100).toFixed(1)+'%',c:$.t1}].map((k,i)=>(
                               <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                                <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                                <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                                <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                                <div style={{fontSize:16,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                               </div>))}
                           </div>
                           <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>En Yüksek Değerli Ürünler</div>
@@ -989,8 +989,8 @@ export default function App(){
                           <span style={{fontSize:10.5,fontWeight:600,color:$.t3,textTransform:'uppercase',letterSpacing:.5}}>{k.l}</span>
                           <div style={{width:28,height:28,borderRadius:8,background:k.bg,color:k.c,display:'flex',alignItems:'center',justifyContent:'center'}}><k.icon size={14}/></div>
                         </div>
-                        <div style={{fontSize:22,fontWeight:800,fontFamily:$.mo,color:k.c,lineHeight:1.1,marginBottom:4}}>{k.v}</div>
-                        <div style={{fontSize:10.5,color:$.t3,fontWeight:500}}>{k.sub}</div>
+                        <div style={{fontSize:22,fontWeight:700,fontFamily:$.mo,color:k.c,lineHeight:1.1,marginBottom:4}}>{k.v}</div>
+                        <div style={{fontSize:12,color:$.t2,fontWeight:500}}>{k.sub}</div>
                       </div></BCard>
                     ))}
 
@@ -1018,7 +1018,7 @@ export default function App(){
                               <span style={{fontSize:9,fontWeight:800,color:'#fff',background:a.c,padding:'2px 7px',borderRadius:5,textTransform:'uppercase',letterSpacing:.5}}>{a.pri}</span>
                             </div>
                             <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:3,lineHeight:1.4}}>{a.t}</div>
-                            <div style={{fontSize:10,color:$.t3,fontWeight:500,lineHeight:1.4}}>{a.sub}</div>
+                            <div style={{fontSize:12,color:$.t2,fontWeight:500,lineHeight:1.4}}>{a.sub}</div>
                           </div>))}
                       </div>
                     </BCard>
@@ -1634,56 +1634,78 @@ export default function App(){
           {sd&&pg==='dash'&&!mob&&(
             <div className="ks" style={{width:440,flexShrink:0,background:'rgba(255,255,255,.72)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',borderLeft:'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
               <div style={{padding:'16px 18px',borderBottom:'1px solid '+$.bd,display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:ac(sd.avgA)}}/>
+                <div style={{width:11,height:11,borderRadius:'50%',background:ac(sd.avgA),flexShrink:0}}/>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:800,fontSize:16}}>{sel}</div>
-                  <div style={{fontSize:11,color:$.t3}}>{sd.facs.length} tesis - {sd.tWh} depo</div>
+                  <div style={{fontWeight:700,fontSize:17,color:$.t1,lineHeight:1.2}}>{sel}</div>
+                  <div style={{fontSize:13,color:$.t2,fontWeight:500,marginTop:2}}>{sd.facs.length} tesis · {sd.tWh} depo</div>
                 </div>
-                <X size={16} color={$.t3} onClick={()=>{setSel(null);setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer'}}/>
+                <div onClick={()=>{setSel(null);setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background .15s'}} className="rh">
+                  <X size={15} color={$.t2}/>
+                </div>
               </div>
               <div style={{flex:1,overflow:'auto',padding:'14px 16px'}}>
 
                 {prodData?(
                   <div>
-                    {/* Breadcrumb: Geri → L2 */}
-                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:12,flexWrap:'wrap'}}>
-                      <div onClick={()=>setDrillL2(null)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,color:$.blu,fontWeight:600}}><ChevronLeft size={14}/>Geri</div>
-                      <span style={{fontSize:11,color:$.t3}}>Seviye 2 /</span>
-                      <span style={{fontSize:12,fontWeight:700,color:$.t1}}>{drillL2} — Ürünler</span>
-                    </div>
-                    <div style={{fontSize:10,color:$.t3,fontWeight:600,marginBottom:8}}>{prodData.length} ürün</div>
+                    {/* Breadcrumb: Şehir › Tesis › L2 › Ürünler — glass single row */}
+                    {(()=>{const facName=drillFac?sd.facs.find(f=>f.id===drillFac)?.n||drillFac:sd.whs.find(w=>w.id===drillWh)?.n||drillWh;return(
+                    <div style={{display:'flex',alignItems:'center',gap:0,marginBottom:16,background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px) saturate(180%)',WebkitBackdropFilter:'blur(20px) saturate(180%)',border:'1px solid rgba(255,255,255,0.85)',boxShadow:'0 2px 16px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.9)',borderRadius:12,overflow:'hidden'}}>
+                      <div onClick={()=>setDrillL2(null)} className="rh" style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer',padding:'11px 13px',borderRight:'1px solid rgba(0,0,0,0.06)',flexShrink:0,transition:'background .15s'}}>
+                        <ChevronLeft size={14} color={$.blu}/><span style={{fontSize:12,fontWeight:700,color:$.blu,whiteSpace:'nowrap'}}>Geri</span>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:4,padding:'11px 13px',flexWrap:'wrap',minWidth:0}}>
+                        <span onClick={()=>{setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer',fontSize:11,fontWeight:600,color:$.blu,whiteSpace:'nowrap'}}>{sel}</span>
+                        <ChevronRight size={10} color={$.t3}/>
+                        <span onClick={()=>setDrillL2(null)} style={{cursor:'pointer',fontSize:11,fontWeight:600,color:$.blu,maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{facName}</span>
+                        <ChevronRight size={10} color={$.t3}/>
+                        <span onClick={()=>setDrillL2(null)} style={{cursor:'pointer',fontSize:11,fontWeight:600,color:$.blu,whiteSpace:'nowrap'}}>{drillL2}</span>
+                        <ChevronRight size={10} color={$.t3}/>
+                        <span style={{fontSize:11,fontWeight:700,color:$.t1,whiteSpace:'nowrap'}}>Ürünler</span>
+                      </div>
+                    </div>);})()}
+                    <div style={{fontSize:12,color:$.t2,fontWeight:600,marginBottom:10}}>{prodData.length} ürün</div>
                     {prodData.map((item,i)=>{const mxQ=prodData[0]?.q||1;return(
-                      <div key={item.n} className="fu" style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'10px 13px',marginBottom:5,boxShadow:$.sh}}>
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:5}}>
-                          <span style={{fontWeight:600,fontSize:11,color:$.t1,lineHeight:1.4,wordBreak:'break-word'}}>{item.n}</span>
-                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(item.a),padding:'2px 7px',borderRadius:5,background:acBg(item.a),whiteSpace:'nowrap',flexShrink:0}}>{item.a}g</span>
+                      <div key={item.n} className="fu" style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'13px 15px',marginBottom:7,boxShadow:$.sh}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:8}}>
+                          <span style={{fontWeight:700,fontSize:12,color:$.t1,lineHeight:1.4,wordBreak:'break-word',flex:1}}>{item.n}</span>
+                          <span style={{fontSize:11,fontWeight:700,color:ac(item.a),padding:'2px 7px',borderRadius:5,background:acBg(item.a),whiteSpace:'nowrap',flexShrink:0}}>{item.a}g</span>
                         </div>
-                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                          <div style={{flex:1,height:5,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.45}}/></div>
-                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:55,textAlign:'right',color:$.t1}}>{fmtTon(item.q)}</span>
-                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:500,color:$.t3,minWidth:50,textAlign:'right'}}>₺{fmt(item.v)}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:6}}>
+                          <span style={{fontSize:12,fontWeight:700,color:$.t1}}>{fmtTon(item.q)}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(item.v)}</span>
                         </div>
+                        <div style={{height:5,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.45}}/></div>
                       </div>);})}
                     {prodData.length===0&&<div style={{fontSize:11,color:$.t3,padding:12,textAlign:'center'}}>Bu kategoride ürün yok</div>}
                   </div>
                 ):l2Data?(
                   <div>
-                    {/* Breadcrumb: Geri → Tesis/Depo */}
-                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:12,flexWrap:'wrap'}}>
-                      <div onClick={()=>{setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,color:$.blu,fontWeight:600}}><ChevronLeft size={14}/>Geri</div>
-                      <span style={{fontSize:12,fontWeight:700,color:$.t1,wordBreak:'break-word'}}>{drillWh||drillFac} — Seviye 2</span>
-                    </div>
+                    {/* Breadcrumb: Şehir › Tesis/Depo › Seviye 2 — glass single row */}
+                    {(()=>{const facName=drillFac?sd.facs.find(f=>f.id===drillFac)?.n||drillFac:sd.whs.find(w=>w.id===drillWh)?.n||drillWh;return(
+                    <div style={{display:'flex',alignItems:'center',gap:0,marginBottom:16,background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px) saturate(180%)',WebkitBackdropFilter:'blur(20px) saturate(180%)',border:'1px solid rgba(255,255,255,0.85)',boxShadow:'0 2px 16px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.9)',borderRadius:12,overflow:'hidden'}}>
+                      <div onClick={()=>{setDrillFac(null);setDrillWh(null);setDrillL2(null);}} className="rh" style={{display:'flex',alignItems:'center',gap:4,cursor:'pointer',padding:'11px 13px',borderRight:'1px solid rgba(0,0,0,0.06)',flexShrink:0,transition:'background .15s'}}>
+                        <ChevronLeft size={14} color={$.blu}/><span style={{fontSize:12,fontWeight:700,color:$.blu,whiteSpace:'nowrap'}}>Geri</span>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:4,padding:'11px 13px',flexWrap:'wrap',minWidth:0}}>
+                        <span onClick={()=>{setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer',fontSize:11,fontWeight:600,color:$.blu,whiteSpace:'nowrap'}}>{sel}</span>
+                        <ChevronRight size={10} color={$.t3}/>
+                        <span style={{fontSize:11,fontWeight:700,color:$.t1,maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{facName}</span>
+                        <ChevronRight size={10} color={$.t3}/>
+                        <span style={{fontSize:11,fontWeight:700,color:$.t1,whiteSpace:'nowrap'}}>Seviye 2</span>
+                      </div>
+                    </div>);})()}
                     {l2Data.map((item,i)=>{const mxQ=l2Data[0]?.q||1;return(
-                      <div key={item.n} className="fu" onClick={()=>setDrillL2(item.n)} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 14px',marginBottom:5,boxShadow:$.sh,cursor:'pointer'}} >
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:5}}>
+                      <div key={item.n} className="fu" onClick={()=>setDrillL2(item.n)} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'13px 15px',marginBottom:7,boxShadow:$.sh,cursor:'pointer'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:8}}>
                           <span style={{fontWeight:700,fontSize:12,lineHeight:1.4,wordBreak:'break-word',flex:1}}>{item.n}</span>
-                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(item.a),padding:'2px 8px',borderRadius:5,background:acBg(item.a),flexShrink:0}}>{item.a}g</span>
+                          <span style={{fontSize:11,fontWeight:700,color:ac(item.a),padding:'2px 8px',borderRadius:5,background:acBg(item.a),flexShrink:0}}>{item.a}g</span>
                         </div>
-                        <div style={{display:'flex',alignItems:'center',gap:8}}>
-                          <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.5}}/></div>
-                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:60,textAlign:'right'}}>{fmtTon(item.q)}</span>
-                          <ChevronRight size={12} color={$.t3} style={{flexShrink:0}}/>
+                        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+                          <span style={{fontSize:12,fontWeight:700,color:$.t1}}>{fmtTon(item.q)}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(item.v)}</span>
+                          <ChevronRight size={12} color={$.t3} style={{marginLeft:'auto',flexShrink:0}}/>
                         </div>
+                        <div style={{height:5,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.45}}/></div>
                       </div>);})}
                   </div>
                 ):(
@@ -1692,15 +1714,15 @@ export default function App(){
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
                       {[{l:'Stok',v:fmtTon(sd.tQ),c:$.blu,bg:$.bluB},{l:'Değer',v:'₺'+fmt(sd.tV),c:'#0d6e4f',bg:$.grnB},{l:'Depo',v:sd.tWh,c:$.pur,bg:$.purB},{l:'Ürün',v:sd.tPc,c:$.org,bg:$.orgB}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 13px'}}>
-                          <div style={{fontSize:9,color:$.t3,textTransform:'uppercase',fontWeight:700,letterSpacing:1}}>{k.l}</div>
-                          <div style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:$.mo,marginTop:3}}>{k.v}</div>
+                          <div style={{fontSize:10,color:$.t2,textTransform:'uppercase',fontWeight:700,letterSpacing:.8}}>{k.l}</div>
+                          <div style={{fontSize:24,fontWeight:700,color:k.c,fontFamily:$.mo,marginTop:3}}>{k.v}</div>
                         </div>))}
                     </div>
                     {/* FIFO aging bar */}
                     <div style={{background:$.bg,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 13px',marginBottom:10}}>
                       <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
                         <span style={{fontSize:10,color:$.t3,fontWeight:700}}>FIFO YAŞLANMA</span>
-                        <span style={{fontSize:17,fontFamily:$.mo,fontWeight:800,color:ac(sd.avgA)}}>{sd.avgA} gün</span>
+                        <span style={{fontSize:17,fontFamily:$.mo,fontWeight:700,color:ac(sd.avgA)}}>{sd.avgA} gün</span>
                       </div>
                       <div style={{height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
                         <div style={{height:'100%',width:Math.min(100,(sd.avgA/500)*100)+'%',borderRadius:3,background:'linear-gradient(90deg,#0d6e4f,'+ac(sd.avgA)+')'}}/>
@@ -1722,25 +1744,27 @@ export default function App(){
                         <div key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'7px',borderRadius:$.r,fontSize:11,fontWeight:600,textAlign:'center',cursor:'pointer',background:tab===t.id?$.acL:$.bg,color:tab===t.id?$.ac:$.t3,border:'1px solid '+(tab===t.id?'#b8dece':$.bdL)}}>{t.l}</div>))}
                     </div>
                     {tab==='f'&&sd.facs.sort((a,b)=>b.q-a.q).map((f,i)=>{const ti=TI[f.type]||TI.dis;return(
-                      <div key={f.id} className="fu" onClick={()=>{setDrillFac(f.id);setDrillWh(null);setDrillL2(null);}} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'10px 13px',marginBottom:4,position:'relative',overflow:'hidden',boxShadow:$.sh,cursor:'pointer'}}>
-                        <div style={{position:'absolute',top:0,left:0,bottom:0,width:3,background:ti.color,opacity:.5}}/>
-                        <div style={{paddingLeft:8,fontWeight:700,fontSize:12,marginBottom:3,wordBreak:'break-word',lineHeight:1.4}}>{f.n}</div>
-                        <div style={{display:'flex',gap:10,paddingLeft:8,fontSize:11,color:$.t2,alignItems:'center'}}>
-                          <span style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fmtTon(f.q)}</span>
-                          <span style={{marginLeft:'auto',fontFamily:$.mo,fontWeight:700,color:ac(f.a)}}>{f.a}g</span>
+                      <div key={f.id} className="fu" onClick={()=>{setDrillFac(f.id);setDrillWh(null);setDrillL2(null);}} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'12px 14px',marginBottom:6,position:'relative',overflow:'hidden',boxShadow:$.sh,cursor:'pointer'}}>
+                        <div style={{position:'absolute',top:0,left:0,bottom:0,width:3,background:ti.color,opacity:.6}}/>
+                        <div style={{paddingLeft:10,fontWeight:700,fontSize:12,marginBottom:6,wordBreak:'break-word',lineHeight:1.4}}>{f.n}</div>
+                        <div style={{display:'flex',gap:8,paddingLeft:10,alignItems:'center',flexWrap:'wrap'}}>
+                          <span style={{fontSize:12,fontWeight:700,color:$.t1}}>{fmtTon(f.q)}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                          <span style={{marginLeft:'auto',fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:5,background:acBg(f.a)}}>{f.a}g</span>
                           <ChevronRight size={13} color={$.t3}/>
                         </div>
                       </div>);})}
                     {tab==='w'&&sd.whs.sort((a,b)=>b.q-a.q).map((w,i)=>(
-                      <div key={w.id+i} className="fu" onClick={()=>{setDrillWh(w.id);setDrillFac(null);setDrillL2(null);}} style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.r,padding:'9px 13px',marginBottom:4,cursor:'pointer',boxShadow:$.sh}}>
-                        <div style={{display:'flex',alignItems:'flex-start',gap:5,marginBottom:3}}>
-                          <span style={{fontWeight:600,fontSize:11,flex:1,color:$.t2,wordBreak:'break-word',lineHeight:1.4}}>{w.n}</span>
-                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(w.a),flexShrink:0}}>{w.a}g</span>
-                          <ChevronRight size={12} color={$.t3} style={{flexShrink:0}}/>
+                      <div key={w.id+i} className="fu" onClick={()=>{setDrillWh(w.id);setDrillFac(null);setDrillL2(null);}} style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'12px 14px',marginBottom:6,cursor:'pointer',boxShadow:$.sh}}>
+                        <div style={{display:'flex',alignItems:'flex-start',gap:6,marginBottom:6}}>
+                          <span style={{fontWeight:700,fontSize:12,flex:1,color:$.t1,wordBreak:'break-word',lineHeight:1.4}}>{w.n}</span>
+                          <span style={{fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:5,background:acBg(w.a),flexShrink:0}}>{w.a}g</span>
+                          <ChevronRight size={12} color={$.t3} style={{flexShrink:0,marginTop:2}}/>
                         </div>
-                        <div style={{display:'flex',alignItems:'center',gap:6}}>
-                          <div style={{flex:1,height:4,borderRadius:2,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:Math.min(100,(w.q/(sd.whs[0]?.q||1))*100)+'%',borderRadius:2,background:ac(w.a),opacity:.45}}/></div>
-                          <span style={{fontSize:10,fontFamily:$.mo,color:$.t2,fontWeight:600}}>{fmtTon(w.q)}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{flex:1,height:5,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:Math.min(100,(w.q/(sd.whs[0]?.q||1))*100)+'%',borderRadius:3,background:ac(w.a),opacity:.45}}/></div>
+                          <span style={{fontSize:11,color:$.t1,fontWeight:700}}>{fmtTon(w.q)}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:'#0d6e4f'}}>₺{fmt(w.v)}</span>
                         </div>
                       </div>))}
                   </div>
@@ -1769,8 +1793,8 @@ export default function App(){
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
                       {[{l:'Toplam Stok',v:fmtTon(c.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(c.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:c.a+' gün',c:ac(c.a)},{l:'Ürün Sayısı',v:c.pc,c:$.pur}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                          <div style={{fontSize:15,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                          <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                          <div style={{fontSize:15,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                         </div>))}
                     </div>
                     <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
@@ -1792,8 +1816,8 @@ export default function App(){
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
                       {[{l:'Stok',v:fmtTon(f.q),c:$.blu},{l:'Değer',v:'₺'+fmt(f.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:f.a+' gün',c:ac(f.a)},{l:'Depo',v:f.wc,c:$.pur}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:9,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                          <div style={{fontSize:15,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                          <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>{k.l}</div>
+                          <div style={{fontSize:15,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                         </div>))}
                     </div>
                     <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürün Dağılımı</div>
