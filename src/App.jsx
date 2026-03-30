@@ -1632,7 +1632,7 @@ export default function App(){
 
           {/* ===== RIGHT KPI PANEL ===== */}
           {sd&&pg==='dash'&&!mob&&(
-            <div className="ks" style={{width:320,flexShrink:0,background:'rgba(255,255,255,.72)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',borderLeft:'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+            <div className="ks" style={{width:400,flexShrink:0,background:'rgba(255,255,255,.72)',backdropFilter:'blur(20px) saturate(160%)',WebkitBackdropFilter:'blur(20px) saturate(160%)',borderLeft:'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden'}}>
               <div style={{padding:'16px 18px',borderBottom:'1px solid '+$.bd,display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
                 <div style={{width:10,height:10,borderRadius:'50%',background:ac(sd.avgA)}}/>
                 <div style={{flex:1}}>
@@ -1751,7 +1751,7 @@ export default function App(){
 
           {/* ===== YÖNETİM RIGHT DRAWER ===== */}
           {yonDetail&&pg==='yon'&&(
-            <div style={{width:mob?'100%':360,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(24px) saturate(160%)',WebkitBackdropFilter:'blur(24px) saturate(160%)',borderLeft:mob?'none':'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden',position:mob?'absolute':'relative',top:mob?0:undefined,right:mob?0:undefined,bottom:mob?0:undefined,zIndex:mob?40:undefined,height:mob?'100%':undefined}}>
+            <div style={{width:mob?'100%':400,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(24px) saturate(160%)',WebkitBackdropFilter:'blur(24px) saturate(160%)',borderLeft:mob?'none':'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden',position:mob?'absolute':'relative',top:mob?0:undefined,right:mob?0:undefined,bottom:mob?0:undefined,zIndex:mob?40:undefined,height:mob?'100%':undefined}}>
               <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
                 <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
                 <div style={{flex:1,minWidth:0}}>
