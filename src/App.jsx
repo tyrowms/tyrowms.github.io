@@ -4,6 +4,30 @@ const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
 const INIT=[];
+const _DEMO=(()=>{
+  const comps=[['TAND','Tiryaki Anadolu Tarım A.Ş.'],['TSRY','Tiryaki Süryani Tarım'],['DANE','Dane Tarım A.Ş.'],['ENUT','Enut Gıda A.Ş.'],['SUHO','Suho Trading Ltd.'],['SAMA','Sama Agriculture Co.'],['MESQ','Mesq Trading'],['SRCA','Sarıca Organics'],['GPOR','Giresun Port Organics'],['ETRY','Etry Enerji A.Ş.'],['TTEC','Tiryaki Teknoloji A.Ş.'],['ASET','Aset Holding A.Ş.'],['TOGO','Togo Agri Ltd.'],['NOVA','Nova Trading']];
+  const facs=[['ADN','Adana Silolu Tesis','ADN-01'],['BRS','Bursa Depo Tesisi','BRS-01'],['GRS','Giresun Fındık Tesisi','GRS-01'],['ISK','İskenderun Liman Tesisi','ISK-01'],['DTC','İstanbul Merkez Depo','DTC-01'],['IZM','İzmir Liman Tesisi','IZM-01'],['KON','Konya Tahıl Tesisi','KON-01'],['MRS','Mersin Liman Tesisi','MRS-01'],['MUS','Muş Silo Tesisi','MUS-01'],['SMS','Samsun Liman Tesisi','SMS-01'],['BND','Bandırma Tesisi','BND-01'],['GZT','Gaziantep Tesisi','GZT-01'],['TRY-BND','Bandırma Öz Tesis','TRY-BND-01'],['YLD-KON','Konya Öz Tesis','YLD-KON-01'],['YLD-MUS','Muş Öz Tesis','YLD-MUS-01']];
+  const cats=[
+    {pfx:'1',l2:'06',l2n:'Tahıl',l3:'0601',l3n:'Hububat',prods:[['Buğday','TR'],['Mısır','UA'],['Arpa','DE'],['Yulaf','TR'],['Sorgum','AR'],['Çeltik','VN'],['Tritikale','TR']],price:8.5,priceU:0.25},
+    {pfx:'2',l2:'07',l2n:'Yağlı Tohum ve Yemle',l3:'0701',l3n:'Yemeklik Yağ Tohumu',prods:[['Ayçiçeği','TR'],['Kanola','DE'],['Soya Fasulyesi','BR'],['Aspir','TR'],['Ham Ayçiçek Yağı','RU'],['Kolza','FR'],['Susam','ET']],price:22,priceU:0.65},
+    {pfx:'3',l2:'08',l2n:'Kuruyemiş',l3:'0801',l3n:'Sert Kabuklu Meyveler',prods:[['Fındık İç','TR'],['Ceviz İç','TR'],['Antep Fıstığı','TR'],['Badem İç','US'],['Çam Fıstığı','TR'],['Kaju','VN'],['Makademya','ZA']],price:95,priceU:2.8},
+    {pfx:'1',l2:'09',l2n:'Bakliyat',l3:'0901',l3n:'Yemeklik Tane Baklagiller',prods:[['Nohut','TR'],['Kırmızı Mercimek','TR'],['Kuru Fasulye','AR'],['Bakla','TR'],['Bezelye','DE'],['Yeşil Mercimek','CA'],['Börülce','TR']],price:18,priceU:0.53},
+    {pfx:'2',l2:'10',l2n:'Diğer',l3:'1001',l3n:'Çeşitli İşlenmiş',prods:[['Pirinç','VN'],['Buğday Unu','TR'],['Kepek','TR'],['Mısır Nişastası','TR'],['Hayvan Yemi','TR'],['Gluten','TR'],['Razmol','TR']],price:12,priceU:0.35},
+  ];
+  const ambalaj=['Big-Bag','Dökme','Çuval 50kg','Çuval 25kg','Konteyner','Dökme-Gemi'];
+  let seed=7391;
+  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0xffffffff;};
+  const ri=(a)=>Math.floor(rnd()*a.length);
+  const rn=(min,max)=>Math.round(min+rnd()*(max-min));
+  const rows=[];
+  for(let i=0;i<100;i++){
+    const comp=comps[ri(comps)];const fac=facs[ri(facs)];const cat=cats[ri(cats)];const prod=cat.prods[ri(cat.prods)];
+    const madde=cat.pfx+String(1000+rn(1,99)).padStart(6,'0').slice(-5);
+    const days=rn(0,500);const qty=rn(1000,120000);const pTL=parseFloat((cat.price*(0.75+rnd()*0.5)).toFixed(2));const pUSD=parseFloat((cat.priceU*(0.75+rnd()*0.5)).toFixed(2));const depNo=rn(1,4);
+    rows.push([comp[0],comp[1],madde,prod[0],prod[1],'P'+String(100+i).slice(1),ambalaj[ri(ambalaj)],'%'+rn(0,18),qty,fac[0],fac[1],fac[2].replace('01',String(depNo).padStart(2,'0')),'Ambar '+depNo,'PTR-'+String(10000+i),'L1-'+cat.pfx,'Grup '+cat.pfx,cat.l2,cat.l2n,cat.l3,cat.l3n,'','','','',pTL,pUSD,parseFloat((pTL*0.98).toFixed(2)),days,parseFloat((pTL*1.02).toFixed(2)),parseFloat((pTL*0.97).toFixed(2)),days,parseFloat((pTL*1.01).toFixed(2)),days]);
+  }
+  return rows;
+})();
 const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","YLD-KON":"Konya","YLD-MUS":"Muş"};
@@ -1028,24 +1052,24 @@ export default function App(){
                       <div style={{padding:'12px 16px'}}>
                         <div onClick={()=>setYonDetail({type:'critical',name:'Kritik Stok Detayı (365+ Gün)',badge:critProds.length+' ürün',badgeC:'#e5484d',badgeBg:'rgba(229,72,77,.08)'})} style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(229,72,77,.05)',marginBottom:8,cursor:'pointer',border:'1px solid rgba(229,72,77,.12)'}} className="rh">
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-                            <span style={{fontSize:11,fontWeight:700,color:'#e5484d'}}>365+ Gün</span>
-                            <ChevronRight size={12} color={$.t3}/>
+                            <span style={{fontSize:12,fontWeight:700,color:'#e5484d'}}>365+ Gün</span>
+                            <ChevronRight size={13} color={$.t2}/>
                           </div>
                           <div style={{fontFamily:$.mo,fontSize:16,fontWeight:800,color:'#e5484d',marginBottom:2}}>{fmtTon(critQty)}</div>
-                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>₺{fmt(critVal)} · %{critPct.toFixed(1)}</div>
+                          <div style={{fontFamily:$.mo,fontSize:11,color:$.t2}}>₺{fmt(critVal)} · %{critPct.toFixed(1)}</div>
                         </div>
                         <div style={{padding:'10px 12px',borderRadius:$.rM,background:'rgba(234,88,12,.04)',marginBottom:8,border:'1px solid rgba(234,88,12,.1)'}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#ea580c',marginBottom:2}}>180+ Gün</div>
+                          <div style={{fontSize:12,fontWeight:700,color:'#ea580c',marginBottom:2}}>180+ Gün</div>
                           <div style={{fontFamily:$.mo,fontSize:14,fontWeight:800,color:'#ea580c'}}>{fmtTon(c180Qty)}</div>
-                          <div style={{fontFamily:$.mo,fontSize:10,color:$.t3}}>%{c180Pct.toFixed(1)} oran</div>
+                          <div style={{fontFamily:$.mo,fontSize:11,color:$.t2}}>%{c180Pct.toFixed(1)} oran</div>
                         </div>
                         <div style={{marginTop:8}}>
-                          <div style={{fontSize:10,fontWeight:700,color:$.t2,marginBottom:6}}>Tesis Tipi Dağılımı</div>
+                          <div style={{fontSize:11,fontWeight:700,color:$.t2,marginBottom:6}}>Tesis Tipi Dağılımı</div>
                           {typeStats.map(t=>(
                             <div key={t.k} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}>
                               <div style={{width:7,height:7,borderRadius:3,background:t.c,flexShrink:0}}/>
-                              <span style={{fontSize:10,color:$.t2,flex:1}}>{t.l}</span>
-                              <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:t.c}}>{t.count}</span>
+                              <span style={{fontSize:11,color:$.t2,flex:1}}>{t.l}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:t.c}}>{t.count}</span>
                             </div>))}
                         </div>
                       </div>
@@ -1067,9 +1091,9 @@ export default function App(){
                                 <td style={{padding:'7px 8px',fontWeight:600,color:$.t1,borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none',position:'sticky',left:0,background:$.bg2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:130}}>{h.n}</td>
                                 {BK.map(b=>{const v=h.ag[b.k]||0;const intensity=mx>0?v/mx:0;return(
                                   <td key={b.k} style={{textAlign:'center',padding:'7px 4px',borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none'}}>
-                                    <div style={{display:'inline-block',padding:'3px 6px',borderRadius:5,fontFamily:$.mo,fontWeight:700,fontSize:9.5,background:v>0?b.c+'18':'transparent',color:v>0?b.c:$.t3,opacity:v>0?(.4+intensity*.6):0.3}}>{v>0?fmtTon(v):'-'}</div>
+                                    <div style={{display:'inline-block',padding:'3px 6px',borderRadius:5,fontFamily:$.mo,fontWeight:700,fontSize:10.5,background:v>0?b.c+'18':'transparent',color:v>0?b.c:$.t2,opacity:v>0?(.4+intensity*.6):0.35}}>{v>0?fmtTon(v):'-'}</div>
                                   </td>);})}
-                                <td style={{textAlign:'right',padding:'7px 8px',fontFamily:$.mo,fontWeight:800,color:$.t1,borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none',fontSize:11}}>{fmtTon(h.total)}<ChevronRight size={10} color={$.t3} style={{marginLeft:4,verticalAlign:'middle'}}/></td>
+                                <td style={{textAlign:'right',padding:'7px 8px',fontFamily:$.mo,fontWeight:800,color:$.t1,borderBottom:i<heatData.length-1?'1px solid '+$.bdL:'none',fontSize:12}}>{fmtTon(h.total)}<ChevronRight size={11} color={$.t2} style={{marginLeft:4,verticalAlign:'middle'}}/></td>
                               </tr>);})}
                           </tbody>
                         </table>
@@ -1081,15 +1105,15 @@ export default function App(){
                       <BHead icon={Building2} color={$.pur} bg={$.purB} title="Tesis Performansı (Değer)"/>
                       <div style={{padding:'12px 16px'}}>
                         {facPerf.map((f,i)=>(
-                          <div key={f.id} onClick={()=>setYonDetail({type:'facility',name:f.n||f.id,data:f,badge:TI[f.type]?.label,badgeC:TI[f.type]?.color,badgeBg:TI[f.type]?.color+'14'})} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<facPerf.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
-                            <div style={{width:6,height:6,borderRadius:3,background:TI[f.type]?.color||$.t3,flexShrink:0}}/>
-                            <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n||f.id}</span>
+                          <div key={f.id} onClick={()=>setYonDetail({type:'facility',name:f.n||f.id,data:f,badge:TI[f.type]?.label,badgeC:TI[f.type]?.color,badgeBg:TI[f.type]?.color+'14'})} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:i<facPerf.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
+                            <div style={{width:7,height:7,borderRadius:3,background:TI[f.type]?.color||$.t3,flexShrink:0}}/>
+                            <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n||f.id}</span>
                             <div style={{flex:1.5,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
                               <div style={{height:'100%',width:(f.v/maxFV)*100+'%',borderRadius:3,background:TI[f.type]?.color||$.ac,opacity:.5,transition:'width .5s'}}/>
                             </div>
-                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f',minWidth:60,textAlign:'right'}}>₺{fmt(f.v)}</span>
-                            <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                            <ChevronRight size={11} color={$.t3}/>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#0d6e4f',minWidth:60,textAlign:'right'}}>₺{fmt(f.v)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                            <ChevronRight size={13} color={$.t2}/>
                           </div>))}
                       </div>
                     </BCard>
@@ -1098,15 +1122,15 @@ export default function App(){
                       <BHead icon={Layers} color={$.org} bg={$.orgB} title="Ürün Portföyü (L2)"/>
                       <div style={{padding:'12px 16px'}}>
                         {l2s.map((l,i)=>(
-                          <div key={l.n} onClick={()=>setYonDetail({type:'l2',name:l.n+' Kategorisi',data:l,badge:'₺'+fmt(l.v),badgeC:'#0d6e4f',badgeBg:$.grnB})} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 0',borderBottom:i<l2s.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
-                            <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.n}</span>
+                          <div key={l.n} onClick={()=>setYonDetail({type:'l2',name:l.n+' Kategorisi',data:l,badge:'₺'+fmt(l.v),badgeC:'#0d6e4f',badgeBg:$.grnB})} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0',borderBottom:i<l2s.length-1?'1px solid '+$.bdL:'none',cursor:'pointer'}} className="rh">
+                            <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.n}</span>
                             <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}>
                               <div style={{height:'100%',width:(l.v/maxL2V)*100+'%',borderRadius:3,background:$.org,opacity:.45,transition:'width .5s'}}/>
                             </div>
-                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f',minWidth:55,textAlign:'right'}}>₺{fmt(l.v)}</span>
-                            <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2,minWidth:45,textAlign:'right'}}>{fmtTon(l.q)}</span>
-                            <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(l.a),padding:'1px 5px',borderRadius:4,background:acBg(l.a)}}>{l.a}g</span>
-                            <ChevronRight size={11} color={$.t3}/>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#0d6e4f',minWidth:55,textAlign:'right'}}>₺{fmt(l.v)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2,minWidth:45,textAlign:'right'}}>{fmtTon(l.q)}</span>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(l.a),padding:'2px 7px',borderRadius:4,background:acBg(l.a)}}>{l.a}g</span>
+                            <ChevronRight size={13} color={$.t2}/>
                           </div>))}
                       </div>
                     </BCard>
@@ -1777,12 +1801,12 @@ export default function App(){
           {yonDetail&&pg==='yon'&&(
             <div style={{width:mob?'100%':440,flexShrink:0,background:'rgba(255,255,255,.82)',backdropFilter:'blur(24px) saturate(160%)',WebkitBackdropFilter:'blur(24px) saturate(160%)',borderLeft:mob?'none':'1px solid rgba(226,231,238,.4)',display:'flex',flexDirection:'column',overflow:'hidden',position:mob?'absolute':'relative',top:mob?0:undefined,right:mob?0:undefined,bottom:mob?0:undefined,zIndex:mob?40:undefined,height:mob?'100%':undefined}}>
               <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-                <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',display:'flex',alignItems:'center'}}><ChevronLeft size={18} color={$.ac}/></div>
+                <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(13,110,79,.08)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background .15s'}} className="rh"><ChevronLeft size={16} color={$.ac}/></div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{yonDetail.name}</div>
-                  {yonDetail.badge&&<div style={{fontSize:10,color:yonDetail.badgeC||$.t3,fontWeight:600,marginTop:2}}>{yonDetail.badge}</div>}
+                  <div style={{fontSize:15,fontWeight:700,color:$.t1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{yonDetail.name}</div>
+                  {yonDetail.badge&&<div style={{fontSize:12,color:yonDetail.badgeC||$.t2,fontWeight:600,marginTop:2}}>{yonDetail.badge}</div>}
                 </div>
-                <X size={16} color={$.t3} style={{cursor:'pointer',flexShrink:0}} onClick={()=>setYonDetail(null)}/>
+                <div onClick={()=>setYonDetail(null)} style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background .15s'}} className="rh"><X size={15} color={$.t2}/></div>
               </div>
               <div style={{flex:1,overflow:'auto',padding:'14px 16px'}}>
                 {yonDetail.type==='company'&&(()=>{
@@ -1797,14 +1821,14 @@ export default function App(){
                           <div style={{fontSize:15,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                         </div>))}
                     </div>
-                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
+                    <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
                     {facs.map((f,i)=>(
-                      <div key={f.n} onClick={()=>{setPg('dash');setDrillFac(f.n);setYonDetail(null);}} style={{padding:'7px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6,cursor:'pointer'}} className="rh">
-                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                        <ChevronRight size={11} color={$.t3}/>
+                      <div key={f.n} onClick={()=>{setPg('dash');setDrillFac(f.n);setYonDetail(null);}} style={{padding:'9px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8,cursor:'pointer'}} className="rh">
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                        <ChevronRight size={13} color={$.t2}/>
                       </div>))}
                   </div>);
                 })()}
@@ -1820,13 +1844,13 @@ export default function App(){
                           <div style={{fontSize:15,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                         </div>))}
                     </div>
-                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Ürün Dağılımı</div>
+                    <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>Ürün Dağılımı</div>
                     {prods.map((p,i)=>(
-                      <div key={p.n} style={{padding:'6px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                      <div key={p.n} style={{padding:'8px 0',borderBottom:i<prods.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(p.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(p.a),padding:'2px 7px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
                       </div>))}
                   </div>);
                 })()}
@@ -1838,17 +1862,17 @@ export default function App(){
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
                       {[{l:'Toplam Stok',v:fmtTon(l.q),c:$.blu},{l:'Toplam Değer',v:'₺'+fmt(l.v),c:'#0d6e4f'},{l:'Ort. Yaş',v:l.a+' gün',c:ac(l.a)}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                          <div style={{fontSize:13,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                          <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:14,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                         </div>))}
                     </div>
-                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
+                    <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>Tesis Dağılımı ({facs.length})</div>
                     {facs.map((f,i)=>(
-                      <div key={f.n} style={{padding:'6px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(f.a),padding:'1px 5px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
+                      <div key={f.n} style={{padding:'8px 0',borderBottom:i<facs.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#0d6e4f'}}>₺{fmt(f.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
                       </div>))}
                   </div>);
                 })()}
@@ -1858,17 +1882,17 @@ export default function App(){
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
                       {[{l:'Kritik Stok',v:fmtTon(critQty),c:'#e5484d'},{l:'Kritik Değer',v:'₺'+fmt(critVal),c:'#ea580c'},{l:'Ürün',v:critProds.length,c:$.pur}].map((k,i)=>(
                         <div key={i} style={{background:$.bg,borderRadius:8,padding:'8px 10px',border:'1px solid '+$.bdL}}>
-                          <div style={{fontSize:8.5,color:$.t3,fontWeight:600,marginBottom:2}}>{k.l}</div>
-                          <div style={{fontSize:13,fontWeight:800,fontFamily:$.mo,color:k.c}}>{k.v}</div>
+                          <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:2}}>{k.l}</div>
+                          <div style={{fontSize:14,fontWeight:700,fontFamily:$.mo,color:k.c}}>{k.v}</div>
                         </div>))}
                     </div>
-                    <div style={{fontSize:11,fontWeight:700,color:$.t1,marginBottom:8}}>365+ Gün Ürünler</div>
+                    <div style={{fontSize:12,fontWeight:700,color:$.t1,marginBottom:8}}>365+ Gün Ürünler</div>
                     {critProds.map((p,i)=>(
-                      <div key={p.n} style={{padding:'6px 0',borderBottom:i<critProds.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:6}}>
-                        <span style={{fontSize:11,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#e5484d'}}>₺{fmt(p.v)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:9.5,fontWeight:600,color:ac(p.a),padding:'1px 5px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
+                      <div key={p.n} style={{padding:'8px 0',borderBottom:i<critProds.length-1?'1px solid '+$.bdL:'none',display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.n}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(p.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#e5484d'}}>₺{fmt(p.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:ac(p.a),padding:'2px 7px',borderRadius:4,background:acBg(p.a)}}>{p.a}g</span>
                       </div>))}
                   </div>);
                 })()}
