@@ -153,6 +153,7 @@ export default function App(){
   const [newRow,setNewRow]=useState(null);
   const [drillFac,setDrillFac]=useState(null);
   const [drillWh,setDrillWh]=useState(null);
+  const [drillL2,setDrillL2]=useState(null);
   const [hovTip,setHovTip]=useState(null); // {i, x, y}
   const [repTab,setRepTab]=useState('grp');
   const [repSearch,setRepSearch]=useState('');
@@ -293,6 +294,14 @@ export default function App(){
     if(drillFac)return getL2(calcRows,r=>r[9]===drillFac);
     return null;
   },[drillFac,drillWh,calcRows]);
+
+  const prodData=useMemo(()=>{
+    if(!drillL2)return null;
+    const base=calcRows.filter(r=>(drillWh?r[11]===drillWh:drillFac?r[9]===drillFac:false)&&r[17]===drillL2);
+    const m={};
+    base.forEach(r=>{const n=r[3]||'Bilinmiyor';const q=r[8];const v=r[8]*r[24];const d=r[27];if(!m[n])m[n]={n,q:0,v:0,td:0,tq:0};m[n].q+=q;m[n].v+=v;m[n].td+=q*d;m[n].tq+=q;});
+    return Object.values(m).map(x=>({...x,a:x.tq>0?Math.round(x.td/x.tq):0})).sort((a,b)=>b.q-a.q);
+  },[drillL2,drillFac,drillWh,calcRows]);
 
   const mQ=Math.max(...D.ct.map(c=>c.q),1);
 
@@ -1630,25 +1639,50 @@ export default function App(){
                   <div style={{fontWeight:800,fontSize:16}}>{sel}</div>
                   <div style={{fontSize:11,color:$.t3}}>{sd.facs.length} tesis - {sd.tWh} depo</div>
                 </div>
-                <X size={16} color={$.t3} onClick={()=>{setSel(null);setDrillFac(null);setDrillWh(null);}} style={{cursor:'pointer'}}/>
+                <X size={16} color={$.t3} onClick={()=>{setSel(null);setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer'}}/>
               </div>
               <div style={{flex:1,overflow:'auto',padding:'14px 16px'}}>
 
-                {l2Data?(
+                {prodData?(
                   <div>
-                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:12}}>
-                      <div onClick={()=>{setDrillFac(null);setDrillWh(null);}} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,color:$.blu,fontWeight:600}}><ChevronLeft size={14}/>Geri</div>
-                      <span style={{fontSize:12,fontWeight:700}}>{drillWh||drillFac} - Seviye 2</span>
+                    {/* Breadcrumb: Geri → L2 */}
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+                      <div onClick={()=>setDrillL2(null)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,color:$.blu,fontWeight:600}}><ChevronLeft size={14}/>Geri</div>
+                      <span style={{fontSize:11,color:$.t3}}>Seviye 2 /</span>
+                      <span style={{fontSize:12,fontWeight:700,color:$.t1}}>{drillL2} — Ürünler</span>
+                    </div>
+                    <div style={{fontSize:10,color:$.t3,fontWeight:600,marginBottom:8}}>{prodData.length} ürün</div>
+                    {prodData.map((item,i)=>{const mxQ=prodData[0]?.q||1;return(
+                      <div key={item.n} className="fu" style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'10px 13px',marginBottom:5,boxShadow:$.sh}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:5}}>
+                          <span style={{fontWeight:600,fontSize:11,color:$.t1,lineHeight:1.4,wordBreak:'break-word'}}>{item.n}</span>
+                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(item.a),padding:'2px 7px',borderRadius:5,background:acBg(item.a),whiteSpace:'nowrap',flexShrink:0}}>{item.a}g</span>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{flex:1,height:5,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.45}}/></div>
+                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:55,textAlign:'right',color:$.t1}}>{fmtTon(item.q)}</span>
+                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:500,color:$.t3,minWidth:50,textAlign:'right'}}>₺{fmt(item.v)}</span>
+                        </div>
+                      </div>);})}
+                    {prodData.length===0&&<div style={{fontSize:11,color:$.t3,padding:12,textAlign:'center'}}>Bu kategoride ürün yok</div>}
+                  </div>
+                ):l2Data?(
+                  <div>
+                    {/* Breadcrumb: Geri → Tesis/Depo */}
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:12,flexWrap:'wrap'}}>
+                      <div onClick={()=>{setDrillFac(null);setDrillWh(null);setDrillL2(null);}} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,color:$.blu,fontWeight:600}}><ChevronLeft size={14}/>Geri</div>
+                      <span style={{fontSize:12,fontWeight:700,color:$.t1,wordBreak:'break-word'}}>{drillWh||drillFac} — Seviye 2</span>
                     </div>
                     {l2Data.map((item,i)=>{const mxQ=l2Data[0]?.q||1;return(
-                      <div key={item.n} className="fu" style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 14px',marginBottom:5,boxShadow:$.sh}}>
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                          <span style={{fontWeight:700,fontSize:12}}>{item.n}</span>
-                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(item.a),padding:'2px 8px',borderRadius:5,background:acBg(item.a)}}>{item.a}g</span>
+                      <div key={item.n} className="fu" onClick={()=>setDrillL2(item.n)} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'11px 14px',marginBottom:5,boxShadow:$.sh,cursor:'pointer'}} >
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:5}}>
+                          <span style={{fontWeight:700,fontSize:12,lineHeight:1.4,wordBreak:'break-word',flex:1}}>{item.n}</span>
+                          <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(item.a),padding:'2px 8px',borderRadius:5,background:acBg(item.a),flexShrink:0}}>{item.a}g</span>
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <div style={{flex:1,height:6,borderRadius:3,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:(item.q/mxQ)*100+'%',borderRadius:3,background:ac(item.a),opacity:.5}}/></div>
                           <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,minWidth:60,textAlign:'right'}}>{fmtTon(item.q)}</span>
+                          <ChevronRight size={12} color={$.t3} style={{flexShrink:0}}/>
                         </div>
                       </div>);})}
                   </div>
@@ -1688,21 +1722,21 @@ export default function App(){
                         <div key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:'7px',borderRadius:$.r,fontSize:11,fontWeight:600,textAlign:'center',cursor:'pointer',background:tab===t.id?$.acL:$.bg,color:tab===t.id?$.ac:$.t3,border:'1px solid '+(tab===t.id?'#b8dece':$.bdL)}}>{t.l}</div>))}
                     </div>
                     {tab==='f'&&sd.facs.sort((a,b)=>b.q-a.q).map((f,i)=>{const ti=TI[f.type]||TI.dis;return(
-                      <div key={f.id} className="fu" onClick={()=>{setDrillFac(f.id);setDrillWh(null);}} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'10px 13px',marginBottom:4,position:'relative',overflow:'hidden',boxShadow:$.sh,cursor:'pointer'}}>
+                      <div key={f.id} className="fu" onClick={()=>{setDrillFac(f.id);setDrillWh(null);setDrillL2(null);}} style={{animationDelay:i*30+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'10px 13px',marginBottom:4,position:'relative',overflow:'hidden',boxShadow:$.sh,cursor:'pointer'}}>
                         <div style={{position:'absolute',top:0,left:0,bottom:0,width:3,background:ti.color,opacity:.5}}/>
-                        <div style={{paddingLeft:8,fontWeight:700,fontSize:12,marginBottom:3}}>{f.n}</div>
-                        <div style={{display:'flex',gap:10,paddingLeft:8,fontSize:11,color:$.t2}}>
+                        <div style={{paddingLeft:8,fontWeight:700,fontSize:12,marginBottom:3,wordBreak:'break-word',lineHeight:1.4}}>{f.n}</div>
+                        <div style={{display:'flex',gap:10,paddingLeft:8,fontSize:11,color:$.t2,alignItems:'center'}}>
                           <span style={{fontFamily:$.mo,fontWeight:600,color:$.t1}}>{fmtTon(f.q)}</span>
                           <span style={{marginLeft:'auto',fontFamily:$.mo,fontWeight:700,color:ac(f.a)}}>{f.a}g</span>
                           <ChevronRight size={13} color={$.t3}/>
                         </div>
                       </div>);})}
                     {tab==='w'&&sd.whs.sort((a,b)=>b.q-a.q).map((w,i)=>(
-                      <div key={w.id+i} className="fu" onClick={()=>{setDrillWh(w.id);setDrillFac(null);}} style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.r,padding:'9px 13px',marginBottom:4,cursor:'pointer',boxShadow:$.sh}}>
-                        <div style={{display:'flex',alignItems:'center',gap:5,marginBottom:3}}>
-                          <span style={{fontWeight:600,fontSize:11,flex:1,color:$.t2}}>{w.n}</span>
-                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(w.a)}}>{w.a}g</span>
-                          <ChevronRight size={12} color={$.t3}/>
+                      <div key={w.id+i} className="fu" onClick={()=>{setDrillWh(w.id);setDrillFac(null);setDrillL2(null);}} style={{animationDelay:i*25+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.r,padding:'9px 13px',marginBottom:4,cursor:'pointer',boxShadow:$.sh}}>
+                        <div style={{display:'flex',alignItems:'flex-start',gap:5,marginBottom:3}}>
+                          <span style={{fontWeight:600,fontSize:11,flex:1,color:$.t2,wordBreak:'break-word',lineHeight:1.4}}>{w.n}</span>
+                          <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:ac(w.a),flexShrink:0}}>{w.a}g</span>
+                          <ChevronRight size={12} color={$.t3} style={{flexShrink:0}}/>
                         </div>
                         <div style={{display:'flex',alignItems:'center',gap:6}}>
                           <div style={{flex:1,height:4,borderRadius:2,background:$.bdL,overflow:'hidden'}}><div style={{height:'100%',width:Math.min(100,(w.q/(sd.whs[0]?.q||1))*100)+'%',borderRadius:2,background:ac(w.a),opacity:.45}}/></div>
