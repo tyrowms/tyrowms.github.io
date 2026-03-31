@@ -5,7 +5,7 @@ const WorldMap3D = lazy(() => import('./WorldMap3D'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData } from './dataverseService';
 
 const INIT=[];
-import DEMO from './demo-data.json';
+const DEMO=INIT;
 const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IST":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TKR":"Tekirdağ","KOC":"Kocaeli","TRB":"Trabzon","SILAM":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-DTS":"İstanbul","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","TRY-SDN":"İstanbul","YLD-KON":"Konya","YLD-MUS":"Muş","YLD-TKD":"Tekirdağ"};
