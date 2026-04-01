@@ -164,11 +164,19 @@ export default function App(){
   const [gSearch,setGSearch]=useState('');
   const [gSearchFocus,setGSearchFocus]=useState(false);
   const GS_IDX=[1,3,4,10,12,15,17,19,21,23]; // searchable text column indices
+  // ── Global Gelişmiş Filtre (gRows'dan önce tanımlanmalı) ──
+  const GF_INIT={grp:'',comp:'',urun:'',mense:'',tesis:'',l2:'',l3:''};
+  const [gFilter,setGFilter]=useState(()=>{try{const s=localStorage.getItem('tyrowms_gfilter');if(s){const p=JSON.parse(s);if(p&&typeof p==='object')return{...GF_INIT,...p};}}catch(e){}return GF_INIT;});
+  const [showGFilter,setShowGFilter]=useState(false);
+  useEffect(()=>{try{localStorage.setItem('tyrowms_gfilter',JSON.stringify(gFilter));}catch(e){}},[gFilter]);
+  const gFilterCount=useMemo(()=>Object.values(gFilter).filter(v=>v!=='').length,[gFilter]);
   // calcRows: only rows where madde kodu (index 2) starts with 1, 2 or 3 — used in all calculations
   const calcRows=useMemo(()=>rows.filter(r=>/^[123]/.test(String(r[2]||''))),[rows]);
-  const gRows=useMemo(()=>{if(!gSearch.trim())return calcRows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return calcRows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[calcRows,gSearch]);
+  const gFilterOpts=useMemo(()=>({grps:[...new Set(calcRows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),comps:[...new Set(calcRows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),uruns:[...new Set(calcRows.map(r=>r[3]||''))].filter(Boolean).sort(),menses:[...new Set(calcRows.map(r=>r[4]||''))].filter(v=>v).sort(),tesisler:[...new Set(calcRows.map(r=>r[10]||''))].filter(v=>v).sort(),l2s:[...new Set(calcRows.map(r=>r[17]||''))].filter(v=>v).sort(),l3s:[...new Set(calcRows.map(r=>r[19]||''))].filter(v=>v).sort()}),[calcRows]);
+  const applyGF=(r,gf)=>{if(gf.grp&&gGrp(r[0])!==gf.grp)return false;if(gf.comp&&(r[1]||r[0])!==gf.comp)return false;if(gf.urun&&(r[3]||'')!==gf.urun)return false;if(gf.mense&&(r[4]||'')!==gf.mense)return false;if(gf.tesis&&(r[10]||'')!==gf.tesis)return false;if(gf.l2&&(r[17]||'')!==gf.l2)return false;if(gf.l3&&(r[19]||'')!==gf.l3)return false;return true;};
+  const gRows=useMemo(()=>{let r=calcRows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[calcRows,gSearch,gFilter,gFilterCount]);
   // rawRows: all rows (unfiltered by madde kodu) for Rapor Satırları only
-  const rawRows=useMemo(()=>{if(!gSearch.trim())return rows;const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);return rows.filter(r=>{const grp=gGrp(r[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(r[i]||'').toLowerCase().includes(t))||grp.includes(t));});},[rows,gSearch]);
+  const rawRows=useMemo(()=>{let r=rows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[rows,gSearch,gFilter,gFilterCount]);
   const D=useMemo(()=>buildD(gRows),[gRows]);
   const DW=useMemo(()=>buildDWorld(gRows),[gRows]);
   const mQW=useMemo(()=>Math.max(...DW.countries.map(c=>c.q),1),[DW]);
@@ -643,8 +651,9 @@ export default function App(){
                 {erpError&&<div style={{padding:'3px 7px',borderRadius:7,background:$.redB,fontSize:10,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
               </div>}
             </div>
-            {/* Mobile: Row 2 — Full-width search */}
-            <div style={{position:'relative',width:'100%',marginBottom:4}}>
+            {/* Mobile: Row 2 — Search + filter */}
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+            <div style={{position:'relative',flex:1}}>
               <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
               <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'9px 32px 9px 34px',borderRadius:12,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
               {gSearch&&<div onClick={()=>{setGSearch('');}} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:20,height:20,borderRadius:10,background:'rgba(0,0,0,.1)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={11} color="#636366"/></div>}
@@ -664,6 +673,32 @@ export default function App(){
                 </div>
               )}
             </div>
+            {/* Mobile filter button */}
+            <button className="tb-b" onClick={()=>setShowGFilter(v=>!v)} style={{gap:4,flexShrink:0,padding:'8px 10px',background:showGFilter||gFilterCount>0?$.acL:'',borderColor:showGFilter||gFilterCount>0?$.ac:'',color:showGFilter||gFilterCount>0?$.ac:'',position:'relative'}}>
+              <SlidersHorizontal size={14}/>
+              {gFilterCount>0&&<span style={{fontSize:9,fontWeight:700,color:'#fff',background:$.ac,padding:'1px 5px',borderRadius:7}}>{gFilterCount}</span>}
+            </button>
+            </div>
+            {/* Mobile filter dropdown */}
+            {showGFilter&&<div style={{marginBottom:8,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',borderRadius:14,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 8px 24px rgba(0,0,0,.1)',padding:'14px 16px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                <span style={{fontSize:13,fontWeight:700,color:$.t1}}>Gelişmiş Filtre</span>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  {gFilterCount>0&&<div onClick={()=>setGFilter(GF_INIT)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,fontWeight:600,color:$.red,padding:'4px 8px',borderRadius:6,background:$.redB}} className="rh"><RotateCcw size={11}/>Temizle</div>}
+                  <div onClick={()=>setShowGFilter(false)} style={{cursor:'pointer',width:24,height:24,borderRadius:6,background:'rgba(0,0,0,.05)',display:'flex',alignItems:'center',justifyContent:'center'}} className="rh"><X size={12} color={$.t2}/></div>
+                </div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 10px'}}>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket Grubu</div><select className="fi" value={gFilter.grp} onChange={e=>setGFilter(p=>({...p,grp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.grps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket</div><select className="fi" value={gFilter.comp} onChange={e=>setGFilter(p=>({...p,comp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.comps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Ürün</div><select className="fi" value={gFilter.urun} onChange={e=>setGFilter(p=>({...p,urun:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.uruns.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Menşe</div><select className="fi" value={gFilter.mense} onChange={e=>setGFilter(p=>({...p,mense:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.menses.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Tesis</div><select className="fi" value={gFilter.tesis} onChange={e=>setGFilter(p=>({...p,tesis:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.tesisler.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 2</div><select className="fi" value={gFilter.l2} onChange={e=>setGFilter(p=>({...p,l2:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l2s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 3</div><select className="fi" value={gFilter.l3} onChange={e=>setGFilter(p=>({...p,l3:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l3s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+              </div>
+              {gFilterCount>0&&<div style={{marginTop:10,padding:'5px 8px',borderRadius:6,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt</div>}
+            </div>}
           </>:<>
             {/* Desktop: original single-row layout */}
             <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
@@ -692,7 +727,33 @@ export default function App(){
                 </div>
               )}
             </div>
-            {gSearch&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
+            {/* Global Gelişmiş Filtre Butonu */}
+            <div style={{position:'relative'}}>
+              <button className="tb-b" onClick={()=>setShowGFilter(v=>!v)} style={{gap:5,background:showGFilter||gFilterCount>0?$.acL:'',borderColor:showGFilter||gFilterCount>0?$.ac:'',color:showGFilter||gFilterCount>0?$.ac:'',position:'relative'}}>
+                <SlidersHorizontal size={13}/>
+                {gFilterCount>0&&<span style={{fontSize:9,fontWeight:700,color:'#fff',background:$.ac,padding:'1px 6px',borderRadius:8,minWidth:14,textAlign:'center'}}>{gFilterCount}</span>}
+              </button>
+              {showGFilter&&<><div onClick={()=>setShowGFilter(false)} style={{position:'fixed',inset:0,zIndex:199}}/><div onClick={e=>e.stopPropagation()} style={{position:'absolute',top:'100%',right:0,marginTop:8,width:380,background:'rgba(255,255,255,.96)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',borderRadius:16,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.12)',zIndex:200,padding:'16px 18px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
+                  <span style={{fontSize:14,fontWeight:700,color:$.t1}}>Gelişmiş Filtre</span>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    {gFilterCount>0&&<div onClick={()=>setGFilter(GF_INIT)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:11,fontWeight:600,color:$.red,padding:'4px 10px',borderRadius:6,background:$.redB,transition:'background .15s'}} className="rh"><RotateCcw size={11}/>Temizle</div>}
+                    <div onClick={()=>setShowGFilter(false)} style={{cursor:'pointer',width:24,height:24,borderRadius:6,background:'rgba(0,0,0,.05)',display:'flex',alignItems:'center',justifyContent:'center'}} className="rh"><X size={12} color={$.t2}/></div>
+                  </div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 12px'}}>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket Grubu</div><select className="fi" value={gFilter.grp} onChange={e=>setGFilter(p=>({...p,grp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.grps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket</div><select className="fi" value={gFilter.comp} onChange={e=>setGFilter(p=>({...p,comp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.comps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ürün</div><select className="fi" value={gFilter.urun} onChange={e=>setGFilter(p=>({...p,urun:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.uruns.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Menşe</div><select className="fi" value={gFilter.mense} onChange={e=>setGFilter(p=>({...p,mense:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.menses.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Tesis</div><select className="fi" value={gFilter.tesis} onChange={e=>setGFilter(p=>({...p,tesis:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.tesisler.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 2</div><select className="fi" value={gFilter.l2} onChange={e=>setGFilter(p=>({...p,l2:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l2s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 3</div><select className="fi" value={gFilter.l3} onChange={e=>setGFilter(p=>({...p,l3:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l3s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                </div>
+                {gFilterCount>0&&<div style={{marginTop:12,padding:'6px 10px',borderRadius:8,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt filtrelendi</div>}
+              </div></>}
+            </div>
+            {(gSearch||gFilterCount>0)&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
             {erpStatus&&<div style={{padding:'3px 9px',borderRadius:7,background:$.grnB,fontSize:11,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
             {erpError&&<div style={{padding:'3px 9px',borderRadius:7,background:$.redB,fontSize:11,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
             <div style={{fontSize:11,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>
