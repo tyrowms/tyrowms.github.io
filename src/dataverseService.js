@@ -331,6 +331,7 @@ export async function fetchTrendData(account, gFilter = {}) {
   const fetchXml = `<fetch aggregate="true">` +
     `<entity name="${ENTITY_LOGICAL}">` +
       `<attribute name="mserp_qty" alias="totalQty" aggregate="sum" />` +
+      `<attribute name="mserp_qty" alias="recordCount" aggregate="count" />` +
       `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
       filterXml +
     `</entity>` +
@@ -350,7 +351,7 @@ export async function fetchTrendData(account, gFilter = {}) {
       } else if (raw && typeof raw === 'string' && raw.includes('T')) {
         iso = raw.split('T')[0];
       }
-      return { date: iso, totalQty: Number(d.totalQty) || 0 };
+      return { date: iso, totalQty: Number(d.totalQty) || 0, recordCount: Number(d.recordCount) || 0 };
     })
     .filter(d => d.date)
     .sort((a,b) => String(a.date).localeCompare(String(b.date)));

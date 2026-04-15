@@ -41,19 +41,19 @@ function getMonthlyPoints(trendRaw, year){
   for(let m=0;m<12;m++){
     const isLatest=year===maxYear&&m===maxMonth;
     if(isLatest&&maxP){
-      out.push({label:MONTHS_TR[m],date:maxP.date,totalQty:maxP.totalQty,month:m,year,isLatest:true});
+      out.push({label:MONTHS_TR[m],date:maxP.date,totalQty:maxP.totalQty,recordCount:maxP.recordCount,month:m,year,isLatest:true});
       continue;
     }
     const candidates=trendRaw.filter(d=>{const dt=new Date(d.date);return dt.getFullYear()===year&&dt.getMonth()===m&&dt.getDate()<=7;});
     candidates.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const p=candidates[0];
-    out.push({label:MONTHS_TR[m],date:p?.date||null,totalQty:p?p.totalQty:null,month:m,year});
+    out.push({label:MONTHS_TR[m],date:p?.date||null,totalQty:p?p.totalQty:null,recordCount:p?p.recordCount:null,month:m,year});
   }
   return out;
 }
 function getQuarterlyPoints(trendRaw, year){
   const monthly=getMonthlyPoints(trendRaw,year);
-  return [0,3,6,9].map((sm,qi)=>{const p=monthly[sm];return{label:QUARTERS_TR[qi],date:p.date,totalQty:p.totalQty,quarter:qi,year};});
+  return [0,3,6,9].map((sm,qi)=>{const p=monthly[sm];return{label:QUARTERS_TR[qi],date:p.date,totalQty:p.totalQty,recordCount:p.recordCount,quarter:qi,year};});
 }
 function getYearlyPoints(trendRaw){
   const years=[...new Set(trendRaw.map(d=>new Date(d.date).getFullYear()))].sort();
@@ -62,7 +62,7 @@ function getYearlyPoints(trendRaw){
     const inYear=trendRaw.filter(d=>new Date(d.date).getFullYear()===y).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const janFirstWeek=inYear.filter(d=>{const dt=new Date(d.date);return dt.getMonth()===0&&dt.getDate()<=7;});
     const p=janFirstWeek[0]||inYear[0];
-    return{label:String(y),date:p?.date||null,totalQty:p?p.totalQty:null,year:y};
+    return{label:String(y),date:p?.date||null,totalQty:p?p.totalQty:null,recordCount:p?p.recordCount:null,year:y};
   });
 }
 
@@ -1077,6 +1077,7 @@ export default function App(){
                           <th style={{padding:'7px 8px',textAlign:'left',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Dönem</th>
                           <th style={{padding:'7px 8px',textAlign:'left',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Rapor Tarihi</th>
                           <th style={{padding:'7px 8px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Toplam Stok</th>
+                          <th style={{padding:'7px 8px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Kayıt</th>
                           <th style={{padding:'7px 8px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>% Değişim</th>
                         </tr>
                       </thead>
@@ -1086,6 +1087,7 @@ export default function App(){
                             <td style={{padding:'7px 8px',fontWeight:600,color:$.t1}}>{p.label}</td>
                             <td style={{padding:'7px 8px',fontFamily:$.mo,color:$.t2,fontSize:10.5}}>{p.date||'—'}</td>
                             <td style={{padding:'7px 8px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:p.totalQty!=null?$.blu:$.t3}}>{p.totalQty!=null?fmtTon(p.totalQty):'—'}</td>
+                            <td style={{padding:'7px 8px',textAlign:'right',fontFamily:$.mo,fontWeight:600,color:p.recordCount!=null?$.t2:$.t3,fontSize:10.5}}>{p.recordCount!=null?fN(p.recordCount):'—'}</td>
                             <td style={{padding:'7px 8px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:pc}}>{p.pct==null?'—':(p.pct>=0?'▲ +':'▼ ')+Math.abs(p.pct).toFixed(1)+'%'}</td>
                           </tr>
                         );})}
