@@ -320,17 +320,39 @@ function buildFetchFilter(gFilter, cutoffISO) {
   return `<filter type="and">${conds.join('')}</filter>`;
 }
 
-export async function fetchTrendData(account, gFilter = {}) {
+// Metric → FetchXML aggregate attribute mapping
+function metricAggregateXml(metricId) {
+  switch (metricId) {
+    case 'qty':           return `<attribute name="mserp_qty" alias="value" aggregate="sum" />`;
+    case 'value':         return `<attribute name="mserp_amountsec" alias="value" aggregate="sum" />`;
+    case 'facilities':    return `<attribute name="mserp_inventsiteid" alias="value" aggregate="countcolumn" distinct="true" />`;
+    case 'products':      return `<attribute name="mserp_itemname" alias="value" aggregate="countcolumn" distinct="true" />`;
+    case 'avgAge':        return `<attribute name="mserp_purchfifo" alias="value" aggregate="avg" />`;
+    case 'criticalStock': return `<attribute name="mserp_qty" alias="value" aggregate="sum" />`;
+    default:              return `<attribute name="mserp_qty" alias="value" aggregate="sum" />`;
+  }
+}
+
+// Extra filter conditions specific to a metric (e.g. criticalStock needs fifo >= 180)
+function metricExtraCondition(metricId) {
+  if (metricId === 'criticalStock') return `<condition attribute="mserp_purchfifo" operator="ge" value="180" />`;
+  return '';
+}
+
+export async function fetchKPITrend(account, gFilter = {}, metricId = 'qty') {
   const token = await getDataverseToken(account);
 
   // Minimum tarih sınırı: 2025 Ocak (daha eski veri yok)
   const cutoffISO = '2025-01-01';
 
-  // Dataverse datetime field'ı OData $apply groupby desteklemiyor — FetchXML ile dategrouping="day" kullanılır
-  const filterXml = buildFetchFilter(gFilter, cutoffISO);
+  const baseFilter = buildFetchFilter(gFilter, cutoffISO);
+  const extraCond = metricExtraCondition(metricId);
+  // Inject extra condition into the existing <filter type="and">...</filter>
+  const filterXml = extraCond ? baseFilter.replace('</filter>', extraCond + '</filter>') : baseFilter;
+
   const fetchXml = `<fetch aggregate="true">` +
     `<entity name="${ENTITY_LOGICAL}">` +
-      `<attribute name="mserp_qty" alias="totalQty" aggregate="sum" />` +
+      metricAggregateXml(metricId) +
       `<attribute name="mserp_qty" alias="recordCount" aggregate="count" />` +
       `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
       filterXml +
@@ -341,18 +363,19 @@ export async function fetchTrendData(account, gFilter = {}) {
   const data = await dvFetch(url, token);
   return (data.value || [])
     .map(d => {
-      // FetchXML may return formatted value; prefer raw alias
       const raw = d.reportDate;
       let iso = raw;
       if (raw && typeof raw === 'string' && raw.includes('/')) {
-        // US format "1/5/2024" → "2024-01-05"
         const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
         if (m) iso = `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
       } else if (raw && typeof raw === 'string' && raw.includes('T')) {
         iso = raw.split('T')[0];
       }
-      return { date: iso, totalQty: Number(d.totalQty) || 0, recordCount: Number(d.recordCount) || 0 };
+      return { date: iso, value: Number(d.value) || 0, recordCount: Number(d.recordCount) || 0 };
     })
     .filter(d => d.date)
     .sort((a,b) => String(a.date).localeCompare(String(b.date)));
 }
+
+// Backward-compat alias
+export const fetchTrendData = (account, gFilter) => fetchKPITrend(account, gFilter, 'qty');
