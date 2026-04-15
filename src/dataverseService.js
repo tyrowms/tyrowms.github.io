@@ -296,7 +296,8 @@ export async function fetchTrendData(account, gFilter = {}) {
 
   const gfExpr = buildGFilterExpr(gFilter);
   const combined = gfExpr ? `${dateFilter} and ${gfExpr}` : dateFilter;
-  const apply = `filter(${combined})/groupby((${DATE_FIELD}))/aggregate(mserp_qty with sum as totalQty)`;
+  // Dataverse: aggregate must be INSIDE groupby as second argument (OData 4.01 inline form)
+  const apply = `filter(${combined})/groupby((${DATE_FIELD}),aggregate(mserp_qty with sum as totalQty))`;
   const url = `${API_BASE}?$apply=${encodeURIComponent(apply)}`;
 
   let allRecords = [];
