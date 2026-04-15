@@ -323,10 +323,8 @@ function buildFetchFilter(gFilter, cutoffISO) {
 export async function fetchTrendData(account, gFilter = {}) {
   const token = await getDataverseToken(account);
 
-  // Son 3 yıl sınırı
-  const threeYearsAgo = new Date();
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-  const cutoffISO = threeYearsAgo.toISOString().split('T')[0];
+  // Minimum tarih sınırı: 2025 Ocak (daha eski veri yok)
+  const cutoffISO = '2025-01-01';
 
   // Dataverse datetime field'ı OData $apply groupby desteklemiyor — FetchXML ile dategrouping="day" kullanılır
   const filterXml = buildFetchFilter(gFilter, cutoffISO);

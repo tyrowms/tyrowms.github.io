@@ -25,6 +25,8 @@ const gGrp=code=>{if(!code)return'Diğer';const u=code.toUpperCase().trim();retu
 const BK=[{k:'0-30',c:'#0d6e4f'},{k:'31-60',c:'#16a34a'},{k:'61-90',c:'#65a30d'},{k:'91-120',c:'#f5a623'},{k:'121-180',c:'#ea580c'},{k:'181-365',c:'#e5484d'},{k:'365+',c:'#991b1b'}];
 const MONTHS_TR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 const QUARTERS_TR=['Q1 (Oca-Mar)','Q2 (Nis-Haz)','Q3 (Tem-Eyl)','Q4 (Eki-Ara)'];
+// Kısa ton formatı (chart bar etiketi için) — "1.5Mt", "446Kt", "12t"
+const fmtShortTon=n=>{const t=n/1000;if(t>=1e6)return(t/1e6).toFixed(1)+'Mt';if(t>=1e3)return(t/1e3).toFixed(0)+'Kt';if(t>=1)return Math.round(t)+'t';return Math.round(n)+'kg';};
 
 // Trend helper: her ayın ilk haftası (day <= 7) snapshot'ından en erken olanı seç
 function getMonthlyPoints(trendRaw, year){
@@ -44,8 +46,10 @@ function getQuarterlyPoints(trendRaw, year){
 function getYearlyPoints(trendRaw){
   const years=[...new Set(trendRaw.map(d=>new Date(d.date).getFullYear()))].sort();
   return years.map(y=>{
-    const jan=trendRaw.filter(d=>{const dt=new Date(d.date);return dt.getFullYear()===y&&dt.getMonth()===0&&dt.getDate()<=7;}).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-    const p=jan[0];
+    // Önce Ocak ilk haftası (1-7) aranır, yoksa o yılın en erken reportdate'i kullanılır
+    const inYear=trendRaw.filter(d=>new Date(d.date).getFullYear()===y).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const janFirstWeek=inYear.filter(d=>{const dt=new Date(d.date);return dt.getMonth()===0&&dt.getDate()<=7;});
+    const p=janFirstWeek[0]||inYear[0];
     return{label:String(y),date:p?.date||null,totalQty:p?p.totalQty:null,year:y};
   });
 }
@@ -963,7 +967,7 @@ export default function App(){
                   <div style={{width:34,height:34,borderRadius:9,background:$.bluB,color:$.blu,display:'flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={17}/></div>
                   <div>
                     <div style={{fontSize:14,fontWeight:700,color:$.t1}}>Toplam Stok Trend Analizi</div>
-                    <div style={{fontSize:10.5,color:$.t3,fontWeight:500}}>Her ayın ilk haftasındaki rapor tarihi bazlı · Son 3 yıl</div>
+                    <div style={{fontSize:10.5,color:$.t3,fontWeight:500}}>Her ayın ilk haftasındaki rapor tarihi bazlı · Ocak 2025'ten itibaren</div>
                   </div>
                 </div>
                 <div onClick={()=>setShowStokTrend(false)} className="rh" style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={15} color={$.t2}/></div>
@@ -1017,22 +1021,37 @@ export default function App(){
                   const mx=Math.max(...validPts.map(p=>p.totalQty),1);
                   const totalSum=validPts.reduce((s,p)=>s+p.totalQty,0);
                   const avg=validPts.length>0?totalSum/validPts.length:0;
+                  // % değişim hesabı — önceki geçerli noktaya göre
+                  const pctChange=(cur,prev)=>{if(prev==null||cur==null||prev===0)return null;return((cur-prev)/prev)*100;};
+                  // Her noktaya pct ekle (önceki geçerli noktaya göre)
+                  let prevVal=null;
+                  const ptsWithPct=trendPoints.map(p=>{let pct=null;if(p.totalQty!=null&&prevVal!=null){pct=pctChange(p.totalQty,prevVal);}if(p.totalQty!=null)prevVal=p.totalQty;return{...p,pct};});
+                  // Genel trend (ilk ve son geçerli nokta arası)
+                  const overallPct=validPts.length>=2?pctChange(validPts[validPts.length-1].totalQty,validPts[0].totalQty):null;
                   return(<>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:16}}>
                       <div style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
-                        <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>Ortalama Stok</div>
-                        <div style={{fontSize:15,fontWeight:700,fontFamily:$.mo,color:$.blu}}>{fmtTon(avg)}</div>
+                        <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>Ortalama</div>
+                        <div style={{fontSize:13,fontWeight:700,fontFamily:$.mo,color:$.blu}}>{fmtTon(avg)}</div>
+                      </div>
+                      <div style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
+                        <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>Dönem Değişimi</div>
+                        <div style={{fontSize:13,fontWeight:700,fontFamily:$.mo,color:overallPct==null?$.t3:overallPct>=0?'#0d6e4f':$.red}}>
+                          {overallPct==null?'—':(overallPct>=0?'▲ ':'▼ ')+Math.abs(overallPct).toFixed(1)+'%'}
+                        </div>
                       </div>
                       <div style={{background:$.bg,borderRadius:8,padding:'10px 12px',border:'1px solid '+$.bdL}}>
                         <div style={{fontSize:10,color:$.t2,fontWeight:600,marginBottom:3}}>Veri Noktası</div>
-                        <div style={{fontSize:15,fontWeight:700,fontFamily:$.mo,color:$.t1}}>{validPts.length} / {trendPoints.length}</div>
+                        <div style={{fontSize:13,fontWeight:700,fontFamily:$.mo,color:$.t1}}>{validPts.length} / {trendPoints.length}</div>
                       </div>
                     </div>
 
-                    <div style={{padding:'8px 4px 14px',display:'flex',alignItems:'flex-end',gap:4,height:200,borderBottom:'1px solid '+$.bdL,marginBottom:14}}>
-                      {trendPoints.map((p,i)=>{const h=p.totalQty!=null?(p.totalQty/mx)*160:0;return(
-                        <div key={i} title={p.date?`${p.label} · ${p.date} · ${fmtTon(p.totalQty)}`:p.label} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,minWidth:0}}>
-                          <div style={{fontSize:8.5,fontFamily:$.mo,color:$.t2,fontWeight:600,whiteSpace:'nowrap'}}>{p.totalQty!=null?fmtTon(p.totalQty):'—'}</div>
+                    <div style={{padding:'8px 4px 14px',display:'flex',alignItems:'flex-end',gap:6,height:220,borderBottom:'1px solid '+$.bdL,marginBottom:14}}>
+                      {ptsWithPct.map((p,i)=>{const h=p.totalQty!=null?(p.totalQty/mx)*160:0;const pctColor=p.pct==null?$.t3:p.pct>=0?'#0d6e4f':$.red;return(
+                        <div key={i} title={p.date?`${p.label} · ${p.date} · ${fmtTon(p.totalQty)}${p.pct!=null?` · ${p.pct>=0?'+':''}${p.pct.toFixed(1)}%`:''}`:p.label} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3,minWidth:0}}>
+                          {p.pct!=null&&<div style={{fontSize:8.5,fontFamily:$.mo,color:pctColor,fontWeight:700,whiteSpace:'nowrap'}}>{(p.pct>=0?'▲':'▼')+Math.abs(p.pct).toFixed(0)+'%'}</div>}
+                          {p.pct==null&&p.totalQty!=null&&<div style={{fontSize:8.5,height:11}}/>}
+                          <div style={{fontSize:9.5,fontFamily:$.mo,color:$.t1,fontWeight:700,whiteSpace:'nowrap'}}>{p.totalQty!=null?fmtShortTon(p.totalQty):'—'}</div>
                           <div style={{width:'100%',height:h,background:p.totalQty!=null?$.blu:$.bdL,borderRadius:'4px 4px 0 0',minHeight:p.totalQty!=null?2:0,transition:'height .3s'}}/>
                           <div style={{fontSize:9,color:$.t3,fontWeight:600,whiteSpace:'nowrap',transform:trendPoints.length>6?'rotate(-35deg)':'none',transformOrigin:'center top',marginTop:trendPoints.length>6?4:0}}>{p.label}</div>
                         </div>
@@ -1046,16 +1065,18 @@ export default function App(){
                           <th style={{padding:'7px 8px',textAlign:'left',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Dönem</th>
                           <th style={{padding:'7px 8px',textAlign:'left',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Rapor Tarihi</th>
                           <th style={{padding:'7px 8px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>Toplam Stok</th>
+                          <th style={{padding:'7px 8px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9.5,textTransform:'uppercase',letterSpacing:.4}}>% Değişim</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {trendPoints.map((p,i)=>(
+                        {ptsWithPct.map((p,i)=>{const pc=p.pct==null?$.t3:p.pct>=0?'#0d6e4f':$.red;return(
                           <tr key={i} style={{borderBottom:'1px solid '+$.bdL,background:i%2?'#fafbfc':'transparent'}}>
                             <td style={{padding:'7px 8px',fontWeight:600,color:$.t1}}>{p.label}</td>
                             <td style={{padding:'7px 8px',fontFamily:$.mo,color:$.t2,fontSize:10.5}}>{p.date||'—'}</td>
                             <td style={{padding:'7px 8px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:p.totalQty!=null?$.blu:$.t3}}>{p.totalQty!=null?fmtTon(p.totalQty):'—'}</td>
+                            <td style={{padding:'7px 8px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:pc}}>{p.pct==null?'—':(p.pct>=0?'▲ +':'▼ ')+Math.abs(p.pct).toFixed(1)+'%'}</td>
                           </tr>
-                        ))}
+                        );})}
                       </tbody>
                     </table>
                   </>);
