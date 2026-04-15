@@ -285,6 +285,28 @@ function buildGFilterExpr(gFilter) {
   return parts.length > 0 ? parts.join(' and ') : '';
 }
 
+// Escape XML special chars for FetchXML values
+function xmlEsc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+// Build <filter> XML block from gFilter
+function buildFetchFilter(gFilter, cutoffISO) {
+  const conds = [`<condition attribute="${DATE_FIELD}" operator="on-or-after" value="${cutoffISO}" />`];
+  if (gFilter.comp) conds.push(`<condition attribute="mserp_companyname" operator="eq" value="${xmlEsc(gFilter.comp)}" />`);
+  if (gFilter.urun) conds.push(`<condition attribute="mserp_itemname" operator="eq" value="${xmlEsc(gFilter.urun)}" />`);
+  if (gFilter.mense) conds.push(`<condition attribute="mserp_inventcolorid" operator="eq" value="${xmlEsc(gFilter.mense)}" />`);
+  if (gFilter.tesis) conds.push(`<condition attribute="mserp_inventsitename" operator="eq" value="${xmlEsc(gFilter.tesis)}" />`);
+  if (gFilter.l2) conds.push(`<condition attribute="mserp_etgproductlevel02name" operator="eq" value="${xmlEsc(gFilter.l2)}" />`);
+  if (gFilter.l3) conds.push(`<condition attribute="mserp_etgproductlevel03name" operator="eq" value="${xmlEsc(gFilter.l3)}" />`);
+  if (gFilter.grpCompanies && gFilter.grpCompanies.length > 0) {
+    const vals = gFilter.grpCompanies.map(c => `<value>${xmlEsc(c)}</value>`).join('');
+    conds.push(`<condition attribute="mserp_companyid" operator="in">${vals}</condition>`);
+  }
+  return `<filter type="and">${conds.join('')}</filter>`;
+}
+
 export async function fetchTrendData(account, gFilter = {}) {
   const token = await getDataverseToken(account);
 
@@ -292,23 +314,33 @@ export async function fetchTrendData(account, gFilter = {}) {
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
   const cutoffISO = threeYearsAgo.toISOString().split('T')[0];
-  const dateFilter = `${DATE_FIELD} ge ${cutoffISO}`;
 
-  const gfExpr = buildGFilterExpr(gFilter);
-  const combined = gfExpr ? `${dateFilter} and ${gfExpr}` : dateFilter;
-  // Dataverse: aggregate must be INSIDE groupby as second argument (OData 4.01 inline form)
-  const apply = `filter(${combined})/groupby((${DATE_FIELD}),aggregate(mserp_qty with sum as totalQty))`;
-  const url = `${API_BASE}?$apply=${encodeURIComponent(apply)}`;
+  // Dataverse datetime field'ı OData $apply groupby desteklemiyor — FetchXML ile dategrouping="day" kullanılır
+  const filterXml = buildFetchFilter(gFilter, cutoffISO);
+  const fetchXml = `<fetch aggregate="true">` +
+    `<entity name="${ENTITY_NAME}">` +
+      `<attribute name="mserp_qty" alias="totalQty" aggregate="sum" />` +
+      `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
+      filterXml +
+    `</entity>` +
+  `</fetch>`;
 
-  let allRecords = [];
-  let nextUrl = url;
-  while (nextUrl) {
-    const data = await dvFetch(nextUrl, token);
-    allRecords = allRecords.concat(data.value || []);
-    nextUrl = data['@odata.nextLink'] || null;
-  }
-  return allRecords
-    .map(d => ({ date: d[DATE_FIELD], totalQty: Number(d.totalQty) || 0 }))
+  const url = `${API_BASE}?fetchXml=${encodeURIComponent(fetchXml)}`;
+  const data = await dvFetch(url, token);
+  return (data.value || [])
+    .map(d => {
+      // FetchXML may return formatted value; prefer raw alias
+      const raw = d.reportDate;
+      let iso = raw;
+      if (raw && typeof raw === 'string' && raw.includes('/')) {
+        // US format "1/5/2024" → "2024-01-05"
+        const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m) iso = `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+      } else if (raw && typeof raw === 'string' && raw.includes('T')) {
+        iso = raw.split('T')[0];
+      }
+      return { date: iso, totalQty: Number(d.totalQty) || 0 };
+    })
     .filter(d => d.date)
     .sort((a,b) => String(a.date).localeCompare(String(b.date)));
 }
