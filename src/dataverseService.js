@@ -317,6 +317,23 @@ function buildFetchFilter(gFilter, cutoffISO) {
     const vals = gFilter.grpCompanies.map(c => `<value>${xmlEsc(c)}</value>`).join('');
     conds.push(`<condition attribute="mserp_companyid" operator="in">${vals}</condition>`);
   }
+  // Global arama: her terim için, aranabilir alanlar arasında LIKE %term% OR bloğu
+  // Dashboard GS_IDX = [1,3,4,10,12,15,17,19,21,23] (şirket, ürün, menşe, tesis, ambar, L1-L4 adları)
+  if (gFilter.searchTerms && gFilter.searchTerms.length > 0) {
+    const searchableFields = [
+      'mserp_companyname','mserp_itemname','mserp_inventcolorid',
+      'mserp_inventsitename','mserp_inventlocationname',
+      'mserp_etgproductlevel01name','mserp_etgproductlevel02name',
+      'mserp_etgproductlevel03name','mserp_etgproductlevel04name',
+    ];
+    for (const term of gFilter.searchTerms) {
+      const like = `%${xmlEsc(term)}%`;
+      const orBlock = `<filter type="or">` +
+        searchableFields.map(f => `<condition attribute="${f}" operator="like" value="${like}" />`).join('') +
+      `</filter>`;
+      conds.push(orBlock);
+    }
+  }
   return `<filter type="and">${conds.join('')}</filter>`;
 }
 

@@ -379,7 +379,7 @@ export default function App(){
     return()=>{mounted=false;};
   },[]);
 
-  // ─── Trend Data Fetch (panel açıkken + metric/filtre değiştikçe) ───
+  // ─── Trend Data Fetch (panel açıkken + metric/filtre/arama değiştikçe) ───
   useEffect(()=>{
     if(!trendKPI||!msalAccount)return;
     let cancelled=false;
@@ -391,6 +391,9 @@ export default function App(){
           gf.grpCompanies=Object.entries(CGRP).filter(([_,v])=>v===gFilter.grp).map(([k])=>k);
           delete gf.grp;
         }
+        // Global arama terimlerini geç
+        const terms=gSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        if(terms.length>0)gf.searchTerms=terms;
         const data=await fetchKPITrend(msalAccount,gf,trendKPI);
         if(!cancelled)setTrendRaw(data);
       }catch(e){
@@ -400,7 +403,7 @@ export default function App(){
       }
     })();
     return()=>{cancelled=true;};
-  },[trendKPI,gFilter,msalAccount]);
+  },[trendKPI,gFilter,gSearch,msalAccount]);
 
   // KPI Metric Config — her kart için ayrı
   const KPI_METRICS=useMemo(()=>({
