@@ -7,6 +7,11 @@ const CLIENT_ID = import.meta.env.VITE_AZURE_CLIENT_ID;
 const TENANT_ID = import.meta.env.VITE_AZURE_TENANT_ID;
 const DATAVERSE_URL = import.meta.env.VITE_DATAVERSE_URL || 'https://operations-tiryaki.crm4.dynamics.com';
 const ENTITY_NAME = import.meta.env.VITE_DATAVERSE_ENTITY || 'mserp_tryaiinventoryagingreportentities';
+// Logical name (singular) — used by FetchXML. Standard Dataverse pluralization: entities → entity
+const ENTITY_LOGICAL = import.meta.env.VITE_DATAVERSE_ENTITY_LOGICAL
+  || (ENTITY_NAME.endsWith('ies') ? ENTITY_NAME.slice(0, -3) + 'y'
+      : ENTITY_NAME.endsWith('s') ? ENTITY_NAME.slice(0, -1)
+      : ENTITY_NAME);
 
 export const MSAL_ENABLED = !!(CLIENT_ID && TENANT_ID);
 
@@ -318,7 +323,7 @@ export async function fetchTrendData(account, gFilter = {}) {
   // Dataverse datetime field'ı OData $apply groupby desteklemiyor — FetchXML ile dategrouping="day" kullanılır
   const filterXml = buildFetchFilter(gFilter, cutoffISO);
   const fetchXml = `<fetch aggregate="true">` +
-    `<entity name="${ENTITY_NAME}">` +
+    `<entity name="${ENTITY_LOGICAL}">` +
       `<attribute name="mserp_qty" alias="totalQty" aggregate="sum" />` +
       `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
       filterXml +
