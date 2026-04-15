@@ -1601,25 +1601,40 @@ export default function App(){
                   <table style={{width:'max-content',borderCollapse:'collapse',fontSize:11}}>
                     <thead><tr style={{position:'sticky',top:0,zIndex:2,background:$.bg}}>
                       <th style={{padding:'9px 10px',borderBottom:'2px solid '+$.bd,background:$.bg,width:40}}><input type="checkbox" checked={selRows.size===filtered.length&&filtered.length>0} onChange={e=>{if(e.target.checked){const a=new Set();filtered.forEach(r=>{const i=rows.indexOf(r);if(i>=0)a.add(i);});setSelRows(a);}else setSelRows(new Set());}}/></th>
-                      {HDR.map((h,ci)=>(
-                        <th key={ci} onClick={()=>{if(rC===ci)setRD(d=>d*-1);else{setRC(ci);setRD(-1);}}} style={{padding:'9px 10px',textAlign:NC.has(ci)?'right':'left',color:$.t3,fontWeight:700,fontSize:9,textTransform:'uppercase',borderBottom:'2px solid '+$.bd,cursor:'pointer',whiteSpace:'nowrap',background:$.bg,minWidth:ci===1||ci===3||ci===10||ci===12?130:60,letterSpacing:.5}}>{h}{rC===ci?<ArrowUpDown size={8} style={{marginLeft:2,verticalAlign:'middle'}} color={$.blu}/>:null}</th>))}
+                      {HDR.map((h,ci)=>{
+                        const th=<th key={`h${ci}`} onClick={()=>{if(rC===ci)setRD(d=>d*-1);else{setRC(ci);setRD(-1);}}} style={{padding:'9px 10px',textAlign:NC.has(ci)?'right':'left',color:$.t3,fontWeight:700,fontSize:9,textTransform:'uppercase',borderBottom:'2px solid '+$.bd,cursor:'pointer',whiteSpace:'nowrap',background:$.bg,minWidth:ci===1||ci===3||ci===10||ci===12?130:60,letterSpacing:.5}}>{h}{rC===ci?<ArrowUpDown size={8} style={{marginLeft:2,verticalAlign:'middle'}} color={$.blu}/>:null}</th>;
+                        if(ci===25)return[th,
+                          <th key="htl" style={{padding:'9px 10px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9,textTransform:'uppercase',borderBottom:'2px solid '+$.bd,whiteSpace:'nowrap',background:$.bg,minWidth:80,letterSpacing:.5}}>Toplam Fiyat (Yerel)</th>,
+                          <th key="husd" style={{padding:'9px 10px',textAlign:'right',color:$.t3,fontWeight:700,fontSize:9,textTransform:'uppercase',borderBottom:'2px solid '+$.bd,whiteSpace:'nowrap',background:$.bg,minWidth:80,letterSpacing:.5}}>Toplam Fiyat (Raporlama)</th>];
+                        return th;
+                      })}
                       <th style={{padding:'9px 6px',borderBottom:'2px solid '+$.bd,background:$.bg,width:36}}/>
                     </tr></thead>
                     <tbody>{sorted.slice(rawPage*pageSize,(rawPage+1)*pageSize).map((r,i)=>{const oi=rows.indexOf(r);return(
                       <tr key={i} className="rh" style={{borderBottom:'1px solid '+$.bdL,background:selRows.has(oi)?$.acL:i%2?'#fafbfc':'#fff'}}>
                         <td style={{padding:'7px 10px'}}><input type="checkbox" checked={selRows.has(oi)} onChange={e=>{const n=new Set(selRows);e.target.checked?n.add(oi):n.delete(oi);setSelRows(n);}}/></td>
-                        {r.map((v,ci)=>(
-                          <td key={ci} style={{padding:'7px 10px',textAlign:NC.has(ci)?'right':'left',fontFamily:NC.has(ci)?$.mo:'inherit',fontSize:10.5,whiteSpace:'nowrap',maxWidth:ci===1||ci===3||ci===10||ci===12?150:200,overflow:'hidden',textOverflow:'ellipsis',color:ci===8?$.t1:$.t2,fontWeight:ci===8?600:400}}>
+                        {r.map((v,ci)=>{
+                          const td=<td key={`c${ci}`} style={{padding:'7px 10px',textAlign:NC.has(ci)?'right':'left',fontFamily:NC.has(ci)?$.mo:'inherit',fontSize:10.5,whiteSpace:'nowrap',maxWidth:ci===1||ci===3||ci===10||ci===12?150:200,overflow:'hidden',textOverflow:'ellipsis',color:ci===8?$.t1:$.t2,fontWeight:ci===8?600:400}}>
                             {ci===27?<span style={{padding:'2px 7px',borderRadius:5,background:acBg(v),color:ac(v),fontWeight:600,fontFamily:$.mo}}>{v}</span>:ci===24?('₺'+v):ci===25?('$'+v):typeof v==='number'?fN(v):v}
-                          </td>))}
+                          </td>;
+                          if(ci===25)return[td,
+                            <td key="ctl" style={{padding:'7px 10px',textAlign:'right',fontFamily:$.mo,fontSize:10.5,whiteSpace:'nowrap',color:$.t1,fontWeight:600}}>{'₺'+fN(r[8]*r[24])}</td>,
+                            <td key="cusd" style={{padding:'7px 10px',textAlign:'right',fontFamily:$.mo,fontSize:10.5,whiteSpace:'nowrap',color:'#0d6e4f',fontWeight:600}}>{'$'+fN(r[8]*r[25])}</td>];
+                          return td;
+                        })}
                         <td style={{padding:'7px 6px'}}><Pencil size={12} color={$.t3} style={{cursor:'pointer'}} onClick={()=>{setEditIdx(oi);setEditRow([...r]);}}/></td>
                       </tr>);})}</tbody>
                     <tfoot><tr style={{position:'sticky',bottom:0,zIndex:2,background:'rgba(240,247,243,.97)',borderTop:'2px solid rgba(13,110,79,.2)'}}>
                       <td style={{padding:'8px 10px'}}/>
-                      {HDR.map((_,ci)=>(
-                        <td key={ci} style={{padding:'8px 10px',textAlign:NC.has(ci)?'right':'left',fontFamily:$.mo,fontSize:11,fontWeight:800,whiteSpace:'nowrap'}}>
+                      {HDR.map((_,ci)=>{
+                        const td=<td key={`f${ci}`} style={{padding:'8px 10px',textAlign:NC.has(ci)?'right':'left',fontFamily:$.mo,fontSize:11,fontWeight:800,whiteSpace:'nowrap'}}>
                           {ci===8?<span style={{color:'#0d6e4f'}}>{fN(filtered.reduce((s,r)=>s+r[8],0))}</span>:ci===0?<span style={{fontSize:10,fontWeight:700,color:'#0d6e4f',letterSpacing:.3}}>TOPLAM</span>:''}
-                        </td>))}
+                        </td>;
+                        if(ci===25)return[td,
+                          <td key="ftl" style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:800,whiteSpace:'nowrap',color:$.t1}}>{'₺'+fN(filtered.reduce((s,r)=>s+r[8]*r[24],0))}</td>,
+                          <td key="fusd" style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:800,whiteSpace:'nowrap',color:'#0d6e4f'}}>{'$'+fN(filtered.reduce((s,r)=>s+r[8]*r[25],0))}</td>];
+                        return td;
+                      })}
                       <td style={{padding:'8px 6px'}}/>
                     </tr></tfoot>
                   </table>
