@@ -297,8 +297,16 @@ function xmlEsc(s) {
 }
 
 // Build <filter> XML block from gFilter
+// Also applies the base rule: only item codes starting with 1, 2, or 3 (matches dashboard's calcRows)
 function buildFetchFilter(gFilter, cutoffISO) {
   const conds = [`<condition attribute="${DATE_FIELD}" operator="on-or-after" value="${cutoffISO}" />`];
+  // Madde kodu filtresi: 1/2/3 ile başlayan (stok kalemleri) — dashboard calcRows ile aynı
+  const itemOr = `<filter type="or">` +
+    `<condition attribute="mserp_itemid" operator="begins-with" value="1" />` +
+    `<condition attribute="mserp_itemid" operator="begins-with" value="2" />` +
+    `<condition attribute="mserp_itemid" operator="begins-with" value="3" />` +
+  `</filter>`;
+  conds.push(itemOr);
   if (gFilter.comp) conds.push(`<condition attribute="mserp_companyname" operator="eq" value="${xmlEsc(gFilter.comp)}" />`);
   if (gFilter.urun) conds.push(`<condition attribute="mserp_itemname" operator="eq" value="${xmlEsc(gFilter.urun)}" />`);
   if (gFilter.mense) conds.push(`<condition attribute="mserp_inventcolorid" operator="eq" value="${xmlEsc(gFilter.mense)}" />`);
