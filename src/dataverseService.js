@@ -261,3 +261,53 @@ export async function fetchErpData(account, onStatus) {
   onStatus?.(`${rows.length} satır yüklendi`);
   return { rows, reportDate, recordCount: records.length, rawRecords: records };
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// TREND DATA — Aggregated quantity per report date (last 3 years)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Escape single quotes for OData literals (double them)
+function odataStr(s) { return String(s).replace(/'/g, "''"); }
+
+// Build OData filter expression from gFilter object
+function buildGFilterExpr(gFilter) {
+  const parts = [];
+  if (gFilter.comp) parts.push(`mserp_companyname eq '${odataStr(gFilter.comp)}'`);
+  if (gFilter.urun) parts.push(`mserp_itemname eq '${odataStr(gFilter.urun)}'`);
+  if (gFilter.mense) parts.push(`mserp_inventcolorid eq '${odataStr(gFilter.mense)}'`);
+  if (gFilter.tesis) parts.push(`mserp_inventsitename eq '${odataStr(gFilter.tesis)}'`);
+  if (gFilter.l2) parts.push(`mserp_etgproductlevel02name eq '${odataStr(gFilter.l2)}'`);
+  if (gFilter.l3) parts.push(`mserp_etgproductlevel03name eq '${odataStr(gFilter.l3)}'`);
+  if (gFilter.grpCompanies && gFilter.grpCompanies.length > 0) {
+    // grp filter: list of company codes (OR expansion — Dataverse OData 'in' is limited)
+    const orExpr = gFilter.grpCompanies.map(c => `mserp_companyid eq '${odataStr(c)}'`).join(' or ');
+    parts.push(`(${orExpr})`);
+  }
+  return parts.length > 0 ? parts.join(' and ') : '';
+}
+
+export async function fetchTrendData(account, gFilter = {}) {
+  const token = await getDataverseToken(account);
+
+  // Son 3 yıl sınırı
+  const threeYearsAgo = new Date();
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  const cutoffISO = threeYearsAgo.toISOString().split('T')[0];
+  const dateFilter = `${DATE_FIELD} ge ${cutoffISO}`;
+
+  const gfExpr = buildGFilterExpr(gFilter);
+  const combined = gfExpr ? `${dateFilter} and ${gfExpr}` : dateFilter;
+  const apply = `filter(${combined})/groupby((${DATE_FIELD}))/aggregate(mserp_qty with sum as totalQty)`;
+  const url = `${API_BASE}?$apply=${encodeURIComponent(apply)}`;
+
+  let allRecords = [];
+  let nextUrl = url;
+  while (nextUrl) {
+    const data = await dvFetch(nextUrl, token);
+    allRecords = allRecords.concat(data.value || []);
+    nextUrl = data['@odata.nextLink'] || null;
+  }
+  return allRecords
+    .map(d => ({ date: d[DATE_FIELD], totalQty: Number(d.totalQty) || 0 }))
+    .filter(d => d.date)
+    .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+}
