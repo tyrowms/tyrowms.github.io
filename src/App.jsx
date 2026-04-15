@@ -28,10 +28,22 @@ const QUARTERS_TR=['Q1 (Oca-Mar)','Q2 (Nis-Haz)','Q3 (Tem-Eyl)','Q4 (Eki-Ara)'];
 // Kısa ton formatı (chart bar etiketi için) — "1.5Mt", "446Kt", "12t"
 const fmtShortTon=n=>{const t=n/1000;if(t>=1e6)return(t/1e6).toFixed(1)+'Mt';if(t>=1e3)return(t/1e3).toFixed(0)+'Kt';if(t>=1)return Math.round(t)+'t';return Math.round(n)+'kg';};
 
-// Trend helper: her ayın ilk haftası (day <= 7) snapshot'ından en erken olanı seç
+// Trend helper: her ay için ilk haftanın (day<=7) en erken snapshot'ı.
+// İstisna: verideki en güncel ay için ilk hafta yerine en güncel reportdate kullanılır.
 function getMonthlyPoints(trendRaw, year){
+  // Verideki en son (max) reportdate'i bul
+  let maxP=null;
+  for(const d of trendRaw){if(!maxP||String(d.date)>String(maxP.date))maxP=d;}
+  const maxDt=maxP?new Date(maxP.date):null;
+  const maxYear=maxDt?maxDt.getFullYear():null;
+  const maxMonth=maxDt?maxDt.getMonth():null;
   const out=[];
   for(let m=0;m<12;m++){
+    const isLatest=year===maxYear&&m===maxMonth;
+    if(isLatest&&maxP){
+      out.push({label:MONTHS_TR[m],date:maxP.date,totalQty:maxP.totalQty,month:m,year,isLatest:true});
+      continue;
+    }
     const candidates=trendRaw.filter(d=>{const dt=new Date(d.date);return dt.getFullYear()===year&&dt.getMonth()===m&&dt.getDate()<=7;});
     candidates.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
     const p=candidates[0];
@@ -967,7 +979,7 @@ export default function App(){
                   <div style={{width:34,height:34,borderRadius:9,background:$.bluB,color:$.blu,display:'flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={17}/></div>
                   <div>
                     <div style={{fontSize:14,fontWeight:700,color:$.t1}}>Toplam Stok Trend Analizi</div>
-                    <div style={{fontSize:10.5,color:$.t3,fontWeight:500}}>Her ayın ilk haftasındaki rapor tarihi bazlı · Ocak 2025'ten itibaren</div>
+                    <div style={{fontSize:10.5,color:$.t3,fontWeight:500}}>Her ayın ilk haftası · Son ay için en güncel tarih · Ocak 2025'ten itibaren</div>
                   </div>
                 </div>
                 <div onClick={()=>setShowStokTrend(false)} className="rh" style={{cursor:'pointer',width:30,height:30,borderRadius:8,background:'rgba(0,0,0,.06)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={15} color={$.t2}/></div>
