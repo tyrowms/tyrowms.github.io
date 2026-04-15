@@ -369,57 +369,57 @@ function normalizeDate(raw) {
   return raw;
 }
 
-// Paginated FetchXML fetch (handles pagingcookie for >5000 rows)
-async function fetchXmlPaged(fetchXmlInner, token) {
-  let page = 1, pagingCookie = null, all = [];
-  for (let safety = 0; safety < 20; safety++) {
-    const pageAttrs = pagingCookie
-      ? ` page="${page}" count="5000" paging-cookie="${xmlEsc(pagingCookie)}"`
-      : ` page="${page}" count="5000"`;
-    const fullXml = `<fetch aggregate="true"${pageAttrs}>${fetchXmlInner}</fetch>`;
-    const url = `${API_BASE}?fetchXml=${encodeURIComponent(fullXml)}`;
-    const data = await dvFetch(url, token);
-    all = all.concat(data.value || []);
-    if (!data['@Microsoft.Dynamics.CRM.morerecords']) break;
-    pagingCookie = data['@Microsoft.Dynamics.CRM.fetchxmlpagingcookie'];
-    page++;
-  }
-  return all;
+// Single-shot aggregate FetchXML fetch (Dataverse aggregate has 50K row input limit)
+async function fetchXmlAggregate(fetchXmlInner, token) {
+  const fullXml = `<fetch aggregate="true">${fetchXmlInner}</fetch>`;
+  const url = `${API_BASE}?fetchXml=${encodeURIComponent(fullXml)}`;
+  const data = await dvFetch(url, token);
+  return data.value || [];
 }
 
 // Special path: weighted-avg of purchfifo by qty (matches dashboard's Ort. Yaşlanma formula)
+// Dataverse aggregate 50K row input limit → bir seferde yapılamaz.
+// Strateji: önce tarih listesini al, sonra her tarih için küçük bir sorgu at (paralel).
 async function fetchAvgAgeWeighted(token, cutoffISO, gFilter) {
   const baseFilter = buildFetchFilter(gFilter, cutoffISO);
-  // Groupby (reportdate, purchfifo) + sum(qty) — then client-side Σ(fifo×qty)/Σqty per date
-  const inner =
+
+  // 1) Unique reportdate listesi (qty aggregate, hızlı)
+  const dateInner =
     `<entity name="${ENTITY_LOGICAL}">` +
       `<attribute name="mserp_qty" alias="qtySum" aggregate="sum" />` +
-      `<attribute name="mserp_qty" alias="rowCount" aggregate="count" />` +
-      `<attribute name="mserp_purchfifo" alias="fifo" groupby="true" />` +
       `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
       baseFilter +
     `</entity>`;
+  const dateRows = await fetchXmlAggregate(dateInner, token);
+  const dates = [...new Set(dateRows.map(r => normalizeDate(r.reportDate)).filter(Boolean))].sort();
 
-  const rows = await fetchXmlPaged(inner, token);
-  const byDate = {};
-  for (const r of rows) {
-    const iso = normalizeDate(r.reportDate);
-    if (!iso) continue;
-    const q = Number(r.qtySum) || 0;
-    const f = Number(r.fifo) || 0;
-    const c = Number(r.rowCount) || 0;
-    if (!byDate[iso]) byDate[iso] = { qSum: 0, qFifoSum: 0, rows: 0 };
-    byDate[iso].qSum += q;
-    byDate[iso].qFifoSum += q * f;
-    byDate[iso].rows += c;
-  }
-  return Object.entries(byDate)
-    .map(([date, o]) => ({
-      date,
-      value: o.qSum > 0 ? o.qFifoSum / o.qSum : 0,
-      recordCount: o.rows,
-    }))
-    .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  // 2) Her tarih için (fifo groupby + sum(qty)) — paralel
+  const perDate = await Promise.all(dates.map(async (d) => {
+    const filterXml = baseFilter.replace(
+      `</filter>`,
+      `<condition attribute="${DATE_FIELD}" operator="eq" value="${d}" /></filter>`
+    );
+    const inner =
+      `<entity name="${ENTITY_LOGICAL}">` +
+        `<attribute name="mserp_qty" alias="qtySum" aggregate="sum" />` +
+        `<attribute name="mserp_qty" alias="rowCount" aggregate="count" />` +
+        `<attribute name="mserp_purchfifo" alias="fifo" groupby="true" />` +
+        filterXml +
+      `</entity>`;
+    const rows = await fetchXmlAggregate(inner, token);
+    let qSum = 0, qFifoSum = 0, rowsTotal = 0;
+    for (const r of rows) {
+      const q = Number(r.qtySum) || 0;
+      const f = Number(r.fifo) || 0;
+      const c = Number(r.rowCount) || 0;
+      qSum += q;
+      qFifoSum += q * f;
+      rowsTotal += c;
+    }
+    return { date: d, value: qSum > 0 ? qFifoSum / qSum : 0, recordCount: rowsTotal };
+  }));
+
+  return perDate.sort((a,b) => String(a.date).localeCompare(String(b.date)));
 }
 
 export async function fetchKPITrend(account, gFilter = {}, metricId = 'qty') {
@@ -441,7 +441,7 @@ export async function fetchKPITrend(account, gFilter = {}, metricId = 'qty') {
       filterXml +
     `</entity>`;
 
-  const records = await fetchXmlPaged(inner, token);
+  const records = await fetchXmlAggregate(inner, token);
   return records
     .map(d => ({ date: normalizeDate(d.reportDate), value: Number(d.value) || 0, recordCount: Number(d.recordCount) || 0 }))
     .filter(d => d.date)
