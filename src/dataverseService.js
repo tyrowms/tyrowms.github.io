@@ -377,6 +377,14 @@ async function fetchXmlAggregate(fetchXmlInner, token) {
   return data.value || [];
 }
 
+// baseFilter içinde iç içe <filter> olabildiği için ilk </filter>'ı değil, SON (outer) </filter>'ı bul
+// ve condition'ı onun hemen ÖNÜNE ekle. .replace('</filter>') ilk eşleşmeyi değiştirir, hatalıdır.
+function addConditionsToFilter(baseFilter, extraConditionsXml) {
+  const lastIdx = baseFilter.lastIndexOf('</filter>');
+  if (lastIdx < 0) return baseFilter + extraConditionsXml;
+  return baseFilter.slice(0, lastIdx) + extraConditionsXml + baseFilter.slice(lastIdx);
+}
+
 // Special path: weighted-avg of purchfifo by qty (matches dashboard's Ort. Yaşlanma formula)
 // Dataverse aggregate 50K row input limit → bir seferde yapılamaz.
 // Strateji: önce tarih listesini al, sonra her tarih için küçük bir sorgu at (paralel).
@@ -394,12 +402,15 @@ async function fetchAvgAgeWeighted(token, cutoffISO, gFilter) {
   const dates = [...new Set(dateRows.map(r => normalizeDate(r.reportDate)).filter(Boolean))].sort();
 
   // 2) Her tarih için (fifo groupby + sum(qty)) — paralel
-  // NOT: operator="on" datetime alanı için date-only match yapar (eq çalışmıyor)
+  // ge + lt next-day → datetime alanında o günün tüm saatlerini kapsar
   const perDate = await Promise.all(dates.map(async (d) => {
-    const filterXml = baseFilter.replace(
-      `</filter>`,
-      `<condition attribute="${DATE_FIELD}" operator="on" value="${d}" /></filter>`
-    );
+    const dt = new Date(d + 'T00:00:00Z');
+    const next = new Date(dt); next.setUTCDate(dt.getUTCDate() + 1);
+    const nextIso = next.toISOString().split('T')[0];
+    const extra =
+      `<condition attribute="${DATE_FIELD}" operator="on-or-after" value="${d}" />` +
+      `<condition attribute="${DATE_FIELD}" operator="lt" value="${nextIso}" />`;
+    const filterXml = addConditionsToFilter(baseFilter, extra);
     const inner =
       `<entity name="${ENTITY_LOGICAL}">` +
         `<attribute name="mserp_qty" alias="qtySum" aggregate="sum" />` +
@@ -432,7 +443,7 @@ export async function fetchKPITrend(account, gFilter = {}, metricId = 'qty') {
 
   const baseFilter = buildFetchFilter(gFilter, cutoffISO);
   const extraCond = metricExtraCondition(metricId);
-  const filterXml = extraCond ? baseFilter.replace('</filter>', extraCond + '</filter>') : baseFilter;
+  const filterXml = extraCond ? addConditionsToFilter(baseFilter, extraCond) : baseFilter;
 
   const inner =
     `<entity name="${ENTITY_LOGICAL}">` +
