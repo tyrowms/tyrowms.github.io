@@ -117,69 +117,82 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, fmtTon, 
   const [x, y] = projection([city.lng, city.lat]);
   const color = acFn(city.a);
   const ref = useRef();
-  const ringRef = useRef();
 
-  // All markers: silo cylinder (min size increased for better UX)
+  // Flat round marker (sphere). Size hafifçe miktara göre ama küçük.
   const ratio = city.q / maxQty;
-  const radius = Math.max(0.22, ratio * 0.6);
-  const height = Math.max(0.4, ratio * 2.5);
-  const hitRadius = Math.max(radius * 1.5, 0.35);
+  const radius = Math.max(0.18, 0.18 + ratio * 0.18); // 0.18–0.36 aralığı
+  const hitRadius = Math.max(radius * 2.2, 0.42);
   const pos = [x, 0.16, y];
+  const ring1Ref = useRef();
+  const ring2Ref = useRef();
 
   useFrame((state) => {
     if (ref.current) {
-      const target = isSel ? 1.15 : (isHov ? 1.08 : 1);
-      ref.current.scale.x = THREE.MathUtils.lerp(ref.current.scale.x, target, 0.1);
-      ref.current.scale.z = THREE.MathUtils.lerp(ref.current.scale.z, target, 0.1);
+      const target = isSel ? 1.35 : (isHov ? 1.18 : 1);
+      ref.current.scale.x = THREE.MathUtils.lerp(ref.current.scale.x, target, 0.12);
+      ref.current.scale.y = THREE.MathUtils.lerp(ref.current.scale.y, target, 0.12);
+      ref.current.scale.z = THREE.MathUtils.lerp(ref.current.scale.z, target, 0.12);
     }
-    if (ringRef.current && isSel) {
-      ringRef.current.scale.x = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.15;
-      ringRef.current.scale.z = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.15;
+    // Selected state: radar-style expanding rings
+    if (isSel) {
+      const t = state.clock.elapsedTime;
+      const period = 1.8;
+      if (ring1Ref.current) {
+        const phase = (t % period) / period;
+        const s = 1 + phase * 4;
+        ring1Ref.current.scale.x = s; ring1Ref.current.scale.z = s;
+        ring1Ref.current.material.opacity = Math.max(0, 0.55 * (1 - phase));
+      }
+      if (ring2Ref.current) {
+        const phase = ((t + period / 2) % period) / period;
+        const s = 1 + phase * 4;
+        ring2Ref.current.scale.x = s; ring2Ref.current.scale.z = s;
+        ring2Ref.current.material.opacity = Math.max(0, 0.55 * (1 - phase));
+      }
     }
   });
 
-  // --- Silo marker (cylinder) ---
+  // --- Round point marker ---
   return (
     <group position={pos}>
+      {/* Radar rings: expand outward on selection */}
       {isSel && (
-        <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-          <ringGeometry args={[radius + 0.12, radius + 0.2, 32]} />
-          <meshBasicMaterial color={color} transparent opacity={0.25} side={THREE.DoubleSide} />
-        </mesh>
+        <>
+          <mesh ref={ring1Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+            <ringGeometry args={[radius * 1.1, radius * 1.3, 64]} />
+            <meshBasicMaterial color={color} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+          </mesh>
+          <mesh ref={ring2Ref} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+            <ringGeometry args={[radius * 1.1, radius * 1.3, 64]} />
+            <meshBasicMaterial color={color} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+          </mesh>
+        </>
       )}
       {/* Invisible hitbox for easier clicking */}
       <mesh
-        position={[0, (height + 0.3) / 2, 0]}
+        position={[0, radius, 0]}
         onClick={e => { e.stopPropagation(); onSelect(city.n); }}
         onPointerOver={e => { e.stopPropagation(); onHover(city.n); document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => { onHoverEnd(); document.body.style.cursor = 'default'; }}
       >
-        <cylinderGeometry args={[hitRadius, hitRadius, height + 0.3, 16]} />
+        <sphereGeometry args={[hitRadius, 16, 12]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <mesh
-        ref={ref}
-        position={[0, height / 2, 0]}
-      >
-        <cylinderGeometry args={[radius, radius * 0.85, height, 20]} />
+      {/* Round marker sphere */}
+      <mesh ref={ref} position={[0, radius, 0]}>
+        <sphereGeometry args={[radius, 24, 20]} />
         <meshStandardMaterial
           color={color}
-          transparent
-          opacity={isSel ? 0.95 : (isHov ? 0.88 : 0.8)}
           emissive={color}
-          emissiveIntensity={isSel ? 0.3 : (isHov ? 0.15 : 0.05)}
-          metalness={0.1}
-          roughness={0.6}
+          emissiveIntensity={isSel ? 0.45 : (isHov ? 0.22 : 0.12)}
+          metalness={0.25}
+          roughness={0.45}
         />
-      </mesh>
-      <mesh position={[0, height + 0.05, 0]}>
-        <sphereGeometry args={[radius * 0.45, 12, 12]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.2} />
       </mesh>
 
       {/* Default label: only city name, visible based on zoom rank */}
       {(showLabel || isSel) && (
-        <Html position={[0, height + 0.35, 0]} center style={{ pointerEvents: 'none', transform: 'translate(-50%,-100%)' }}>
+        <Html position={[0, radius * 2 + 0.25, 0]} center style={{ pointerEvents: 'none', transform: 'translate(-50%,-100%)' }}>
           <div style={{
             background: 'rgba(255,255,255,.95)',
             backdropFilter: 'blur(8px)',
@@ -203,7 +216,7 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, fmtTon, 
 
       {/* Hover tooltip: name + ton + FIFO */}
       {(isHov && !isSel) && (
-        <Html position={[0, height + 0.8, 0]} center style={{ pointerEvents: 'none', transform: 'translate(-50%,-100%)' }}>
+        <Html position={[0, radius * 2 + 0.7, 0]} center style={{ pointerEvents: 'none', transform: 'translate(-50%,-100%)' }}>
           <div style={{
             background: 'rgba(255,255,255,.98)',
             border: '1.5px solid #e2e7ee',
@@ -225,7 +238,7 @@ function CityMarker({ city, maxQty, isSel, isHov, showLabel, acFn, fmt, fmtTon, 
 
       {/* Selected tooltip: full details */}
       {isSel && (
-        <Html position={[0, height + 0.9, 0]} center style={{ pointerEvents: 'none', transform: 'translate(-50%,-100%)' }}>
+        <Html position={[0, radius * 2 + 0.8, 0]} center style={{ pointerEvents: 'none', transform: 'translate(-50%,-100%)' }}>
           <div style={{
             background: 'rgba(255,255,255,.98)',
             border: '2px solid ' + color,
