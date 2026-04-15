@@ -394,10 +394,11 @@ async function fetchAvgAgeWeighted(token, cutoffISO, gFilter) {
   const dates = [...new Set(dateRows.map(r => normalizeDate(r.reportDate)).filter(Boolean))].sort();
 
   // 2) Her tarih için (fifo groupby + sum(qty)) — paralel
+  // NOT: operator="on" datetime alanı için date-only match yapar (eq çalışmıyor)
   const perDate = await Promise.all(dates.map(async (d) => {
     const filterXml = baseFilter.replace(
       `</filter>`,
-      `<condition attribute="${DATE_FIELD}" operator="eq" value="${d}" /></filter>`
+      `<condition attribute="${DATE_FIELD}" operator="on" value="${d}" /></filter>`
     );
     const inner =
       `<entity name="${ENTITY_LOGICAL}">` +
