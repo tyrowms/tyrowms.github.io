@@ -339,40 +339,94 @@ function metricExtraCondition(metricId) {
   return '';
 }
 
+// Normalize Dataverse date strings to ISO YYYY-MM-DD
+function normalizeDate(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') {
+    if (raw.includes('/')) {
+      const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+    }
+    if (raw.includes('T')) return raw.split('T')[0];
+  }
+  return raw;
+}
+
+// Paginated FetchXML fetch (handles pagingcookie for >5000 rows)
+async function fetchXmlPaged(fetchXmlInner, token) {
+  let page = 1, pagingCookie = null, all = [];
+  for (let safety = 0; safety < 20; safety++) {
+    const pageAttrs = pagingCookie
+      ? ` page="${page}" count="5000" paging-cookie="${xmlEsc(pagingCookie)}"`
+      : ` page="${page}" count="5000"`;
+    const fullXml = `<fetch aggregate="true"${pageAttrs}>${fetchXmlInner}</fetch>`;
+    const url = `${API_BASE}?fetchXml=${encodeURIComponent(fullXml)}`;
+    const data = await dvFetch(url, token);
+    all = all.concat(data.value || []);
+    if (!data['@Microsoft.Dynamics.CRM.morerecords']) break;
+    pagingCookie = data['@Microsoft.Dynamics.CRM.fetchxmlpagingcookie'];
+    page++;
+  }
+  return all;
+}
+
+// Special path: weighted-avg of purchfifo by qty (matches dashboard's Ort. Yaşlanma formula)
+async function fetchAvgAgeWeighted(token, cutoffISO, gFilter) {
+  const baseFilter = buildFetchFilter(gFilter, cutoffISO);
+  // Groupby (reportdate, purchfifo) + sum(qty) — then client-side Σ(fifo×qty)/Σqty per date
+  const inner =
+    `<entity name="${ENTITY_LOGICAL}">` +
+      `<attribute name="mserp_qty" alias="qtySum" aggregate="sum" />` +
+      `<attribute name="mserp_qty" alias="rowCount" aggregate="count" />` +
+      `<attribute name="mserp_purchfifo" alias="fifo" groupby="true" />` +
+      `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
+      baseFilter +
+    `</entity>`;
+
+  const rows = await fetchXmlPaged(inner, token);
+  const byDate = {};
+  for (const r of rows) {
+    const iso = normalizeDate(r.reportDate);
+    if (!iso) continue;
+    const q = Number(r.qtySum) || 0;
+    const f = Number(r.fifo) || 0;
+    const c = Number(r.rowCount) || 0;
+    if (!byDate[iso]) byDate[iso] = { qSum: 0, qFifoSum: 0, rows: 0 };
+    byDate[iso].qSum += q;
+    byDate[iso].qFifoSum += q * f;
+    byDate[iso].rows += c;
+  }
+  return Object.entries(byDate)
+    .map(([date, o]) => ({
+      date,
+      value: o.qSum > 0 ? o.qFifoSum / o.qSum : 0,
+      recordCount: o.rows,
+    }))
+    .sort((a,b) => String(a.date).localeCompare(String(b.date)));
+}
+
 export async function fetchKPITrend(account, gFilter = {}, metricId = 'qty') {
   const token = await getDataverseToken(account);
-
-  // Minimum tarih sınırı: 2025 Ocak (daha eski veri yok)
   const cutoffISO = '2025-01-01';
+
+  // Weighted avg için özel yol (dashboard formülü ile birebir)
+  if (metricId === 'avgAge') return fetchAvgAgeWeighted(token, cutoffISO, gFilter);
 
   const baseFilter = buildFetchFilter(gFilter, cutoffISO);
   const extraCond = metricExtraCondition(metricId);
-  // Inject extra condition into the existing <filter type="and">...</filter>
   const filterXml = extraCond ? baseFilter.replace('</filter>', extraCond + '</filter>') : baseFilter;
 
-  const fetchXml = `<fetch aggregate="true">` +
+  const inner =
     `<entity name="${ENTITY_LOGICAL}">` +
       metricAggregateXml(metricId) +
       `<attribute name="mserp_qty" alias="recordCount" aggregate="count" />` +
       `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
       filterXml +
-    `</entity>` +
-  `</fetch>`;
+    `</entity>`;
 
-  const url = `${API_BASE}?fetchXml=${encodeURIComponent(fetchXml)}`;
-  const data = await dvFetch(url, token);
-  return (data.value || [])
-    .map(d => {
-      const raw = d.reportDate;
-      let iso = raw;
-      if (raw && typeof raw === 'string' && raw.includes('/')) {
-        const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (m) iso = `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
-      } else if (raw && typeof raw === 'string' && raw.includes('T')) {
-        iso = raw.split('T')[0];
-      }
-      return { date: iso, value: Number(d.value) || 0, recordCount: Number(d.recordCount) || 0 };
-    })
+  const records = await fetchXmlPaged(inner, token);
+  return records
+    .map(d => ({ date: normalizeDate(d.reportDate), value: Number(d.value) || 0, recordCount: Number(d.recordCount) || 0 }))
     .filter(d => d.date)
     .sort((a,b) => String(a.date).localeCompare(String(b.date)));
 }
