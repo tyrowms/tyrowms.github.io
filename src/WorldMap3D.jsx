@@ -331,7 +331,7 @@ function computeView(countries) {
   return { camY, cx, cz };
 }
 
-export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, onGlobalClick, globalActive }) {
+export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, onGlobalClick, globalActive, onSwitchToTurkey }) {
   // İlk render'da hesapla — sonraki güncellemelerde değişmez
   const view = useMemo(() => computeView(countries), [countries]);
 
@@ -365,6 +365,23 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
         <div style={{ fontSize:13, fontWeight:700, color: globalActive ? '#0d6e4f' : '#1a2332', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Küresel Operasyonlar</div>
         <div style={{ fontSize:11, fontWeight:500, color: globalActive ? '#0d6e4f' : '#5a6b7f', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{countries.length} ülke · {countries.reduce((s,c)=>s+c.fc,0)} tesis</div>
       </div>
+      {/* Türkiye'ye dön butonu (dashboard'dan çağrıldığında görünür) */}
+      {onSwitchToTurkey && (
+        <div onClick={onSwitchToTurkey} style={{ position:'absolute', top:12, right:14, zIndex:5, cursor:'pointer',
+          background:'rgba(255,255,255,.65)', backdropFilter:'blur(16px) saturate(180%)', WebkitBackdropFilter:'blur(16px) saturate(180%)',
+          borderRadius:12, padding:'8px 14px', display:'flex', alignItems:'center', gap:8,
+          border:'1px solid rgba(255,255,255,.7)',
+          boxShadow:'0 4px 16px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.9)',
+          transition:'all .2s ease' }}>
+          <div style={{ width:32, height:32, borderRadius:'50%', overflow:'hidden',
+            background:'rgba(59,130,246,.08)', border:'1.5px solid rgba(59,130,246,.3)',
+            display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 }}>🇹🇷</div>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:'#1a2332', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Türkiye</div>
+            <div style={{ fontSize:10, fontWeight:500, color:'#5a6b7f', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Haritaya dön</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -426,7 +426,7 @@ function SpinGlobe() {
   );
 }
 
-export default function TurkeyMap3D({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, yurtdisi }) {
+export default function TurkeyMap3D({ cities, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, yurtdisi, onSwitchToWorld }) {
   const ydActive = sel === 'Yurtdışı';
   return (
     <div style={{ height: 450, overflow: 'hidden', background: 'linear-gradient(180deg,#f0f4f8,#f5f7fa)', borderRadius: '0 0 16px 16px', position: 'relative' }}>
@@ -461,10 +461,10 @@ export default function TurkeyMap3D({ cities, maxQty, sel, hov, onSelect, onHove
           target={[-1.5, 0, 1.5]}
         />
       </Canvas>
-      {/* 3D Mini Globe — Yurtdışı */}
+      {/* 3D Mini Globe — Dünya / Yurtdışı */}
       {yurtdisi && (
         <div
-          onClick={() => onSelect('Yurtdışı')}
+          onClick={() => onSwitchToWorld ? onSwitchToWorld() : onSelect('Yurtdışı')}
           style={{
             position: 'absolute', top: 10, left: 10, zIndex: 10,
             display: 'flex', alignItems: 'center', gap: 8,
