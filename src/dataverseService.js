@@ -338,16 +338,76 @@ function buildFetchFilter(gFilter, cutoffISO) {
 }
 
 // Metric → FetchXML aggregate attribute mapping
+// NOT: facilities, products ve avgAge özel yollar kullanır — buraya düşmezler
 function metricAggregateXml(metricId) {
   switch (metricId) {
     case 'qty':           return `<attribute name="mserp_qty" alias="value" aggregate="sum" />`;
     case 'value':         return `<attribute name="mserp_amountsec" alias="value" aggregate="sum" />`;
-    case 'facilities':    return `<attribute name="mserp_inventsiteid" alias="value" aggregate="countcolumn" distinct="true" />`;
-    case 'products':      return `<attribute name="mserp_itemname" alias="value" aggregate="countcolumn" distinct="true" />`;
-    case 'avgAge':        return `<attribute name="mserp_purchfifo" alias="value" aggregate="avg" />`;
     case 'criticalStock': return `<attribute name="mserp_qty" alias="value" aggregate="sum" />`;
     default:              return `<attribute name="mserp_qty" alias="value" aggregate="sum" />`;
   }
+}
+
+// Tarih listesinden sadece "her ayın ilk haftası (gün<=7) + en güncel tarih" olanları seç
+// avgAge, products, facilities gibi pahalı sorguları hızlandırır (~60 → ~16 tarih)
+function filterToFirstWeekDates(dates) {
+  if (dates.length === 0) return [];
+  const maxDate = dates[dates.length - 1]; // sorted asc, last = max
+  const seen = new Set();
+  const result = [];
+  for (const d of dates) {
+    const dt = new Date(d + 'T00:00:00Z');
+    const key = dt.getUTCFullYear() + '-' + dt.getUTCMonth();
+    if (dt.getUTCDate() <= 7 && !seen.has(key)) {
+      seen.add(key);
+      result.push(d);
+    }
+  }
+  // En güncel tarih yoksa ekle
+  if (!result.includes(maxDate)) result.push(maxDate);
+  return result.sort();
+}
+
+// Tesis ve Ürün: groupby (date, field) + client-side distinct count per date
+async function fetchCountDistinctTrend(token, cutoffISO, gFilter, fieldName) {
+  const baseFilter = buildFetchFilter(gFilter, cutoffISO);
+
+  // 1) Tarih listesi al (hızlı)
+  const dateInner =
+    `<entity name="${ENTITY_LOGICAL}">` +
+      `<attribute name="mserp_qty" alias="qtySum" aggregate="sum" />` +
+      `<attribute name="${DATE_FIELD}" alias="reportDate" groupby="true" dategrouping="day" />` +
+      baseFilter +
+    `</entity>`;
+  const dateRows = await fetchXmlAggregate(dateInner, token);
+  const allDates = [...new Set(dateRows.map(r => normalizeDate(r.reportDate)).filter(Boolean))].sort();
+  const targetDates = filterToFirstWeekDates(allDates);
+
+  // 2) Her hedef tarih için groupby(field) sorgusu — paralel
+  const perDate = await Promise.all(targetDates.map(async (d) => {
+    const dt = new Date(d + 'T00:00:00Z');
+    const next = new Date(dt); next.setUTCDate(dt.getUTCDate() + 1);
+    const nextIso = next.toISOString().split('T')[0];
+    const extra =
+      `<condition attribute="${DATE_FIELD}" operator="on-or-after" value="${d}" />` +
+      `<condition attribute="${DATE_FIELD}" operator="lt" value="${nextIso}" />`;
+    const filterXml = addConditionsToFilter(baseFilter, extra);
+    const inner =
+      `<entity name="${ENTITY_LOGICAL}">` +
+        `<attribute name="mserp_qty" alias="cnt" aggregate="count" />` +
+        `<attribute name="${fieldName}" alias="grpVal" groupby="true" />` +
+        filterXml +
+      `</entity>`;
+    const rows = await fetchXmlAggregate(inner, token);
+    let distinctCount = 0, totalRows = 0;
+    for (const r of rows) {
+      distinctCount++;
+      totalRows += Number(r.cnt) || 0;
+    }
+    return { date: d, value: distinctCount, recordCount: totalRows };
+  }));
+
+  return perDate.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
 // Extra filter conditions specific to a metric (e.g. criticalStock needs fifo >= 180)
@@ -391,7 +451,7 @@ function addConditionsToFilter(baseFilter, extraConditionsXml) {
 async function fetchAvgAgeWeighted(token, cutoffISO, gFilter) {
   const baseFilter = buildFetchFilter(gFilter, cutoffISO);
 
-  // 1) Unique reportdate listesi (qty aggregate, hızlı)
+  // 1) Unique reportdate listesi (qty aggregate, hızlı) — sonra sadece ilk-hafta tarihlerine daralt
   const dateInner =
     `<entity name="${ENTITY_LOGICAL}">` +
       `<attribute name="mserp_qty" alias="qtySum" aggregate="sum" />` +
@@ -399,7 +459,8 @@ async function fetchAvgAgeWeighted(token, cutoffISO, gFilter) {
       baseFilter +
     `</entity>`;
   const dateRows = await fetchXmlAggregate(dateInner, token);
-  const dates = [...new Set(dateRows.map(r => normalizeDate(r.reportDate)).filter(Boolean))].sort();
+  const allDates = [...new Set(dateRows.map(r => normalizeDate(r.reportDate)).filter(Boolean))].sort();
+  const dates = filterToFirstWeekDates(allDates); // ~60 → ~16 tarih
 
   // 2) Her tarih için (fifo groupby + sum(qty)) — paralel
   // ge + lt next-day → datetime alanında o günün tüm saatlerini kapsar
@@ -438,8 +499,10 @@ export async function fetchKPITrend(account, gFilter = {}, metricId = 'qty') {
   const token = await getDataverseToken(account);
   const cutoffISO = '2025-01-01';
 
-  // Weighted avg için özel yol (dashboard formülü ile birebir)
+  // Özel yollar: Dataverse aggregate sınırları nedeniyle özel sorgu stratejileri
   if (metricId === 'avgAge') return fetchAvgAgeWeighted(token, cutoffISO, gFilter);
+  if (metricId === 'facilities') return fetchCountDistinctTrend(token, cutoffISO, gFilter, 'mserp_inventsiteid');
+  if (metricId === 'products') return fetchCountDistinctTrend(token, cutoffISO, gFilter, 'mserp_itemname');
 
   const baseFilter = buildFetchFilter(gFilter, cutoffISO);
   const extraCond = metricExtraCondition(metricId);
