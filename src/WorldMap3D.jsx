@@ -116,46 +116,36 @@ function mergeGeos(geoms) {
   return t;
 }
 
-// UV'leri POSITION'dan hesapla — ülke sınırlarına göre bayrak 1× sığdır, aspect ratio koru
+// UV'leri POSITION'dan hesapla — ülke sınırlarına göre bayrak 1× sığdır
+// Trimmed bounding box: %5 outlier atılır (Alaska gibi uzak parçalar bayrak merkezini bozmaz)
 function normalizeUVs(geometry) {
   const pos=geometry?.attributes?.position, uv=geometry?.attributes?.uv;
   if(!uv||!pos||pos.count===0) return;
-  // Üst yüzey vertexlerinin XY bounding box'ını bul (Z ≈ depth=0.25)
   const depth=0.25, tol=0.1;
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  const xs=[],ys=[];
   for(let i=0;i<pos.count;i++){
-    if(Math.abs(pos.getZ(i)-depth)<tol){
-      const x=pos.getX(i),y=pos.getY(i);
-      if(x<minX)minX=x;if(x>maxX)maxX=x;
-      if(y<minY)minY=y;if(y>maxY)maxY=y;
-    }
+    if(Math.abs(pos.getZ(i)-depth)<tol){ xs.push(pos.getX(i)); ys.push(pos.getY(i)); }
   }
-  if(minX===Infinity){
-    // Fallback: tüm vertex'lerden bounding box
-    for(let i=0;i<pos.count;i++){
-      const x=pos.getX(i),y=pos.getY(i);
-      if(x<minX)minX=x;if(x>maxX)maxX=x;
-      if(y<minY)minY=y;if(y>maxY)maxY=y;
-    }
+  if(xs.length===0){
+    for(let i=0;i<pos.count;i++){ xs.push(pos.getX(i)); ys.push(pos.getY(i)); }
   }
+  if(xs.length<4) return;
+  xs.sort((a,b)=>a-b); ys.sort((a,b)=>a-b);
+  // %5 trim — Alaska/Hawaii gibi outlier'ları at
+  const t=Math.max(1,Math.floor(xs.length*0.05));
+  const minX=xs[t], maxX=xs[xs.length-1-t];
+  const minY=ys[t], maxY=ys[ys.length-1-t];
   const dx=maxX-minX||1, dy=maxY-minY||1;
-  const flagAR=3/2; // bayrak oranı (genişlik/yükseklik)
-  const geoAR=dx/dy; // ülke oranı
+  const flagAR=3/2, geoAR=dx/dy;
   for(let i=0;i<pos.count;i++){
     let u=(pos.getX(i)-minX)/dx;
     let v=(pos.getY(i)-minY)/dy;
-    // Bayrak aspect ratio'sunu koru, merkeze hizala
-    if(geoAR>flagAR){
-      // Ülke bayraktan geniş → yatay sıkıştır, ortala
-      const s=flagAR/geoAR;
-      u=(u-0.5)*s+0.5;
-    }else{
-      // Ülke bayraktan uzun → dikey sıkıştır, ortala
-      const s=geoAR/flagAR;
-      v=(v-0.5)*s+0.5;
-    }
+    if(geoAR>flagAR){ const s=flagAR/geoAR; u=(u-0.5)*s+0.5; }
+    else{ const s=geoAR/flagAR; v=(v-0.5)*s+0.5; }
+    // Clamp — outlier vertex'ler sınır dışına çıkmasın
+    u=Math.max(0,Math.min(1,u)); v=Math.max(0,Math.min(1,v));
     uv.setX(i, u);
-    uv.setY(i, 1-v); // canvas Y aşağı → UV Y yukarı çevir
+    uv.setY(i, 1-v);
   }
   uv.needsUpdate=true;
 }
@@ -228,13 +218,16 @@ function WorldSurface({ countryDataMap, flagTextures }) {
             <meshPhysicalMaterial
               map={flagTex || null}
               color={flagTex ? '#ffffff' : e.color}
-              metalness={0.1} roughness={flagTex ? 0.2 : 0.1}
-              clearcoat={0.7} clearcoatRoughness={0.1}
-              iridescence={flagTex ? 0.1 : 0.6} iridescenceIOR={1.3}
-              emissive={e.color2 || e.color} emissiveIntensity={flagTex ? 0.06 : 0.28}
-              transparent opacity={flagTex ? 0.94 : 0.78}
+              metalness={flagTex ? 0 : 0.2}
+              roughness={flagTex ? 0.35 : 0.1}
+              clearcoat={flagTex ? 0.2 : 1}
+              clearcoatRoughness={flagTex ? 0.3 : 0.05}
+              iridescence={flagTex ? 0 : 0.6} iridescenceIOR={1.3}
+              emissive={flagTex ? '#000000' : (e.color2||e.color)}
+              emissiveIntensity={flagTex ? 0 : 0.28}
+              transparent={!flagTex}
+              opacity={flagTex ? 1 : 0.78}
               side={THREE.DoubleSide}
-              sheen={flagTex ? 0.1 : 0.4} sheenColor={e.color2 || e.color}
             />
           </mesh>
         );
