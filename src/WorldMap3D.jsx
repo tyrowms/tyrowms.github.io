@@ -20,10 +20,22 @@ const NAME_TR = {
   'Singapore':'Singapur','China':'Çin','Russia':'Rusya'
 };
 
-// ISO alpha-2 koddan bayrak emojisi oluştur: 'tr' → 🇹🇷
-const flagEmoji=(iso)=>{if(!iso)return'';return String.fromCodePoint(...[...iso.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));};
-// Türkçe ülke adından bayrak emojisi: 'ABD' → 🇺🇸
-const trNameToEmoji=(trName)=>{const eng=Object.entries(NAME_TR).find(([_,v])=>v===trName)?.[0]||trName;const iso=ISO_CODES[eng];return iso?flagEmoji(iso):'';};
+// Canvas bayrak → data URL (yuvarlak flag ikon için)
+const _flagImgCache={};
+function getFlagImgUrl(iso){
+  if(!iso)return'';
+  if(_flagImgCache[iso])return _flagImgCache[iso];
+  createFlagTexture(iso); // canvas oluştur
+  const tex=_flagCache[iso];
+  if(!tex?.source?.data?.toDataURL)return'';
+  _flagImgCache[iso]=tex.source.data.toDataURL('image/png');
+  return _flagImgCache[iso];
+}
+// Türkçe ülke adı → flag img data URL
+function trNameToFlagUrl(trName){
+  const eng=Object.entries(NAME_TR).find(([_,v])=>v===trName)?.[0]||trName;
+  return getFlagImgUrl(ISO_CODES[eng]);
+}
 
 // GeoJSON ülke adı → ISO alpha-2 kod (bayrak CDN için)
 const ISO_CODES = {
@@ -321,14 +333,14 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           background:'rgba(255,255,255,.72)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
           padding:'5px 12px', borderRadius:8,
           boxShadow:'0 2px 10px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.9)',
-          border:'1px solid rgba(255,255,255,.65)' }}>{isDiger?'⚓ ':trNameToEmoji(c.n)+' '}{c.n}</div>
+          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:5 }}>{isDiger?<span>⚓</span>:trNameToFlagUrl(c.n)?<img src={trNameToFlagUrl(c.n)} style={{width:18,height:18,borderRadius:'50%',objectFit:'cover',boxShadow:'0 1px 3px rgba(0,0,0,.15)',flexShrink:0}}/>:null}{c.n}</div>
       </Html>
       {isHov && !isSel && (
         <Html position={[0, radius * 2 + 1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.72)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:16, padding:'14px 20px', boxShadow:'0 8px 32px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9)',
             border:'1px solid rgba(255,255,255,.7)', fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:180 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8 }}>{trNameToEmoji(c.n)} {c.n}</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>{trNameToFlagUrl(c.n)?<img src={trNameToFlagUrl(c.n)} style={{width:24,height:24,borderRadius:'50%',objectFit:'cover',boxShadow:'0 2px 6px rgba(0,0,0,.15)'}}/>:null}{c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:14 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:14 }}>₺{fmt(c.v)}</div></div>
@@ -344,7 +356,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           <div style={{ background:'rgba(255,255,255,.78)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:18, padding:'16px 22px', boxShadow:`0 12px 40px rgba(0,0,0,.12), 0 0 0 1px ${color}22, inset 0 1px 0 rgba(255,255,255,.9)`,
             border:`1.5px solid ${color}33`, fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:200 }}>
-            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10 }}>{trNameToEmoji(c.n)} {c.n}</div>
+            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>{trNameToFlagUrl(c.n)?<img src={trNameToFlagUrl(c.n)} style={{width:28,height:28,borderRadius:'50%',objectFit:'cover',boxShadow:'0 2px 8px rgba(0,0,0,.18)'}}/>:null}{c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px 16px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:15 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:15 }}>₺{fmt(c.v)}</div></div>
@@ -453,13 +465,26 @@ function createFlagTexture(iso) {
       // Yıldız
       g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
       break;
-    case 'us': { // 🇺🇸 ABD
-      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.floor(i*H/13),W,Math.ceil(H/13)+1);}
-      const cw=Math.round(W*0.4),ch=Math.round(H*7/13);
-      g.fillStyle='#3C3B6E';g.fillRect(0,0,cw,ch);
+    case 'us': { // 🇺🇸 ABD — tam bayrak
+      // 13 şerit
+      const sh=H/13;
+      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B31942':'#fff';g.fillRect(0,Math.round(i*sh),W,Math.ceil(sh)+1);}
+      // Mavi kanton (üst-sol %40 genişlik, 7 şerit yüksekliği)
+      const cw=Math.round(W*0.4),ch=Math.round(sh*7);
+      g.fillStyle='#00205B';g.fillRect(0,0,cw,ch);
+      // 50 yıldız: 9 satır (5×6 + 4×5 dönüşümlü)
       g.fillStyle='#fff';
-      for(let r=0;r<9;r++){const cols=r%2===0?6:5;const gx=cw/6.5;const gy=ch/10;
-      for(let j=0;j<cols;j++){star((r%2===0?gx*0.6:gx)+j*gx,gy*0.7+r*gy, 6*S, 2.4*S, 5);}}
+      const rows=[6,5,6,5,6,5,6,5,6]; // her satırdaki yıldız sayısı
+      const rowH=ch/10; // satırlar arası mesafe
+      const colW6=cw/7; // 6-yıldız satırı için sütun genişliği
+      const colW5=cw/6; // 5-yıldız satırı için sütun genişliği
+      const sr=Math.min(rowH,colW6)*0.35; // yıldız dış yarıçap
+      rows.forEach((cols,ri)=>{
+        const cy=rowH*(ri+0.5);
+        const cWidth=cols===6?colW6:colW5;
+        const offX=cols===6?colW6*0.5:colW5*0.5;
+        for(let ci=0;ci<cols;ci++) star(offX+ci*cWidth, cy, sr, sr*0.4, 5);
+      });
       } break;
     case 'ca': // 🇨🇦 Kanada
       g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
