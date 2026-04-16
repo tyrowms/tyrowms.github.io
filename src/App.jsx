@@ -249,7 +249,7 @@ export default function App(){
   const [sel,setSel]=useState(null);
   const [hov,setHov]=useState(null);
   const [tab,setTab]=useState('f');
-  const [dashMapMode,setDashMapMode]=useState('turkey'); // 'turkey' | 'world'
+  const [dashMapMode,setDashMapMode]=useState('world'); // 'turkey' | 'world'
   // Emerging Markets state
   const [emSel,setEmSel]=useState(null);
   const [emHov,setEmHov]=useState(null);
@@ -2478,8 +2478,8 @@ export default function App(){
             </div>
           )}
 
-          {/* ===== EM RIGHT DRAWER ===== */}
-          {(emSel==='__global__'||emSD)&&pg==='em'&&!mob&&(()=>{
+          {/* ===== EM RIGHT DRAWER (Harita sayfası + Dashboard dünya modu) ===== */}
+          {(emSel==='__global__'||emSD)&&(pg==='em'||(pg==='dash'&&dashMapMode==='world'))&&!mob&&(()=>{
             const emFacName=DW.f.find(f=>f.id===(emDrillFac||emDrillWh))?.n||(emDrillFac||emDrillWh);
             const GBC=({children})=><div style={{display:'flex',alignItems:'center',gap:0,marginBottom:14,background:'rgba(255,255,255,0.65)',backdropFilter:'blur(20px) saturate(180%)',WebkitBackdropFilter:'blur(20px) saturate(180%)',border:'1px solid rgba(255,255,255,0.85)',boxShadow:'0 2px 12px rgba(0,0,0,0.05),inset 0 1px 0 rgba(255,255,255,0.9)',borderRadius:12,overflow:'hidden',flexWrap:'wrap'}}>{children}</div>;
             const BCBack=({onClick})=><div onClick={onClick} className="rh" style={{display:'flex',alignItems:'center',gap:4,padding:'10px 13px',cursor:'pointer',borderRight:'1px solid rgba(0,0,0,0.06)',flexShrink:0,transition:'background .15s'}}><ChevronLeft size={14} color={$.blu}/><span style={{fontSize:12,fontWeight:700,color:$.blu}}>Geri</span></div>;
