@@ -161,7 +161,7 @@ function agingColor2(days) {
   return new THREE.Color('#f43f5e');
 }
 
-function WorldSurface({ countryDataMap, flagTextures }) {
+function WorldSurface({ countryDataMap, flagTextures, flagVer }) {
   const { offGeo, entries } = useMemo(() => {
     const dMap = countryDataMap || {};
     const offGeoms = [], entries = [];
@@ -197,8 +197,9 @@ function WorldSurface({ countryDataMap, flagTextures }) {
       </mesh>}
       {entries.map((e,i) => {
         const flagTex = e.iso ? ftMap[e.iso] : null;
+        const loaded = flagTex?.image?.complete;
         return (
-          <mesh key={i} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
+          <mesh key={`${i}-${loaded?'f':'c'}-${flagVer}`} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
             <meshPhysicalMaterial
               map={flagTex || null}
               color={flagTex ? '#ffffff' : e.color}
@@ -347,7 +348,7 @@ function ClickPlane({ onDeselect }) {
   );
 }
 
-function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, flagTextures }) {
+function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, flagTextures, flagVer }) {
   const sorted = useMemo(() => [...countries].sort((a, b) => b.q - a.q), [countries]);
   const dataMap = useMemo(() => {
     const m = {};
@@ -361,7 +362,7 @@ function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acF
       <directionalLight position={[0, 15, 0]} intensity={0.5} />
       <directionalLight position={[8, 10, 5]} intensity={0.3} />
       <ClickPlane onDeselect={() => onSelect(null)} />
-      <WorldSurface countryDataMap={dataMap} flagTextures={flagTextures} />
+      <WorldSurface countryDataMap={dataMap} flagTextures={flagTextures} flagVer={flagVer} />
       <Borders />
       {sorted.map(c => (
         <Marker key={c.n} c={c} maxQty={maxQty}
@@ -454,7 +455,7 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
       >
         <Scene countries={countries} maxQty={maxQty}
           sel={sel} hov={hov} onSelect={wrappedSelect} onHover={onHover} onHoverEnd={onHoverEnd}
-          acFn={acFn} fmt={fmt} fmtTon={fmtTon} fN={fN} flagTextures={flagTexRef.current} />
+          acFn={acFn} fmt={fmt} fmtTon={fmtTon} fN={fN} flagTextures={flagTexRef.current} flagVer={flagVer} />
         <OrbitControls
           enablePan={true} enableZoom={true} enableRotate={false}
           screenSpacePanning={false}
