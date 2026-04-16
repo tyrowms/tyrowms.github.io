@@ -20,6 +20,25 @@ const NAME_TR = {
   'Singapore':'Singapur','China':'Çin','Russia':'Rusya'
 };
 
+// GeoJSON ülke adı → ISO alpha-2 kod (bayrak CDN için)
+const ISO_CODES = {
+  'Turkey':'tr','United States of America':'us','Canada':'ca','Belgium':'be',
+  'Romania':'ro','Iraq':'iq','Ghana':'gh','Sudan':'sd','Lebanon':'lb',
+  'France':'fr','Germany':'de','Russia':'ru','Ukraine':'ua','India':'in',
+  'Brazil':'br','China':'cn','Kenya':'ke','South Africa':'za','Nigeria':'ng',
+  'Morocco':'ma','Tunisia':'tn','Algeria':'dz','Mozambique':'mz','Tanzania':'tz',
+  'Saudi Arabia':'sa','United Arab Emirates':'ae','Singapore':'sg',
+  'United Kingdom':'gb','Spain':'es','Italy':'it','Poland':'pl','Netherlands':'nl',
+  'Sweden':'se','Norway':'no','Finland':'fi','Denmark':'dk','Portugal':'pt',
+  'Greece':'gr','Austria':'at','Switzerland':'ch','Czech Rep.':'cz','Hungary':'hu',
+  'Ireland':'ie','Japan':'jp','South Korea':'kr','Australia':'au','New Zealand':'nz',
+  'Mexico':'mx','Argentina':'ar','Colombia':'co','Chile':'cl','Peru':'pe',
+  'Egypt':'eg','Ethiopia':'et','Dem. Rep. Congo':'cd','Somalia':'so',
+  'Indonesia':'id','Thailand':'th','Vietnam':'vn','Philippines':'ph','Malaysia':'my',
+  'Pakistan':'pk','Bangladesh':'bd','Myanmar':'mm','Iran':'ir','Israel':'il',
+  'Jordan':'jo','Syria':'sy','Yemen':'ye','Oman':'om','Qatar':'qa','Kuwait':'kw','Bahrain':'bh',
+};
+
 // Antimeridyen geçişi tespiti: ardışık iki noktanın boylam farkı > 170° ise polygon'u böl
 const AM_THRESH = 170;
 function geoToShapes(feat) {
@@ -74,15 +93,17 @@ const EXT_ON = { depth: 0.25, bevelEnabled: true, bevelThickness: 0.06, bevelSiz
 
 function mergeGeos(geoms) {
   if (!geoms.length) return null;
-  const positions = [], normals = [], indices = [];
+  const positions = [], normals = [], uvs = [], indices = [];
   let offset = 0;
   geoms.forEach(g => {
     if (!g.attributes.position) return;
     const pos = g.attributes.position.array;
     const nrm = g.attributes.normal ? g.attributes.normal.array : new Float32Array(pos.length);
+    const uv = g.attributes.uv ? g.attributes.uv.array : new Float32Array((pos.length/3)*2);
     const idx = g.index ? Array.from(g.index.array) : [];
     for (let i = 0; i < pos.length; i++) positions.push(pos[i]);
     for (let i = 0; i < nrm.length; i++) normals.push(nrm[i]);
+    for (let i = 0; i < uv.length; i++) uvs.push(uv[i]);
     idx.forEach(i => indices.push(i + offset));
     offset += pos.length / 3;
   });
@@ -90,8 +111,27 @@ function mergeGeos(geoms) {
   const t = new THREE.BufferGeometry();
   t.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   t.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  if (uvs.length) t.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   if (indices.length) t.setIndex(indices);
   return t;
+}
+
+// UV'leri [0,1] aralığına normalize et — bayrak texture ülke sınırlarına sığar
+function normalizeUVs(geometry) {
+  const uv = geometry?.attributes?.uv;
+  if (!uv || uv.count === 0) return;
+  let minU=Infinity, maxU=-Infinity, minV=Infinity, maxV=-Infinity;
+  for (let i=0; i<uv.count; i++) {
+    const u=uv.getX(i), v=uv.getY(i);
+    if(u<minU)minU=u; if(u>maxU)maxU=u;
+    if(v<minV)minV=v; if(v>maxV)maxV=v;
+  }
+  const du=maxU-minU||1, dv=maxV-minV||1;
+  for (let i=0; i<uv.count; i++) {
+    uv.setX(i, (uv.getX(i)-minU)/du);
+    uv.setY(i, (uv.getY(i)-minV)/dv);
+  }
+  uv.needsUpdate = true;
 }
 
 // Aurora gradient renk paleti — iki renk arası blend
@@ -135,7 +175,10 @@ function WorldSurface({ countryDataMap }) {
         shapes.forEach(s => { try { gs.push(new THREE.ExtrudeGeometry(s, EXT_ON)); } catch(e){} });
         if (gs.length) {
           const mg = mergeGeos(gs); gs.forEach(g => g.dispose());
-          if (mg) entries.push({ geo: mg, color: agingColor(cd.a), color2: agingColor2(cd.a) });
+          if (mg) {
+            normalizeUVs(mg); // UV'leri [0,1]'e normalize et (bayrak texture için)
+            entries.push({ geo: mg, color: agingColor(cd.a), color2: agingColor2(cd.a), name, iso: ISO_CODES[name] });
+          }
         }
       } else {
         shapes.forEach(s => { try { offGeoms.push(new THREE.ExtrudeGeometry(s, EXT_OFF)); } catch(e){} });
@@ -145,24 +188,45 @@ function WorldSurface({ countryDataMap }) {
     return { offGeo: og, entries };
   }, [countryDataMap]);
 
+  // Bayrak texture'larını CDN'den yükle
+  const flagTextures = useMemo(() => {
+    const loader = new THREE.TextureLoader();
+    const texMap = {};
+    entries.forEach(e => {
+      if (e.iso) {
+        const tex = loader.load(`https://flagcdn.com/w640/${e.iso}.png`);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.minFilter = THREE.LinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        texMap[e.iso] = tex;
+      }
+    });
+    return texMap;
+  }, [entries]);
+
   return (
     <>
       {offGeo && <mesh rotation={[-Math.PI/2,0,0]} geometry={offGeo}>
         <meshBasicMaterial color="#edf1f6" side={THREE.DoubleSide} />
       </mesh>}
-      {entries.map((e,i) => (
-        <mesh key={i} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
-          <meshPhysicalMaterial
-            color={e.color} metalness={0.2} roughness={0.1}
-            clearcoat={1} clearcoatRoughness={0.05}
-            iridescence={0.6} iridescenceIOR={1.4}
-            emissive={e.color2 || e.color} emissiveIntensity={0.28}
-            transparent opacity={0.78}
-            side={THREE.DoubleSide}
-            sheen={0.4} sheenColor={e.color2 || e.color}
-          />
-        </mesh>
-      ))}
+      {entries.map((e,i) => {
+        const flagTex = e.iso ? flagTextures[e.iso] : null;
+        return (
+          <mesh key={i} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
+            <meshPhysicalMaterial
+              map={flagTex || null}
+              color={flagTex ? '#ffffff' : e.color}
+              metalness={0.1} roughness={flagTex ? 0.2 : 0.1}
+              clearcoat={0.7} clearcoatRoughness={0.1}
+              iridescence={flagTex ? 0.1 : 0.6} iridescenceIOR={1.3}
+              emissive={e.color2 || e.color} emissiveIntensity={flagTex ? 0.06 : 0.28}
+              transparent opacity={flagTex ? 0.94 : 0.78}
+              side={THREE.DoubleSide}
+              sheen={flagTex ? 0.1 : 0.4} sheenColor={e.color2 || e.color}
+            />
+          </mesh>
+        );
+      })}
     </>
   );
 }
