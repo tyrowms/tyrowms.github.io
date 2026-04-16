@@ -406,31 +406,134 @@ const _flagCache = {};
 function createFlagTexture(iso) {
   if (!iso) return null;
   if (_flagCache[iso]) return _flagCache[iso];
-  const W=256,H=170,c=document.createElement('canvas');c.width=W;c.height=H;
+  // 2x çözünürlük (Retina kalitesi)
+  const S=2, W=512, H=340;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
   const g=c.getContext('2d');
-  const hS=(cols)=>{const h=H/cols.length;cols.forEach((cl,i)=>{g.fillStyle=cl;g.fillRect(0,i*h,W,h+1);});};
-  const vS=(cols)=>{const w=W/cols.length;cols.forEach((cl,i)=>{g.fillStyle=cl;g.fillRect(i*w,0,w+1,H);});};
+  // Anti-alias + yüksek kalite
+  g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+  // Helpers
+  const fill=(cl)=>{g.fillStyle=cl;g.fillRect(0,0,W,H);};
+  const hS=(cols)=>{const h=H/cols.length;cols.forEach((cl,i)=>{g.fillStyle=cl;g.fillRect(0,Math.floor(i*h),W,Math.ceil(h)+1);});};
+  const vS=(cols)=>{const w=W/cols.length;cols.forEach((cl,i)=>{g.fillStyle=cl;g.fillRect(Math.floor(i*w),0,Math.ceil(w)+1,H);});};
+  const star=(cx,cy,r,r2,pts)=>{g.beginPath();for(let i=0;i<pts*2;i++){const a=Math.PI*i/pts-Math.PI/2;const rd=i%2===0?r:r2;g.lineTo(cx+Math.cos(a)*rd,cy+Math.sin(a)*rd);}g.closePath();g.fill();};
+  const crescent=(cx,cy,r1,r2,off)=>{g.beginPath();g.arc(cx,cy,r1,0,Math.PI*2);g.fill();g.save();g.globalCompositeOperation='destination-out';g.beginPath();g.arc(cx+off,cy,r2,0,Math.PI*2);g.fill();g.restore();};
+
   switch(iso){
-    case 'tr':g.fillStyle='#E30A17';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.beginPath();g.arc(112,H/2,36,0,Math.PI*2);g.fill();g.fillStyle='#E30A17';g.beginPath();g.arc(122,H/2,28,0,Math.PI*2);g.fill();g.fillStyle='#fff';g.save();g.translate(150,H/2);for(let i=0;i<5;i++){g.beginPath();const a=Math.PI*2*i/5-Math.PI/2;g.moveTo(Math.cos(a)*13,Math.sin(a)*13);const b=a+Math.PI/5;g.lineTo(Math.cos(b)*5,Math.sin(b)*5);const d=a+Math.PI*2/5;g.lineTo(Math.cos(d)*13,Math.sin(d)*13);g.fill();}g.restore();break;
-    case 'us':for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.floor(i*H/13),W,Math.ceil(H/13)+1);}g.fillStyle='#3C3B6E';g.fillRect(0,0,Math.floor(W*0.38),Math.floor(H*0.54));g.fillStyle='#fff';for(let r=0;r<5;r++)for(let j=0;j<6;j++){g.beginPath();g.arc(8+j*15,8+r*17,2,0,Math.PI*2);g.fill();}break;
-    case 'ca':vS(['#FF0000','#fff','#fff','#FF0000']);g.fillStyle='#FF0000';g.beginPath();g.moveTo(W/2,35);g.lineTo(W/2-8,65);g.lineTo(W/2-30,65);g.lineTo(W/2-15,80);g.lineTo(W/2-22,110);g.lineTo(W/2,95);g.lineTo(W/2+22,110);g.lineTo(W/2+15,80);g.lineTo(W/2+30,65);g.lineTo(W/2+8,65);g.fill();break;
-    case 'be':vS(['#000','#FAE042','#ED2939']);break;
-    case 'ro':vS(['#002B7F','#FCD116','#CE1126']);break;
-    case 'iq':hS(['#CE1126','#fff','#000']);g.fillStyle='#007A3D';g.font='bold 36px serif';g.textAlign='center';g.textBaseline='middle';g.fillText('★',W/2,H/2);break;
-    case 'gh':hS(['#CE1126','#FCD116','#006B3F']);g.fillStyle='#000';g.save();g.translate(W/2,H/2);g.beginPath();for(let i=0;i<5;i++){const a=Math.PI*2*i/5-Math.PI/2;g.lineTo(Math.cos(a)*20,Math.sin(a)*20);const b=a+Math.PI/5;g.lineTo(Math.cos(b)*8,Math.sin(b)*8);}g.fill();g.restore();break;
-    case 'sd':hS(['#D21034','#fff','#000']);g.fillStyle='#007229';g.beginPath();g.moveTo(0,0);g.lineTo(W*0.28,H/2);g.lineTo(0,H);g.fill();break;
-    case 'gb':g.fillStyle='#012169';g.fillRect(0,0,W,H);g.strokeStyle='#fff';g.lineWidth=22;g.beginPath();g.moveTo(0,0);g.lineTo(W,H);g.moveTo(W,0);g.lineTo(0,H);g.stroke();g.strokeStyle='#C8102E';g.lineWidth=8;g.stroke();g.fillStyle='#fff';g.fillRect(W/2-16,0,32,H);g.fillRect(0,H/2-12,W,24);g.fillStyle='#C8102E';g.fillRect(W/2-8,0,16,H);g.fillRect(0,H/2-5,W,10);break;
-    case 'de':hS(['#000','#DD0000','#FFCE00']);break;
-    case 'fr':vS(['#002395','#fff','#ED2939']);break;
-    case 'it':vS(['#009246','#fff','#CE2B37']);break;
-    case 'ru':hS(['#fff','#0039A6','#D52B1E']);break;
-    case 'sa':g.fillStyle='#006C35';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.font='bold 20px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('المملكة العربية',W/2,H/2-12);g.fillText('السعودية',W/2,H/2+12);break;
-    case 'ae':g.fillStyle='#00732F';g.fillRect(0,0,W,H/3);g.fillStyle='#fff';g.fillRect(0,H/3,W,H/3);g.fillStyle='#000';g.fillRect(0,H*2/3,W,H/3);g.fillStyle='#FF0000';g.fillRect(0,0,W*0.22,H);break;
-    default:g.fillStyle='#ccc';g.fillRect(0,0,W,H);g.fillStyle='#666';g.font='bold 36px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(iso.toUpperCase(),W/2,H/2);break;
+    case 'tr': // 🇹🇷 Türkiye
+      fill('#E30A17');
+      g.fillStyle='#fff';
+      // Hilal: büyük beyaz daire + kırmızı kırpma dairesi
+      g.beginPath();g.arc(W*0.42,H/2,H*0.25,0,Math.PI*2);g.fill();
+      g.fillStyle='#E30A17';g.beginPath();g.arc(W*0.45,H/2,H*0.2,0,Math.PI*2);g.fill();
+      // Yıldız
+      g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
+      break;
+    case 'us': // 🇺🇸 ABD
+      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.floor(i*H/13),W,Math.ceil(H/13)+1);}
+      g.fillStyle='#3C3B6E';g.fillRect(0,0,Math.round(W*0.4),Math.round(H*7/13));
+      g.fillStyle='#fff';
+      const bx=W*0.4,by=H*7/13;
+      for(let r=0;r<9;r++)for(let j=0;j<(r%2===0?6:5);j++){
+        const ox=r%2===0?bx/(12):bx/(10);
+        star(ox+j*(bx/6),by/18+r*(by/9),4*S,1.6*S,5);
+      }
+      break;
+    case 'ca': // 🇨🇦 Kanada
+      g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
+      g.fillStyle='#fff';g.fillRect(W/4,0,W/2,H);
+      // Akçaağaç yaprağı (11 noktalı)
+      g.fillStyle='#FF0000';g.save();g.translate(W/2,H/2);g.scale(S,S);
+      g.beginPath();
+      g.moveTo(0,-40);g.lineTo(5,-28);g.lineTo(18,-32);g.lineTo(14,-20);g.lineTo(24,-18);
+      g.lineTo(16,-8);g.lineTo(20,0);g.lineTo(10,2);g.lineTo(12,16);g.lineTo(0,10);
+      g.lineTo(-12,16);g.lineTo(-10,2);g.lineTo(-20,0);g.lineTo(-16,-8);g.lineTo(-24,-18);
+      g.lineTo(-14,-20);g.lineTo(-18,-32);g.lineTo(-5,-28);g.closePath();g.fill();
+      g.restore();
+      break;
+    case 'be': vS(['#000','#FAE042','#ED2939']); break; // 🇧🇪
+    case 'ro': vS(['#002B7F','#FCD116','#CE1126']); break; // 🇷🇴
+    case 'iq': // 🇮🇶 Irak
+      hS(['#CE1126','#fff','#000']);
+      g.fillStyle='#007A3D';g.font=`bold ${40*S}px serif`;g.textAlign='center';g.textBaseline='middle';
+      g.fillText('الله أكبر',W/2,H/2);
+      break;
+    case 'gh': // 🇬🇭 Gana
+      hS(['#CE1126','#FCD116','#006B3F']);
+      g.fillStyle='#000';star(W/2,H/2,H*0.12,H*0.05,5);
+      break;
+    case 'sd': // 🇸🇩 Sudan
+      hS(['#D21034','#fff','#000']);
+      g.fillStyle='#007229';g.beginPath();g.moveTo(0,0);g.lineTo(W*0.28,H/2);g.lineTo(0,H);g.closePath();g.fill();
+      break;
+    case 'gb': // 🇬🇧 İngiltere
+      fill('#012169');
+      // Çapraz beyaz
+      g.strokeStyle='#fff';g.lineWidth=30*S;g.beginPath();g.moveTo(0,0);g.lineTo(W,H);g.moveTo(W,0);g.lineTo(0,H);g.stroke();
+      // Çapraz kırmızı
+      g.strokeStyle='#C8102E';g.lineWidth=10*S;g.beginPath();g.moveTo(0,0);g.lineTo(W,H);g.moveTo(W,0);g.lineTo(0,H);g.stroke();
+      // Dikey/yatay beyaz
+      g.fillStyle='#fff';g.fillRect(W/2-18*S,0,36*S,H);g.fillRect(0,H/2-14*S,W,28*S);
+      // Dikey/yatay kırmızı
+      g.fillStyle='#C8102E';g.fillRect(W/2-9*S,0,18*S,H);g.fillRect(0,H/2-7*S,W,14*S);
+      break;
+    case 'de': hS(['#000','#DD0000','#FFCE00']); break; // 🇩🇪
+    case 'fr': vS(['#002395','#fff','#ED2939']); break; // 🇫🇷
+    case 'it': vS(['#009246','#fff','#CE2B37']); break; // 🇮🇹
+    case 'ru': hS(['#fff','#0039A6','#D52B1E']); break; // 🇷🇺
+    case 'nl': hS(['#AE1C28','#fff','#21468B']); break; // 🇳🇱
+    case 'pl': hS(['#fff','#DC143C']); break; // 🇵🇱
+    case 'ua': hS(['#005BBB','#FFD500']); break; // 🇺🇦
+    case 'sa': // 🇸🇦 Suudi Arabistan
+      fill('#006C35');
+      g.fillStyle='#fff';g.font=`bold ${28*S}px sans-serif`;g.textAlign='center';g.textBaseline='middle';
+      g.fillText('لا إله إلا الله',W/2,H*0.38);
+      g.fillText('محمد رسول الله',W/2,H*0.58);
+      // Kılıç
+      g.strokeStyle='#fff';g.lineWidth=3*S;g.beginPath();g.moveTo(W*0.25,H*0.78);g.lineTo(W*0.75,H*0.78);g.stroke();
+      break;
+    case 'ae': // 🇦🇪 BAE
+      g.fillStyle='#00732F';g.fillRect(0,0,W,H/3);
+      g.fillStyle='#fff';g.fillRect(0,H/3,W,H/3);
+      g.fillStyle='#000';g.fillRect(0,H*2/3,W,H/3);
+      g.fillStyle='#FF0000';g.fillRect(0,0,W*0.22,H);
+      break;
+    case 'eg': // 🇪🇬 Mısır
+      hS(['#CE1126','#fff','#000']);
+      g.fillStyle='#C09300';star(W/2,H/2,H*0.1,H*0.04,5);
+      break;
+    case 'br': // 🇧🇷 Brezilya
+      fill('#009B3A');
+      g.fillStyle='#FEDF00';g.beginPath();g.moveTo(W/2,H*0.08);g.lineTo(W*0.92,H/2);g.lineTo(W/2,H*0.92);g.lineTo(W*0.08,H/2);g.closePath();g.fill();
+      g.fillStyle='#002776';g.beginPath();g.arc(W/2,H/2,H*0.22,0,Math.PI*2);g.fill();
+      g.strokeStyle='#fff';g.lineWidth=3*S;g.beginPath();g.arc(W/2,H*0.58,H*0.4,-0.3,-2.8,true);g.stroke();
+      break;
+    case 'cn': // 🇨🇳 Çin
+      fill('#DE2910');
+      g.fillStyle='#FFDE00';star(W*0.18,H*0.28,H*0.16,H*0.06,5);
+      const sc=[{x:.32,y:.12},{x:.38,y:.2},{x:.38,y:.33},{x:.32,y:.42}];
+      sc.forEach(p=>{star(W*p.x,H*p.y,H*0.05,H*0.02,5);});
+      break;
+    case 'in': // 🇮🇳 Hindistan
+      hS(['#FF9933','#fff','#138808']);
+      g.fillStyle='#000080';g.beginPath();g.arc(W/2,H/2,H*0.1,0,Math.PI*2);g.stroke();
+      g.strokeStyle='#000080';g.lineWidth=2*S;
+      for(let i=0;i<24;i++){const a=Math.PI*2*i/24;g.beginPath();g.moveTo(W/2+Math.cos(a)*H*0.04,H/2+Math.sin(a)*H*0.04);g.lineTo(W/2+Math.cos(a)*H*0.1,H/2+Math.sin(a)*H*0.1);g.stroke();}
+      break;
+    default:
+      // Bilinmeyen: gradient gri + büyük ISO kodu
+      const grd=g.createLinearGradient(0,0,W,H);grd.addColorStop(0,'#e0e0e0');grd.addColorStop(1,'#c0c0c0');
+      g.fillStyle=grd;g.fillRect(0,0,W,H);
+      g.fillStyle='#888';g.font=`bold ${48*S}px sans-serif`;g.textAlign='center';g.textBaseline='middle';
+      g.fillText(iso.toUpperCase(),W/2,H/2);
+      break;
   }
   const tex=new THREE.CanvasTexture(c);
   tex.colorSpace=THREE.SRGBColorSpace;
-  tex.minFilter=THREE.LinearFilter;
+  tex.minFilter=THREE.LinearMipmapLinearFilter;
+  tex.magFilter=THREE.LinearFilter;
+  tex.anisotropy=4;
+  tex.generateMipmaps=true;
   _flagCache[iso]=tex;
   return tex;
 }
