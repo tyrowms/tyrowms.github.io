@@ -116,22 +116,48 @@ function mergeGeos(geoms) {
   return t;
 }
 
-// UV'leri [0,1] aralığına normalize et — bayrak texture ülke sınırlarına sığar
+// UV'leri POSITION'dan hesapla — ülke sınırlarına göre bayrak 1× sığdır, aspect ratio koru
 function normalizeUVs(geometry) {
-  const uv = geometry?.attributes?.uv;
-  if (!uv || uv.count === 0) return;
-  let minU=Infinity, maxU=-Infinity, minV=Infinity, maxV=-Infinity;
-  for (let i=0; i<uv.count; i++) {
-    const u=uv.getX(i), v=uv.getY(i);
-    if(u<minU)minU=u; if(u>maxU)maxU=u;
-    if(v<minV)minV=v; if(v>maxV)maxV=v;
+  const pos=geometry?.attributes?.position, uv=geometry?.attributes?.uv;
+  if(!uv||!pos||pos.count===0) return;
+  // Üst yüzey vertexlerinin XY bounding box'ını bul (Z ≈ depth=0.25)
+  const depth=0.25, tol=0.1;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(let i=0;i<pos.count;i++){
+    if(Math.abs(pos.getZ(i)-depth)<tol){
+      const x=pos.getX(i),y=pos.getY(i);
+      if(x<minX)minX=x;if(x>maxX)maxX=x;
+      if(y<minY)minY=y;if(y>maxY)maxY=y;
+    }
   }
-  const du=maxU-minU||1, dv=maxV-minV||1;
-  for (let i=0; i<uv.count; i++) {
-    uv.setX(i, (uv.getX(i)-minU)/du);
-    uv.setY(i, (uv.getY(i)-minV)/dv);
+  if(minX===Infinity){
+    // Fallback: tüm vertex'lerden bounding box
+    for(let i=0;i<pos.count;i++){
+      const x=pos.getX(i),y=pos.getY(i);
+      if(x<minX)minX=x;if(x>maxX)maxX=x;
+      if(y<minY)minY=y;if(y>maxY)maxY=y;
+    }
   }
-  uv.needsUpdate = true;
+  const dx=maxX-minX||1, dy=maxY-minY||1;
+  const flagAR=3/2; // bayrak oranı (genişlik/yükseklik)
+  const geoAR=dx/dy; // ülke oranı
+  for(let i=0;i<pos.count;i++){
+    let u=(pos.getX(i)-minX)/dx;
+    let v=(pos.getY(i)-minY)/dy;
+    // Bayrak aspect ratio'sunu koru, merkeze hizala
+    if(geoAR>flagAR){
+      // Ülke bayraktan geniş → yatay sıkıştır, ortala
+      const s=flagAR/geoAR;
+      u=(u-0.5)*s+0.5;
+    }else{
+      // Ülke bayraktan uzun → dikey sıkıştır, ortala
+      const s=geoAR/flagAR;
+      v=(v-0.5)*s+0.5;
+    }
+    uv.setX(i, u);
+    uv.setY(i, 1-v); // canvas Y aşağı → UV Y yukarı çevir
+  }
+  uv.needsUpdate=true;
 }
 
 // Aurora gradient renk paleti — iki renk arası blend
@@ -534,9 +560,8 @@ function createFlagTexture(iso) {
   tex.magFilter=THREE.LinearFilter;
   tex.anisotropy=4;
   tex.generateMipmaps=true;
-  tex.wrapS=THREE.RepeatWrapping;
-  tex.wrapT=THREE.RepeatWrapping;
-  tex.repeat.set(3,2); // bayrak 3×2 tile — kumaş dokusu gibi
+  tex.wrapS=THREE.ClampToEdgeWrapping;
+  tex.wrapT=THREE.ClampToEdgeWrapping;
   _flagCache[iso]=tex;
   return tex;
 }
