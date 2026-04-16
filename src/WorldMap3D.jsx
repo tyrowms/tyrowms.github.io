@@ -467,16 +467,18 @@ function createFlagTexture(iso) {
       // Yıldız
       g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
       break;
-    case 'us': { // 🇺🇸 ABD — DIAGNOSTIC: sol yarı mavi, sağ yarı kırmızı
-      // Eğer ABD haritada sol=mavi sağ=kırmızı görünürse UV mapping doğru
-      g.fillStyle='#2563EB';g.fillRect(0,0,W/2,H);
-      g.fillStyle='#DC2626';g.fillRect(W/2,0,W/2,H);
-      // Üst yarıya beyaz, alt yarıya yeşil — yön testi
-      g.fillStyle='rgba(255,255,255,0.5)';g.fillRect(0,0,W,H/2);
-      g.fillStyle='rgba(0,128,0,0.5)';g.fillRect(0,H/2,W,H/2);
-      // Sonuç: sol-üst=açık mavi, sağ-üst=açık kırmızı, sol-alt=koyu mavi-yeşil, sağ-alt=koyu kırmızı-yeşil
-      g.fillStyle='#fff';g.font='bold 60px sans-serif';g.textAlign='center';g.textBaseline='middle';
-      g.fillText('UV TEST',W/2,H/2);
+    case 'us': { // 🇺🇸 ABD — mavi baskın, tüm canvas'ta görünür
+      // Üst yarı: mavi kanton (geniş) + beyaz yıldızlar
+      g.fillStyle='#2563EB';g.fillRect(0,0,W,Math.round(H*0.55));
+      // Alt yarı: kırmızı-beyaz şeritler
+      const stripeH=H*0.45/6;
+      for(let i=0;i<6;i++){g.fillStyle=i%2===0?'#DC2626':'#fff';g.fillRect(0,Math.round(H*0.55+i*stripeH),W,Math.ceil(stripeH)+1);}
+      // Yıldızlar — mavi alanın ortasında büyük
+      g.fillStyle='#fff';
+      const rows=[6,5,6,5,6];const blueH=H*0.55;
+      for(let ri=0;ri<rows.length;ri++){const n=rows[ri];const cy=blueH/(rows.length+1)*(ri+1);
+      for(let ci=0;ci<n;ci++){const cx=W/(n+1)*(ci+1);
+      star(cx,cy,H*0.04,H*0.016,5);}}
       } break;
     case 'ca': // 🇨🇦 Kanada
       g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
