@@ -87,14 +87,13 @@ function buildD(rows){
 // Uluslararası tesis kodu → Ülke (gerçek ERP verisinden)
 const FCTM={
   // ABD
-  'ALEX':'ABD','ARMIL':'ABD','BWC':'ABD','BORD':'ABD','BRIDG':'ABD','CHERO':'ABD','COLDZ':'ABD','COLU':'ABD','COZAD':'ABD','DEJON':'ABD','DELTA':'ABD','DESM':'ABD','ECHO':'ABD','FIVER':'ABD','GALVA':'ABD','GLADS':'ABD','GRAN':'ABD','GROV':'ABD','HAMM':'ABD','HERC':'ABD','HUNT':'ABD','LANG':'ABD','LATHR':'ABD','LONGB':'ABD','MANLY':'ABD','MANOR':'ABD','MHC':'ABD','MARSE':'ABD','NEWC':'ABD','NOLA3':'ABD','NOLA4':'ABD','NOLA6':'ABD','NOLA7':'ABD','OAK':'ABD','ONT':'ABD','OTT':'ABD','OZARK':'ABD','PASA':'ABD','PENN':'ABD','PHIL':'ABD','PHOE':'ABD','PLEAS':'ABD','PROG':'ABD','RED':'ABD','ROCH':'ABD','SIOUX':'ABD','SUMN':'ABD','SWEDE':'ABD','VALLA':'ABD','VANCO':'ABD','WILM':'ABD',
+  'ALEX':'ABD','ARMIL':'ABD','BWC':'ABD','BORD':'ABD','BRIDG':'ABD','CHERO':'ABD','COLDZ':'ABD','COLU':'ABD','COZAD':'ABD','DEJON':'ABD','DELTA':'ABD','DESM':'ABD','ECHO':'ABD','FIVER':'ABD','GALVA':'ABD','GLADS':'ABD','GRAN':'ABD','GROV':'ABD','HAMM':'ABD','HERC':'ABD','HUNT':'ABD','LANG':'ABD','LATHR':'ABD','LONGB':'ABD','MANLY':'ABD','MANOR':'ABD','MHC':'ABD','MARSE':'ABD','NEWC':'ABD','NOLA3':'ABD','NOLA4':'ABD','NOLA5':'ABD','NOLA6':'ABD','NOLA7':'ABD','NOLA8':'ABD','OAK':'ABD','ONT':'ABD','OTT':'ABD','OZARK':'ABD','PASA':'ABD','PENN':'ABD','PHIL':'ABD','PHOE':'ABD','PLEAS':'ABD','PROG':'ABD','RED':'ABD','ROCH':'ABD','SIOUX':'ABD','SUMN':'ABD','SWEDE':'ABD','VALLA':'ABD','VANCO':'ABD','WILM':'ABD','BOONE':'ABD','BOON':'ABD','SRUS':'ABD','LEBAN':'ABD','ALTAS':'ABD',
   // Kanada
-  'AUS':'Kanada','GNGT':'Kanada','HEP':'Kanada','MONTR':'Kanada','REG':'Kanada','SAS':'Kanada','VANC':'Kanada','VANCP':'Kanada',
+  'AUS':'Kanada','GNGT':'Kanada','HEP':'Kanada','MONTR':'Kanada','MONTPORT':'Kanada','REG':'Kanada','SAS':'Kanada','VANC':'Kanada','VANCP':'Kanada','VANCY':'Kanada',
   // Avrupa
   'ANTW':'Belçika','CALINESTI':'Romanya','MARACINENI':'Romanya','GBI':'Romanya',
   // Orta Doğu / Irak
   'BBL':'Irak','BGD':'Irak','BSR':'Irak','KBR':'Irak','KUT':'Irak','NJF':'Irak',
-  'LEBAN':'ABD',
   // Afrika
   'GHANA':'Gana',
   // Özel Türk kodları (TRY- prefix ama yurtdışı)
@@ -107,23 +106,43 @@ const COUNTRY_LL={
   'Irak':[33,44],'Gana':[7.9,-1],'Sudan':[15.6,32.5],
   'Diğer':[18,-30]
 };
-const gCountry=c=>{
-  // Önce tam kodu FCTM'de ara (TRY-SDN gibi özel durumlar)
-  if(FCTM[c])return FCTM[c];
-  // Sonra tam kodu CTM'de ara
-  if(CTM[c])return'Türkiye';
-  const p=c.split('-')[0];
-  // Prefix'i FCTM'de ara
+// ABD eyalet ve Kanada il kodları — tesis adından ülke tespiti için
+const US_STATES=new Set(['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']);
+const CA_PROVS=new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','PQ','QC','SK','YT']);
+
+const gCountry=(code,name)=>{
+  // 1. Tam kodu FCTM'de ara
+  if(FCTM[code])return FCTM[code];
+  // 2. Tam kodu CTM'de ara (Türkiye)
+  if(CTM[code])return'Türkiye';
+  const p=code.split('-')[0];
+  // 3. Prefix'i FCTM'de ara
   if(FCTM[p])return FCTM[p];
-  // Prefix'i CTM'de ara
+  // 4. Prefix'i CTM'de ara
   if(CTM[p])return'Türkiye';
+  // 5. Akıllı fallback: tesis adından eyalet/il kodu tespit et
+  // Örn: "Boone, IA - AgCertain..." → IA = Iowa = ABD
+  // Örn: "Vancouver, BC - CN Intermodal..." → BC = British Columbia = Kanada
+  if(name){
+    const m=name.match(/,\s*([A-Z]{2})\s*[-–—]/);
+    if(m){
+      if(US_STATES.has(m[1]))return'ABD';
+      if(CA_PROVS.has(m[1]))return'Kanada';
+    }
+    // İsim içinde ülke ipuçları
+    const u=name.toUpperCase();
+    if(u.includes('GHANA'))return'Gana';
+    if(u.includes('IRAQ')||u.includes('IRAK'))return'Irak';
+    if(u.includes('SUDAN'))return'Sudan';
+    if(u.includes('ROMANIA')||u.includes('ROMANYA'))return'Romanya';
+  }
   return'Diğer';
 };
 
 function buildDWorld(rows){
   const fm={},wm={};
   rows.forEach(r=>{const mi=r[8],ts=r[9],ta=r[10],dp=r[11],da=r[12],ua=r[3],fu=r[25],fifo=r[27];
-    if(!fm[ts])fm[ts]={id:ts,n:ta,country:gCountry(ts),type:gT(ts),q:0,v:0,ws:new Set(),ps:new Set(),td:0,tq:0};
+    if(!fm[ts])fm[ts]={id:ts,n:ta,country:gCountry(ts,ta),type:gT(ts),q:0,v:0,ws:new Set(),ps:new Set(),td:0,tq:0};
     const f=fm[ts];f.q+=mi;f.v+=mi*fu;f.ws.add(dp);f.ps.add(ua);f.td+=mi*fifo;f.tq+=mi;
     const wk=ts+'|'+dp;if(!wm[wk])wm[wk]={fc:ts,id:dp,n:da,q:0,v:0,ps:new Set(),td:0,tq:0};
     const w=wm[wk];w.q+=mi;w.v+=mi*fu;w.ps.add(ua);w.td+=mi*fifo;w.tq+=mi;});
