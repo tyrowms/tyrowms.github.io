@@ -161,7 +161,7 @@ function agingColor2(days) {
   return new THREE.Color('#f43f5e');
 }
 
-function WorldSurface({ countryDataMap }) {
+function WorldSurface({ countryDataMap, flagTextures }) {
   const { offGeo, entries } = useMemo(() => {
     const dMap = countryDataMap || {};
     const offGeoms = [], entries = [];
@@ -176,7 +176,7 @@ function WorldSurface({ countryDataMap }) {
         if (gs.length) {
           const mg = mergeGeos(gs); gs.forEach(g => g.dispose());
           if (mg) {
-            normalizeUVs(mg); // UV'leri [0,1]'e normalize et (bayrak texture için)
+            try { normalizeUVs(mg); } catch(e) {} // UV normalize — bayrak texture için
             entries.push({ geo: mg, color: agingColor(cd.a), color2: agingColor2(cd.a), name, iso: ISO_CODES[name] });
           }
         }
@@ -188,29 +188,7 @@ function WorldSurface({ countryDataMap }) {
     return { offGeo: og, entries };
   }, [countryDataMap]);
 
-  // Bayrak texture'larını CDN'den yükle (crossOrigin gerekli — WebGL tainted canvas policy)
-  const flagTextures = useMemo(() => {
-    const loader = new THREE.TextureLoader();
-    loader.setCrossOrigin('anonymous');
-    const texMap = {};
-    entries.forEach(e => {
-      if (e.iso) {
-        const tex = loader.load(
-          `https://flagcdn.com/w640/${e.iso}.png`,
-          (t) => { t.needsUpdate = true; }, // onLoad: force material update
-          undefined,
-          () => {} // onError: silent fallback to color
-        );
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.minFilter = THREE.LinearFilter;
-        tex.magFilter = THREE.LinearFilter;
-        tex.wrapS = THREE.ClampToEdgeWrapping;
-        tex.wrapT = THREE.ClampToEdgeWrapping;
-        texMap[e.iso] = tex;
-      }
-    });
-    return texMap;
-  }, [entries]);
+  const ftMap = flagTextures || {};
 
   return (
     <>
@@ -218,7 +196,7 @@ function WorldSurface({ countryDataMap }) {
         <meshBasicMaterial color="#edf1f6" side={THREE.DoubleSide} />
       </mesh>}
       {entries.map((e,i) => {
-        const flagTex = e.iso ? flagTextures[e.iso] : null;
+        const flagTex = e.iso ? ftMap[e.iso] : null;
         return (
           <mesh key={i} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
             <meshPhysicalMaterial
@@ -369,7 +347,7 @@ function ClickPlane({ onDeselect }) {
   );
 }
 
-function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN }) {
+function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, flagTextures }) {
   const sorted = useMemo(() => [...countries].sort((a, b) => b.q - a.q), [countries]);
   const dataMap = useMemo(() => {
     const m = {};
@@ -383,7 +361,7 @@ function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acF
       <directionalLight position={[0, 15, 0]} intensity={0.5} />
       <directionalLight position={[8, 10, 5]} intensity={0.3} />
       <ClickPlane onDeselect={() => onSelect(null)} />
-      <WorldSurface countryDataMap={dataMap} />
+      <WorldSurface countryDataMap={dataMap} flagTextures={flagTextures} />
       <Borders />
       {sorted.map(c => (
         <Marker key={c.n} c={c} maxQty={maxQty}
@@ -423,6 +401,28 @@ function computeView(countries) {
   return { camY, cx, cz };
 }
 
+// Bayrak texture'larını Canvas DIŞINDA yükle (R3F Canvas context'te TextureLoader sorun çıkarabiliyor)
+const _flagLoader = new THREE.TextureLoader();
+_flagLoader.setCrossOrigin('anonymous');
+const _flagCache = {};
+function loadFlagTexture(iso) {
+  if (!iso) return null;
+  if (_flagCache[iso]) return _flagCache[iso];
+  const tex = _flagLoader.load(
+    `https://flagcdn.com/w640/${iso}.png`,
+    (t) => { t.needsUpdate = true; },
+    undefined,
+    () => { _flagCache[iso] = null; } // hata: cache'e null yaz, tekrar deneme
+  );
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  _flagCache[iso] = tex;
+  return tex;
+}
+
 export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, onGlobalClick, globalActive, onSwitchToTurkey }) {
   // Türkiye'ye tıklandığında dashboard'daysa Türkiye haritasına geç
   const wrappedSelect = useCallback((name) => {
@@ -432,6 +432,9 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
   // İlk render'da hesapla — sonraki güncellemelerde değişmez
   const view = useMemo(() => computeView(countries), [countries]);
 
+  // Bayrak texture'ları (şimdilik devre dışı — stabilize edildikten sonra aktifleştirilecek)
+  const flagTexRef = useRef({});
+
   return (
     <div style={{ height: 500, overflow:'hidden', background:'linear-gradient(180deg,#eaeff5,#f5f7fa)', borderRadius:'0 0 16px 16px', position:'relative' }}>
       <Canvas
@@ -440,7 +443,7 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
       >
         <Scene countries={countries} maxQty={maxQty}
           sel={sel} hov={hov} onSelect={wrappedSelect} onHover={onHover} onHoverEnd={onHoverEnd}
-          acFn={acFn} fmt={fmt} fmtTon={fmtTon} fN={fN} />
+          acFn={acFn} fmt={fmt} fmtTon={fmtTon} fN={fN} flagTextures={flagTexRef.current} />
         <OrbitControls
           enablePan={true} enableZoom={true} enableRotate={false}
           screenSpacePanning={false}
@@ -461,9 +464,8 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
         transition:'all .25s ease', display:'flex', alignItems:'center' }}>
         {/* Subtle accent line */}
         <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
-          background: globalActive ? '#0d6e4f' : 'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6,#0d6e4f)',
-          backgroundSize:'200% 100%', animation: globalActive ? 'none' : 'shimmer 3s linear infinite',
-          opacity: globalActive ? .8 : .35 }}/>
+          background: globalActive ? '#0d6e4f' : 'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6)',
+          opacity: globalActive ? .8 : .4 }}/>
         {/* Globe icon with orbit ring */}
         <div style={{ width:38, height:38, margin:'9px 0 9px 11px', borderRadius:'50%', position:'relative',
           background: globalActive ? 'rgba(13,110,79,.08)' : 'rgba(0,0,0,.03)',
