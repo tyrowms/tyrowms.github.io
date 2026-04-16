@@ -20,18 +20,11 @@ const NAME_TR = {
   'Singapore':'Singapur','China':'Çin','Russia':'Rusya'
 };
 
-// Yüksek kalite yuvarlak SVG bayrak ikonu (circle-flags CDN)
-// HTML <img> tag'ları CDN'den sorunsuz yükler (WebGL'den farklı olarak)
-function flagIconUrl(iso){return iso?`https://hatscripts.github.io/circle-flags/flags/${iso}.svg`:'';}
-function trNameToFlagUrl(trName){
+// Bayrak ikonu URL — flagcdn.com SVG (CORS: *, curl ile doğrulanmış)
+// HTML <img> tag CORS gerektirmez (sadece gösterim, canvas/WebGL değil)
+function trNameToIso(trName){
   const eng=Object.entries(NAME_TR).find(([_,v])=>v===trName)?.[0]||trName;
-  const iso=ISO_CODES[eng];return iso?flagIconUrl(iso):'';
-}
-// Flag icon component — CDN SVG, hata olursa gizle
-function FlagIcon({trName,size=18}){
-  const url=trNameToFlagUrl(trName);
-  if(!url)return null;
-  return <img src={url} width={size} height={size} style={{borderRadius:'50%',objectFit:'cover',boxShadow:'0 1px 4px rgba(0,0,0,.15)',flexShrink:0,display:'block'}} onError={e=>{e.target.style.display='none';}} />;
+  return ISO_CODES[eng]||'';
 }
 
 // GeoJSON ülke adı → ISO alpha-2 kod (bayrak CDN için)
@@ -330,14 +323,14 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           background:'rgba(255,255,255,.72)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
           padding:'5px 12px', borderRadius:8,
           boxShadow:'0 2px 10px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.9)',
-          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:5 }}>{isDiger?<span>⚓</span>:<FlagIcon trName={c.n} size={16}/>}{c.n}</div>
+          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:5 }}>{isDiger?<span>⚓</span>:trNameToIso(c.n)?<img src={`https://flagcdn.com/${trNameToIso(c.n)}.svg`} width={16} height={12} style={{borderRadius:2,objectFit:'cover',flexShrink:0}} onError={e=>{e.target.style.display='none';}}/>:null}{c.n}</div>
       </Html>
       {isHov && !isSel && (
         <Html position={[0, radius * 2 + 1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.72)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:16, padding:'14px 20px', boxShadow:'0 8px 32px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9)',
             border:'1px solid rgba(255,255,255,.7)', fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:180 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}><FlagIcon trName={c.n} size={24}/>{c.n}</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>{trNameToIso(c.n)?<img src={`https://flagcdn.com/${trNameToIso(c.n)}.svg`} width={24} height={18} style={{borderRadius:3,objectFit:'cover',boxShadow:'0 1px 4px rgba(0,0,0,.12)'}} onError={e=>{e.target.style.display='none';}}/>:null}{c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:14 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:14 }}>₺{fmt(c.v)}</div></div>
@@ -353,7 +346,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           <div style={{ background:'rgba(255,255,255,.78)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:18, padding:'16px 22px', boxShadow:`0 12px 40px rgba(0,0,0,.12), 0 0 0 1px ${color}22, inset 0 1px 0 rgba(255,255,255,.9)`,
             border:`1.5px solid ${color}33`, fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:200 }}>
-            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}><FlagIcon trName={c.n} size={28}/>{c.n}</div>
+            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>{trNameToIso(c.n)?<img src={`https://flagcdn.com/${trNameToIso(c.n)}.svg`} width={28} height={21} style={{borderRadius:3,objectFit:'cover',boxShadow:'0 2px 6px rgba(0,0,0,.15)'}} onError={e=>{e.target.style.display='none';}}/>:null}{c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px 16px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:15 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:15 }}>₺{fmt(c.v)}</div></div>
@@ -462,26 +455,35 @@ function createFlagTexture(iso) {
       // Yıldız
       g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
       break;
-    case 'us': { // 🇺🇸 ABD — tam bayrak
-      // 13 şerit
-      const sh=H/13;
-      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B31942':'#fff';g.fillRect(0,Math.round(i*sh),W,Math.ceil(sh)+1);}
-      // Mavi kanton (üst-sol %40 genişlik, 7 şerit yüksekliği)
-      const cw=Math.round(W*0.4),ch=Math.round(sh*7);
-      g.fillStyle='#00205B';g.fillRect(0,0,cw,ch);
-      // 50 yıldız: 9 satır (5×6 + 4×5 dönüşümlü)
+    case 'us': { // 🇺🇸 ABD — resmi ölçüler (Executive Order 10834)
+      // Oran: A=1.0 (yükseklik), B=1.9 (genişlik), L=0.76 (kanton genişlik), D=0.5385 (kanton yükseklik)
+      // 13 şerit (7 kırmızı, 6 beyaz)
+      const sH=H/13;
+      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.round(i*sH),W,Math.ceil(sH)+1);}
+      // Mavi kanton
+      const cW=Math.round(W*0.4), cH=Math.round(sH*7);
+      g.fillStyle='#3C3B6E';g.fillRect(0,0,cW,cH);
+      // 50 yıldız: 9 sıra alternating 6-5
       g.fillStyle='#fff';
-      const rows=[6,5,6,5,6,5,6,5,6]; // her satırdaki yıldız sayısı
-      const rowH=ch/10; // satırlar arası mesafe
-      const colW6=cw/7; // 6-yıldız satırı için sütun genişliği
-      const colW5=cw/6; // 5-yıldız satırı için sütun genişliği
-      const sr=Math.min(rowH,colW6)*0.35; // yıldız dış yarıçap
-      rows.forEach((cols,ri)=>{
-        const cy=rowH*(ri+0.5);
-        const cWidth=cols===6?colW6:colW5;
-        const offX=cols===6?colW6*0.5:colW5*0.5;
-        for(let ci=0;ci<cols;ci++) star(offX+ci*cWidth, cy, sr, sr*0.4, 5);
-      });
+      const starR=cH/20; // yıldız yarıçap — kanton yüksekliğine orantılı
+      for(let row=0;row<9;row++){
+        const nStars=row%2===0?6:5;
+        const dy=cH/10; // satır aralığı
+        const cy=dy*(row+1)-dy*0.5;
+        for(let col=0;col<nStars;col++){
+          const dx=cW/(nStars+1);
+          const cx=dx*(col+1);
+          // 5 köşeli yıldız çiz
+          g.beginPath();
+          for(let p=0;p<10;p++){
+            const angle=Math.PI*p/5-Math.PI/2;
+            const r=p%2===0?starR:starR*0.38;
+            const px=cx+Math.cos(angle)*r, py=cy+Math.sin(angle)*r;
+            p===0?g.moveTo(px,py):g.lineTo(px,py);
+          }
+          g.closePath();g.fill();
+        }
+      }
       } break;
     case 'ca': // 🇨🇦 Kanada
       g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
