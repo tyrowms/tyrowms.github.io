@@ -171,58 +171,59 @@ function Borders() {
 }
 
 function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon }) {
-  const ref = useRef(), ringRef = useRef();
+  const ref = useRef();
+  const ring1Ref = useRef(), ring2Ref = useRef();
   const isDiger = c.n === 'Diğer';
   const p = projection([c.lng, c.lat]);
   if (!p) return null;
   const color = isDiger ? new THREE.Color('#6366f1') : acFn(c.a);
   const qr = Math.max(c.q / (maxQty || 1), 0.06);
-  const h = isDiger ? 0.15 : (0.3 + qr * 2.8), r = isDiger ? 0.25 : (0.15 + qr * 0.35);
+  const radius = isDiger ? 0.3 : Math.max(0.22, 0.22 + qr * 0.22);
+  const hitRadius = Math.max(radius * 2.2, 0.5);
 
   useFrame(state => {
-    if (!ref.current) return;
-    const t = isSel ? 1.18 : isHov ? 1.1 : 1;
-    ref.current.scale.x = THREE.MathUtils.lerp(ref.current.scale.x, t, 0.1);
-    ref.current.scale.y = THREE.MathUtils.lerp(ref.current.scale.y, t, 0.1);
-    ref.current.scale.z = THREE.MathUtils.lerp(ref.current.scale.z, t, 0.1);
-    if (ringRef.current) {
-      ringRef.current.visible = isSel;
-      if (isSel) { const s = 1 + Math.sin(state.clock.elapsedTime * 2) * 0.15; ringRef.current.scale.set(s,s,s); }
+    if (ref.current) {
+      const t = isSel ? 1.35 : isHov ? 1.18 : 1;
+      ref.current.scale.x = THREE.MathUtils.lerp(ref.current.scale.x, t, 0.12);
+      ref.current.scale.y = THREE.MathUtils.lerp(ref.current.scale.y, t, 0.12);
+      ref.current.scale.z = THREE.MathUtils.lerp(ref.current.scale.z, t, 0.12);
+    }
+    if (isSel) {
+      const t = state.clock.elapsedTime, period = 1.8;
+      if (ring1Ref.current) { const ph = (t % period) / period; const s = 1 + ph * 4; ring1Ref.current.scale.x = s; ring1Ref.current.scale.z = s; ring1Ref.current.material.opacity = Math.max(0, 0.55 * (1 - ph)); }
+      if (ring2Ref.current) { const ph = ((t + period / 2) % period) / period; const s = 1 + ph * 4; ring2Ref.current.scale.x = s; ring2Ref.current.scale.z = s; ring2Ref.current.material.opacity = Math.max(0, 0.55 * (1 - ph)); }
     }
   });
 
   return (
-    <group position={[p[0], 0, p[1]]} ref={ref}>
-      <mesh position={[0,(h+.3)/2,0]}
+    <group position={[p[0], 0, p[1]]}>
+      {/* Radar rings on selection */}
+      {isSel && (<>
+        <mesh ref={ring1Ref} rotation={[-Math.PI/2,0,0]} position={[0,.02,0]}>
+          <ringGeometry args={[radius*1.1, radius*1.3, 64]} />
+          <meshBasicMaterial color={color} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+        <mesh ref={ring2Ref} rotation={[-Math.PI/2,0,0]} position={[0,.02,0]}>
+          <ringGeometry args={[radius*1.1, radius*1.3, 64]} />
+          <meshBasicMaterial color={color} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+      </>)}
+      {/* Invisible hitbox */}
+      <mesh position={[0, radius, 0]}
         onClick={e => { e.stopPropagation(); onSelect(c.n); }}
         onPointerOver={e => { e.stopPropagation(); onHover(c.n); document.body.style.cursor='pointer'; }}
         onPointerOut={() => { onHoverEnd(); document.body.style.cursor='default'; }}>
-        <cylinderGeometry args={[r*3, r*3, h+1.2, 8]} />
-        <meshBasicMaterial transparent opacity={0} />
+        <sphereGeometry args={[hitRadius, 16, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <mesh ref={ringRef} rotation={[-Math.PI/2,0,0]} position={[0,.05,0]} visible={false}>
-        <ringGeometry args={[r*2.8, r*3.8, 32]} />
-        <meshBasicMaterial color={color} transparent opacity={0.3} side={THREE.DoubleSide} />
+      {/* Round sphere marker */}
+      <mesh ref={ref} position={[0, radius, 0]}>
+        <sphereGeometry args={[radius, 24, 20]} />
+        <meshStandardMaterial color={color}
+          emissive={color} emissiveIntensity={isSel ? 0.45 : (isHov ? 0.22 : 0.12)}
+          metalness={0.25} roughness={0.45} />
       </mesh>
-      {isDiger ? (
-        /* Diğer: denizde düz disk + ⚓ */
-        <mesh rotation={[-Math.PI/2,0,0]} position={[0,.16,0]}>
-          <circleGeometry args={[0.35, 24]} />
-          <meshStandardMaterial color={color} transparent opacity={isSel?.9:isHov?.8:.65}
-            emissive={color} emissiveIntensity={.3} metalness={.15} roughness={.3} />
-        </mesh>
-      ) : (<>
-        <mesh position={[0, h/2+.14, 0]}>
-          <cylinderGeometry args={[r, r*.85, h, 12]} />
-          <meshStandardMaterial color={color} transparent opacity={isSel?.95:isHov?.88:.8}
-            emissive={color} emissiveIntensity={isSel?.35:isHov?.25:.15} metalness={.1} roughness={.6} />
-        </mesh>
-        <mesh position={[0, h+.14, 0]}>
-          <sphereGeometry args={[r, 12, 8, 0, Math.PI*2, 0, Math.PI/2]} />
-          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={.25} />
-        </mesh>
-      </>)}
-      <Html position={[0, isDiger ? .8 : h+.8, 0]} center zIndexRange={[1,0]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
+      <Html position={[0, radius * 2 + 0.3, 0]} center zIndexRange={[1,0]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
         <div style={{ fontSize:isDiger?11:13, fontWeight:700, color:isDiger?'#6366f1':'#1a2332', fontFamily:"'Plus Jakarta Sans',sans-serif",
           background:'rgba(255,255,255,.72)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
           padding:'5px 12px', borderRadius:8,
@@ -230,7 +231,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           border:'1px solid rgba(255,255,255,.65)' }}>{isDiger?'⚓ ':''}{c.n}</div>
       </Html>
       {isHov && !isSel && (
-        <Html position={[0, h+1.8, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
+        <Html position={[0, radius * 2 + 1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.72)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:16, padding:'14px 20px', boxShadow:'0 8px 32px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9)',
             border:'1px solid rgba(255,255,255,.7)', fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:180 }}>
