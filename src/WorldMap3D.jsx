@@ -588,8 +588,10 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
     if (name === 'Türkiye' && onSwitchToTurkey) { onSwitchToTurkey(); return; }
     onSelect(name);
   }, [onSelect, onSwitchToTurkey]);
-  // İlk render'da hesapla — sonraki güncellemelerde değişmez
-  const view = useMemo(() => computeView(countries), [countries]);
+  // Sabit kamera pozisyonu — filtre değişse bile harita sabit kalır
+  const viewRef = useRef(null);
+  if (!viewRef.current) viewRef.current = countries.length ? computeView(countries) : { camY: 30, cx: 0, cz: 0 };
+  const view = viewRef.current;
 
   // Bayrak texture'ları — Canvas ile senkron çizim (CDN/async gereksiz)
   const flagTexRef = useRef({});
