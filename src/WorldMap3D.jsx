@@ -467,16 +467,16 @@ function createFlagTexture(iso) {
       // Yıldız
       g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
       break;
-    case 'us': { // 🇺🇸 ABD — parlak renkler (3D yüzeyde görünür)
-      const sH=H/13;
-      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#DC2626':'#fff';g.fillRect(0,Math.round(i*sH),W,Math.ceil(sH)+1);}
-      const cW=Math.round(W*0.4),cH=Math.round(sH*7);
-      g.fillStyle='#1E40AF';g.fillRect(0,0,cW,cH); // parlak mavi (3D'de görünsün)
-      g.fillStyle='#fff';
-      const sr=cH/18;
-      for(let row=0;row<9;row++){const n=row%2===0?6:5;const dy=cH/10;const cy=dy*(row+0.5)+dy*0.05;
-      for(let col=0;col<n;col++){const dx=cW/(n+1);const cx=dx*(col+1);
-      g.beginPath();for(let p=0;p<10;p++){const a=Math.PI*p/5-Math.PI/2;const rd=p%2===0?sr:sr*0.4;g.lineTo(cx+Math.cos(a)*rd,cy+Math.sin(a)*rd);}g.closePath();g.fill();}}
+    case 'us': { // 🇺🇸 ABD — DIAGNOSTIC: sol yarı mavi, sağ yarı kırmızı
+      // Eğer ABD haritada sol=mavi sağ=kırmızı görünürse UV mapping doğru
+      g.fillStyle='#2563EB';g.fillRect(0,0,W/2,H);
+      g.fillStyle='#DC2626';g.fillRect(W/2,0,W/2,H);
+      // Üst yarıya beyaz, alt yarıya yeşil — yön testi
+      g.fillStyle='rgba(255,255,255,0.5)';g.fillRect(0,0,W,H/2);
+      g.fillStyle='rgba(0,128,0,0.5)';g.fillRect(0,H/2,W,H/2);
+      // Sonuç: sol-üst=açık mavi, sağ-üst=açık kırmızı, sol-alt=koyu mavi-yeşil, sağ-alt=koyu kırmızı-yeşil
+      g.fillStyle='#fff';g.font='bold 60px sans-serif';g.textAlign='center';g.textBaseline='middle';
+      g.fillText('UV TEST',W/2,H/2);
       } break;
     case 'ca': // 🇨🇦 Kanada
       g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
