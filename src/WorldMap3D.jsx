@@ -432,8 +432,19 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
   // İlk render'da hesapla — sonraki güncellemelerde değişmez
   const view = useMemo(() => computeView(countries), [countries]);
 
-  // Bayrak texture'ları (şimdilik devre dışı — stabilize edildikten sonra aktifleştirilecek)
+  // Bayrak texture'larını Canvas DIŞINDA lazy load (module-level cache, render'da ISO lookup)
   const flagTexRef = useRef({});
+  const isoSet = useMemo(() => {
+    const m = {};
+    (countries || []).forEach(c => {
+      const engName = Object.entries(NAME_TR).find(([_, v]) => v === c.n)?.[0] || c.n;
+      const iso = ISO_CODES[engName];
+      if (iso) { m[iso] = true; loadFlagTexture(iso); } // cache'e yükle (async, non-blocking)
+    });
+    return m;
+  }, [countries]);
+  // Her render'da cache'ten güncel ref'i al
+  flagTexRef.current = _flagCache;
 
   return (
     <div style={{ height: 500, overflow:'hidden', background:'linear-gradient(180deg,#eaeff5,#f5f7fa)', borderRadius:'0 0 16px 16px', position:'relative' }}>
