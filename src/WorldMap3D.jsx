@@ -238,8 +238,8 @@ function WorldSurface({ countryDataMap, flagTextures }) {
               clearcoat={flagTex ? 0.2 : 1}
               clearcoatRoughness={flagTex ? 0.3 : 0.05}
               iridescence={flagTex ? 0 : 0.6} iridescenceIOR={1.3}
-              emissive={flagTex ? '#000000' : (e.color2||e.color)}
-              emissiveIntensity={flagTex ? 0 : 0.28}
+              emissive={flagTex ? '#ffffff' : (e.color2||e.color)}
+              emissiveIntensity={flagTex ? 0.15 : 0.28}
               transparent={!flagTex}
               opacity={flagTex ? 1 : 0.78}
               side={THREE.DoubleSide}
@@ -463,35 +463,16 @@ function createFlagTexture(iso) {
       // Yıldız
       g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
       break;
-    case 'us': { // 🇺🇸 ABD — resmi ölçüler (Executive Order 10834)
-      // Oran: A=1.0 (yükseklik), B=1.9 (genişlik), L=0.76 (kanton genişlik), D=0.5385 (kanton yükseklik)
-      // 13 şerit (7 kırmızı, 6 beyaz)
+    case 'us': { // 🇺🇸 ABD — parlak renkler (3D yüzeyde görünür)
       const sH=H/13;
-      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.round(i*sH),W,Math.ceil(sH)+1);}
-      // Mavi kanton
-      const cW=Math.round(W*0.4), cH=Math.round(sH*7);
-      g.fillStyle='#3C3B6E';g.fillRect(0,0,cW,cH);
-      // 50 yıldız: 9 sıra alternating 6-5
+      for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#DC2626':'#fff';g.fillRect(0,Math.round(i*sH),W,Math.ceil(sH)+1);}
+      const cW=Math.round(W*0.4),cH=Math.round(sH*7);
+      g.fillStyle='#1E40AF';g.fillRect(0,0,cW,cH); // parlak mavi (3D'de görünsün)
       g.fillStyle='#fff';
-      const starR=cH/20; // yıldız yarıçap — kanton yüksekliğine orantılı
-      for(let row=0;row<9;row++){
-        const nStars=row%2===0?6:5;
-        const dy=cH/10; // satır aralığı
-        const cy=dy*(row+1)-dy*0.5;
-        for(let col=0;col<nStars;col++){
-          const dx=cW/(nStars+1);
-          const cx=dx*(col+1);
-          // 5 köşeli yıldız çiz
-          g.beginPath();
-          for(let p=0;p<10;p++){
-            const angle=Math.PI*p/5-Math.PI/2;
-            const r=p%2===0?starR:starR*0.38;
-            const px=cx+Math.cos(angle)*r, py=cy+Math.sin(angle)*r;
-            p===0?g.moveTo(px,py):g.lineTo(px,py);
-          }
-          g.closePath();g.fill();
-        }
-      }
+      const sr=cH/18;
+      for(let row=0;row<9;row++){const n=row%2===0?6:5;const dy=cH/10;const cy=dy*(row+0.5)+dy*0.05;
+      for(let col=0;col<n;col++){const dx=cW/(n+1);const cx=dx*(col+1);
+      g.beginPath();for(let p=0;p<10;p++){const a=Math.PI*p/5-Math.PI/2;const rd=p%2===0?sr:sr*0.4;g.lineTo(cx+Math.cos(a)*rd,cy+Math.sin(a)*rd);}g.closePath();g.fill();}}
       } break;
     case 'ca': // 🇨🇦 Kanada
       g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
