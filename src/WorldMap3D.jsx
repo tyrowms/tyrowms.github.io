@@ -247,7 +247,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
         </Html>
       )}
       {isSel && (
-        <Html position={[0, h+1.8, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
+        <Html position={[0, radius*2+1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.78)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:18, padding:'16px 22px', boxShadow:`0 12px 40px rgba(0,0,0,.12), 0 0 0 1px ${color}22, inset 0 1px 0 rgba(255,255,255,.9)`,
             border:`1.5px solid ${color}33`, fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:200 }}>
@@ -362,33 +362,33 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
         />
       </Canvas>
       <div onClick={onGlobalClick} style={{ position:'absolute', top:14, left:14, zIndex:5, cursor:'pointer',
-        background: globalActive ? 'rgba(13,110,79,.06)' : 'rgba(255,255,255,.08)',
-        backdropFilter:'blur(24px) saturate(200%)', WebkitBackdropFilter:'blur(24px) saturate(200%)',
-        borderRadius:16, padding:0, overflow:'hidden',
-        border: globalActive ? '1.5px solid rgba(13,110,79,.35)' : '1px solid rgba(255,255,255,.18)',
-        boxShadow: globalActive ? '0 8px 32px rgba(13,110,79,.15), 0 0 0 1px rgba(13,110,79,.08)' : '0 8px 32px rgba(0,0,0,.06)',
+        background: globalActive ? 'rgba(245,252,248,.92)' : 'rgba(255,255,255,.82)',
+        backdropFilter:'blur(20px) saturate(180%)', WebkitBackdropFilter:'blur(20px) saturate(180%)',
+        borderRadius:14, padding:0, overflow:'hidden',
+        border: globalActive ? '1.5px solid rgba(13,110,79,.3)' : '1px solid rgba(0,0,0,.06)',
+        boxShadow: globalActive ? '0 6px 24px rgba(13,110,79,.12)' : '0 4px 16px rgba(0,0,0,.06)',
         transition:'all .25s ease', display:'flex', alignItems:'center' }}>
-        {/* Animated gradient accent line */}
+        {/* Subtle accent line */}
         <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
-          background:'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6,#0d6e4f)',
-          backgroundSize:'200% 100%', animation:'shimmer 3s linear infinite', opacity: globalActive ? 1 : .5 }}/>
+          background: globalActive ? '#0d6e4f' : 'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6,#0d6e4f)',
+          backgroundSize:'200% 100%', animation: globalActive ? 'none' : 'shimmer 3s linear infinite',
+          opacity: globalActive ? .8 : .35 }}/>
         {/* Globe icon with orbit ring */}
-        <div style={{ width:40, height:40, margin:'10px 0 10px 12px', borderRadius:'50%', position:'relative',
-          background: globalActive ? 'linear-gradient(135deg,rgba(13,110,79,.15),rgba(59,130,246,.12))' : 'linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.05))',
-          border: globalActive ? '1.5px solid rgba(13,110,79,.25)' : '1px solid rgba(255,255,255,.2)',
+        <div style={{ width:38, height:38, margin:'9px 0 9px 11px', borderRadius:'50%', position:'relative',
+          background: globalActive ? 'rgba(13,110,79,.08)' : 'rgba(0,0,0,.03)',
+          border: globalActive ? '1.5px solid rgba(13,110,79,.2)' : '1px solid rgba(0,0,0,.06)',
           display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={globalActive?'#0d6e4f':'#5a6b7f'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={globalActive?'#0d6e4f':'#5a6b7f'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
           </svg>
-          {/* Orbit ring — dashed, slowly rotating */}
           <div style={{ position:'absolute', inset:-5, borderRadius:'50%',
-            border:'1.5px dashed '+(globalActive?'rgba(13,110,79,.35)':'rgba(90,107,127,.2)'),
+            border:'1.5px dashed '+(globalActive?'rgba(13,110,79,.3)':'rgba(0,0,0,.1)'),
             animation:'spin 10s linear infinite' }}/>
         </div>
-        <div style={{ padding:'8px 14px 8px 10px' }}>
+        <div style={{ padding:'7px 14px 7px 10px' }}>
           <div style={{ fontSize:12, fontWeight:700, color: globalActive ? '#0d6e4f' : '#1a2332',
-            fontFamily:"'Plus Jakarta Sans',sans-serif", letterSpacing:'-.01em' }}>Küresel Operasyonlar</div>
-          <div style={{ fontSize:10, fontWeight:500, color: globalActive ? '#0d6e4f' : '#5a6b7f',
+            fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Küresel Operasyonlar</div>
+          <div style={{ fontSize:10, fontWeight:500, color: globalActive ? 'rgba(13,110,79,.7)' : '#5a6b7f',
             fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{countries.length} ülke · {countries.reduce((s,c)=>s+c.fc,0)} tesis</div>
         </div>
       </div>
