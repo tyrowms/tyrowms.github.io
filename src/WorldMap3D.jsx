@@ -188,16 +188,24 @@ function WorldSurface({ countryDataMap }) {
     return { offGeo: og, entries };
   }, [countryDataMap]);
 
-  // Bayrak texture'larını CDN'den yükle
+  // Bayrak texture'larını CDN'den yükle (crossOrigin gerekli — WebGL tainted canvas policy)
   const flagTextures = useMemo(() => {
     const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
     const texMap = {};
     entries.forEach(e => {
       if (e.iso) {
-        const tex = loader.load(`https://flagcdn.com/w640/${e.iso}.png`);
+        const tex = loader.load(
+          `https://flagcdn.com/w640/${e.iso}.png`,
+          (t) => { t.needsUpdate = true; }, // onLoad: force material update
+          undefined,
+          () => {} // onError: silent fallback to color
+        );
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.minFilter = THREE.LinearFilter;
         tex.magFilter = THREE.LinearFilter;
+        tex.wrapS = THREE.ClampToEdgeWrapping;
+        tex.wrapT = THREE.ClampToEdgeWrapping;
         texMap[e.iso] = tex;
       }
     });
