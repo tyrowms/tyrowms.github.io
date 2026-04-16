@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -161,7 +161,7 @@ function agingColor2(days) {
   return new THREE.Color('#f43f5e');
 }
 
-function WorldSurface({ countryDataMap, flagTextures, flagVer }) {
+function WorldSurface({ countryDataMap, flagTextures }) {
   const { offGeo, entries } = useMemo(() => {
     const dMap = countryDataMap || {};
     const offGeoms = [], entries = [];
@@ -197,9 +197,8 @@ function WorldSurface({ countryDataMap, flagTextures, flagVer }) {
       </mesh>}
       {entries.map((e,i) => {
         const flagTex = e.iso ? ftMap[e.iso] : null;
-        const loaded = flagTex?.image?.complete;
         return (
-          <mesh key={`${i}-${loaded?'f':'c'}-${flagVer}`} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
+          <mesh key={i} rotation={[-Math.PI/2,0,0]} geometry={e.geo}>
             <meshPhysicalMaterial
               map={flagTex || null}
               color={flagTex ? '#ffffff' : e.color}
@@ -348,7 +347,7 @@ function ClickPlane({ onDeselect }) {
   );
 }
 
-function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, flagTextures, flagVer }) {
+function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acFn, fmt, fmtTon, fN, flagTextures }) {
   const sorted = useMemo(() => [...countries].sort((a, b) => b.q - a.q), [countries]);
   const dataMap = useMemo(() => {
     const m = {};
@@ -362,7 +361,7 @@ function Scene({ countries, maxQty, sel, hov, onSelect, onHover, onHoverEnd, acF
       <directionalLight position={[0, 15, 0]} intensity={0.5} />
       <directionalLight position={[8, 10, 5]} intensity={0.3} />
       <ClickPlane onDeselect={() => onSelect(null)} />
-      <WorldSurface countryDataMap={dataMap} flagTextures={flagTextures} flagVer={flagVer} />
+      <WorldSurface countryDataMap={dataMap} flagTextures={flagTextures} />
       <Borders />
       {sorted.map(c => (
         <Marker key={c.n} c={c} maxQty={maxQty}
@@ -402,26 +401,37 @@ function computeView(countries) {
   return { camY, cx, cz };
 }
 
-// Bayrak texture'larını Canvas DIŞINDA yükle — module-level cache + notify callback
-const _flagLoader = new THREE.TextureLoader();
-_flagLoader.setCrossOrigin('anonymous');
+// Bayrak texture'ları — Canvas ile programatik çizim (CDN gereksiz, %100 lokal, senkron)
 const _flagCache = {};
-let _flagNotify = null; // component'ten setState callback gelir
-function loadFlagTexture(iso) {
+function createFlagTexture(iso) {
   if (!iso) return null;
-  if (_flagCache[iso] !== undefined) return _flagCache[iso]; // null = failed, texture = loading/loaded
-  const tex = _flagLoader.load(
-    `https://flagcdn.com/w640/${iso}.png`,
-    (t) => { t.needsUpdate = true; if (_flagNotify) _flagNotify(); }, // texture yüklendi → re-render tetikle
-    undefined,
-    () => { _flagCache[iso] = null; } // hata → null olarak cache'le
-  );
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.minFilter = THREE.LinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  tex.wrapS = THREE.ClampToEdgeWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
-  _flagCache[iso] = tex;
+  if (_flagCache[iso]) return _flagCache[iso];
+  const W=256,H=170,c=document.createElement('canvas');c.width=W;c.height=H;
+  const g=c.getContext('2d');
+  const hS=(cols)=>{const h=H/cols.length;cols.forEach((cl,i)=>{g.fillStyle=cl;g.fillRect(0,i*h,W,h+1);});};
+  const vS=(cols)=>{const w=W/cols.length;cols.forEach((cl,i)=>{g.fillStyle=cl;g.fillRect(i*w,0,w+1,H);});};
+  switch(iso){
+    case 'tr':g.fillStyle='#E30A17';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.beginPath();g.arc(112,H/2,36,0,Math.PI*2);g.fill();g.fillStyle='#E30A17';g.beginPath();g.arc(122,H/2,28,0,Math.PI*2);g.fill();g.fillStyle='#fff';g.save();g.translate(150,H/2);for(let i=0;i<5;i++){g.beginPath();const a=Math.PI*2*i/5-Math.PI/2;g.moveTo(Math.cos(a)*13,Math.sin(a)*13);const b=a+Math.PI/5;g.lineTo(Math.cos(b)*5,Math.sin(b)*5);const d=a+Math.PI*2/5;g.lineTo(Math.cos(d)*13,Math.sin(d)*13);g.fill();}g.restore();break;
+    case 'us':for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.floor(i*H/13),W,Math.ceil(H/13)+1);}g.fillStyle='#3C3B6E';g.fillRect(0,0,Math.floor(W*0.38),Math.floor(H*0.54));g.fillStyle='#fff';for(let r=0;r<5;r++)for(let j=0;j<6;j++){g.beginPath();g.arc(8+j*15,8+r*17,2,0,Math.PI*2);g.fill();}break;
+    case 'ca':vS(['#FF0000','#fff','#fff','#FF0000']);g.fillStyle='#FF0000';g.beginPath();g.moveTo(W/2,35);g.lineTo(W/2-8,65);g.lineTo(W/2-30,65);g.lineTo(W/2-15,80);g.lineTo(W/2-22,110);g.lineTo(W/2,95);g.lineTo(W/2+22,110);g.lineTo(W/2+15,80);g.lineTo(W/2+30,65);g.lineTo(W/2+8,65);g.fill();break;
+    case 'be':vS(['#000','#FAE042','#ED2939']);break;
+    case 'ro':vS(['#002B7F','#FCD116','#CE1126']);break;
+    case 'iq':hS(['#CE1126','#fff','#000']);g.fillStyle='#007A3D';g.font='bold 36px serif';g.textAlign='center';g.textBaseline='middle';g.fillText('★',W/2,H/2);break;
+    case 'gh':hS(['#CE1126','#FCD116','#006B3F']);g.fillStyle='#000';g.save();g.translate(W/2,H/2);g.beginPath();for(let i=0;i<5;i++){const a=Math.PI*2*i/5-Math.PI/2;g.lineTo(Math.cos(a)*20,Math.sin(a)*20);const b=a+Math.PI/5;g.lineTo(Math.cos(b)*8,Math.sin(b)*8);}g.fill();g.restore();break;
+    case 'sd':hS(['#D21034','#fff','#000']);g.fillStyle='#007229';g.beginPath();g.moveTo(0,0);g.lineTo(W*0.28,H/2);g.lineTo(0,H);g.fill();break;
+    case 'gb':g.fillStyle='#012169';g.fillRect(0,0,W,H);g.strokeStyle='#fff';g.lineWidth=22;g.beginPath();g.moveTo(0,0);g.lineTo(W,H);g.moveTo(W,0);g.lineTo(0,H);g.stroke();g.strokeStyle='#C8102E';g.lineWidth=8;g.stroke();g.fillStyle='#fff';g.fillRect(W/2-16,0,32,H);g.fillRect(0,H/2-12,W,24);g.fillStyle='#C8102E';g.fillRect(W/2-8,0,16,H);g.fillRect(0,H/2-5,W,10);break;
+    case 'de':hS(['#000','#DD0000','#FFCE00']);break;
+    case 'fr':vS(['#002395','#fff','#ED2939']);break;
+    case 'it':vS(['#009246','#fff','#CE2B37']);break;
+    case 'ru':hS(['#fff','#0039A6','#D52B1E']);break;
+    case 'sa':g.fillStyle='#006C35';g.fillRect(0,0,W,H);g.fillStyle='#fff';g.font='bold 20px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('المملكة العربية',W/2,H/2-12);g.fillText('السعودية',W/2,H/2+12);break;
+    case 'ae':g.fillStyle='#00732F';g.fillRect(0,0,W,H/3);g.fillStyle='#fff';g.fillRect(0,H/3,W,H/3);g.fillStyle='#000';g.fillRect(0,H*2/3,W,H/3);g.fillStyle='#FF0000';g.fillRect(0,0,W*0.22,H);break;
+    default:g.fillStyle='#ccc';g.fillRect(0,0,W,H);g.fillStyle='#666';g.font='bold 36px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(iso.toUpperCase(),W/2,H/2);break;
+  }
+  const tex=new THREE.CanvasTexture(c);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.minFilter=THREE.LinearFilter;
+  _flagCache[iso]=tex;
   return tex;
 }
 
@@ -434,18 +444,16 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
   // İlk render'da hesapla — sonraki güncellemelerde değişmez
   const view = useMemo(() => computeView(countries), [countries]);
 
-  // Bayrak texture'ları: module-level cache, async yükleme + re-render trigger
-  const [flagVer, setFlagVer] = useState(0); // texture yüklenince artır → re-render
-  _flagNotify = () => setFlagVer(v => v + 1); // module-level callback'e bağla
+  // Bayrak texture'ları — Canvas ile senkron çizim (CDN/async gereksiz)
   const flagTexRef = useRef({});
   useMemo(() => {
     (countries || []).forEach(c => {
       const engName = Object.entries(NAME_TR).find(([_, v]) => v === c.n)?.[0] || c.n;
       const iso = ISO_CODES[engName];
-      if (iso) loadFlagTexture(iso);
+      if (iso) createFlagTexture(iso); // senkron, cache'e yazılır
     });
+    flagTexRef.current = _flagCache;
   }, [countries]);
-  flagTexRef.current = _flagCache; // her render'da güncel cache'i al (flagVer değişince tekrar okunur)
 
   return (
     <div style={{ height: 500, overflow:'hidden', background:'linear-gradient(180deg,#eaeff5,#f5f7fa)', borderRadius:'0 0 16px 16px', position:'relative' }}>
@@ -455,7 +463,7 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
       >
         <Scene countries={countries} maxQty={maxQty}
           sel={sel} hov={hov} onSelect={wrappedSelect} onHover={onHover} onHoverEnd={onHoverEnd}
-          acFn={acFn} fmt={fmt} fmtTon={fmtTon} fN={fN} flagTextures={flagTexRef.current} flagVer={flagVer} />
+          acFn={acFn} fmt={fmt} fmtTon={fmtTon} fN={fN} flagTextures={flagTexRef.current} />
         <OrbitControls
           enablePan={true} enableZoom={true} enableRotate={false}
           screenSpacePanning={false}
