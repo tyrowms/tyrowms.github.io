@@ -331,7 +331,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           metalness={0.25} roughness={0.45} />
       </mesh>
       <Html position={[0, radius * 2 + 0.3, 0]} center zIndexRange={[1,0]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>{(()=>{
-        const big=c.n==='ABD'||c.n==='Kanada';const fs=isDiger?11:big?16:13;const ic=big?20:16;const pd=big?'7px 16px':'5px 12px';
+        const big=c.n==='ABD'||c.n==='Kanada';const fs=isDiger?11:big?14:13;const ic=big?18:16;const pd=big?'6px 14px':'5px 12px';
         return <div style={{ fontSize:fs, fontWeight:700, color:isDiger?'#6366f1':'#1a2332', fontFamily:"'Plus Jakarta Sans',sans-serif",
           background:'rgba(255,255,255,.82)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
           padding:pd, borderRadius:big?10:8,
