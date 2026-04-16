@@ -534,6 +534,9 @@ function createFlagTexture(iso) {
   tex.magFilter=THREE.LinearFilter;
   tex.anisotropy=4;
   tex.generateMipmaps=true;
+  tex.wrapS=THREE.RepeatWrapping;
+  tex.wrapT=THREE.RepeatWrapping;
+  tex.repeat.set(3,2); // bayrak 3×2 tile — kumaş dokusu gibi
   _flagCache[iso]=tex;
   return tex;
 }
