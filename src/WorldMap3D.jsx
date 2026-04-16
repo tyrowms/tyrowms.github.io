@@ -21,7 +21,7 @@ const NAME_TR = {
 };
 
 // Antimeridyen geçişi tespiti: ardışık iki noktanın boylam farkı > 170° ise polygon'u böl
-const AM_THRESH = 170; // boylam farkı eşiği
+const AM_THRESH = 170;
 function geoToShapes(feat) {
   const coords = feat.geometry.type === 'Polygon'
     ? [feat.geometry.coordinates] : feat.geometry.coordinates;
@@ -29,36 +29,41 @@ function geoToShapes(feat) {
   coords.forEach(polygon => {
     const outer = polygon[0];
     if (outer.length < 3) return;
-    let shape = new THREE.Shape();
-    let started = false, prevLng = null;
+    let pts = []; // mevcut segment noktaları
+    let prevLng = null;
+    const flushShape = () => {
+      if (pts.length < 3) { pts = []; return; } // minimum 3 nokta lazım
+      const s = new THREE.Shape();
+      pts.forEach((p, i) => { if (i === 0) s.moveTo(p[0], p[1]); else s.lineTo(p[0], p[1]); });
+      s.closePath();
+      shapes.push(s);
+      pts = [];
+    };
     outer.forEach(([lng, lat]) => {
       const p = projection([lng, lat]);
       if (!p) return;
-      // Antimeridyen atlama: önceki noktayla boylam farkı çok büyükse yeni shape başlat
-      if (prevLng !== null && Math.abs(lng - prevLng) > AM_THRESH) {
-        if (started) { shape.closePath(); shapes.push(shape); }
-        shape = new THREE.Shape();
-        started = false;
-      }
-      if (!started) { shape.moveTo(p[0], -p[1]); started = true; }
-      else shape.lineTo(p[0], -p[1]);
+      if (prevLng !== null && Math.abs(lng - prevLng) > AM_THRESH) flushShape();
+      pts.push([p[0], -p[1]]);
       prevLng = lng;
     });
-    if (started) { shape.closePath(); shapes.push(shape); }
-    // Holes — aynı antimeridyen korumasıyla
+    flushShape();
+    // Holes — antimeridyen atlayan noktaları atla
     polygon.slice(1).forEach(hole => {
       if (hole.length < 3) return;
-      const hp = new THREE.Path();
-      let hs = false, hpLng = null;
+      const hPts = [];
+      let hpLng = null;
       hole.forEach(([lng, lat]) => {
         const p = projection([lng, lat]);
         if (!p) return;
-        if (hpLng !== null && Math.abs(lng - hpLng) > AM_THRESH) return; // atlama varsa noktayı atla
-        if (!hs) { hp.moveTo(p[0], -p[1]); hs = true; }
-        else hp.lineTo(p[0], -p[1]);
+        if (hpLng !== null && Math.abs(lng - hpLng) > AM_THRESH) { hpLng = lng; return; }
+        hPts.push([p[0], -p[1]]);
         hpLng = lng;
       });
-      if (hs) { hp.closePath(); shapes[shapes.length - 1]?.holes.push(hp); }
+      if (hPts.length < 3 || shapes.length === 0) return;
+      const hp = new THREE.Path();
+      hPts.forEach((p, i) => { if (i === 0) hp.moveTo(p[0], p[1]); else hp.lineTo(p[0], p[1]); });
+      hp.closePath();
+      shapes[shapes.length - 1].holes.push(hp);
     });
   });
   return shapes;
