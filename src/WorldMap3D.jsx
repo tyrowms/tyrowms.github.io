@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -401,18 +401,19 @@ function computeView(countries) {
   return { camY, cx, cz };
 }
 
-// Bayrak texture'larını Canvas DIŞINDA yükle (R3F Canvas context'te TextureLoader sorun çıkarabiliyor)
+// Bayrak texture'larını Canvas DIŞINDA yükle — module-level cache + notify callback
 const _flagLoader = new THREE.TextureLoader();
 _flagLoader.setCrossOrigin('anonymous');
 const _flagCache = {};
+let _flagNotify = null; // component'ten setState callback gelir
 function loadFlagTexture(iso) {
   if (!iso) return null;
-  if (_flagCache[iso]) return _flagCache[iso];
+  if (_flagCache[iso] !== undefined) return _flagCache[iso]; // null = failed, texture = loading/loaded
   const tex = _flagLoader.load(
     `https://flagcdn.com/w640/${iso}.png`,
-    (t) => { t.needsUpdate = true; },
+    (t) => { t.needsUpdate = true; if (_flagNotify) _flagNotify(); }, // texture yüklendi → re-render tetikle
     undefined,
-    () => { _flagCache[iso] = null; } // hata: cache'e null yaz, tekrar deneme
+    () => { _flagCache[iso] = null; } // hata → null olarak cache'le
   );
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.minFilter = THREE.LinearFilter;
@@ -432,19 +433,18 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
   // İlk render'da hesapla — sonraki güncellemelerde değişmez
   const view = useMemo(() => computeView(countries), [countries]);
 
-  // Bayrak texture'larını Canvas DIŞINDA lazy load (module-level cache, render'da ISO lookup)
+  // Bayrak texture'ları: module-level cache, async yükleme + re-render trigger
+  const [flagVer, setFlagVer] = useState(0); // texture yüklenince artır → re-render
+  _flagNotify = () => setFlagVer(v => v + 1); // module-level callback'e bağla
   const flagTexRef = useRef({});
-  const isoSet = useMemo(() => {
-    const m = {};
+  useMemo(() => {
     (countries || []).forEach(c => {
       const engName = Object.entries(NAME_TR).find(([_, v]) => v === c.n)?.[0] || c.n;
       const iso = ISO_CODES[engName];
-      if (iso) { m[iso] = true; loadFlagTexture(iso); } // cache'e yükle (async, non-blocking)
+      if (iso) loadFlagTexture(iso);
     });
-    return m;
   }, [countries]);
-  // Her render'da cache'ten güncel ref'i al
-  flagTexRef.current = _flagCache;
+  flagTexRef.current = _flagCache; // her render'da güncel cache'i al (flagVer değişince tekrar okunur)
 
   return (
     <div style={{ height: 500, overflow:'hidden', background:'linear-gradient(180deg,#eaeff5,#f5f7fa)', borderRadius:'0 0 16px 16px', position:'relative' }}>
