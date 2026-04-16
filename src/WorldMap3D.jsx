@@ -20,6 +20,8 @@ const NAME_TR = {
   'Singapore':'Singapur','China':'Çin','Russia':'Rusya'
 };
 
+// Antimeridyen geçişi tespiti: ardışık iki noktanın boylam farkı > 170° ise polygon'u böl
+const AM_THRESH = 170; // boylam farkı eşiği
 function geoToShapes(feat) {
   const coords = feat.geometry.type === 'Polygon'
     ? [feat.geometry.coordinates] : feat.geometry.coordinates;
@@ -27,25 +29,37 @@ function geoToShapes(feat) {
   coords.forEach(polygon => {
     const outer = polygon[0];
     if (outer.length < 3) return;
-    const shape = new THREE.Shape();
-    outer.forEach(([lng, lat], i) => {
+    let shape = new THREE.Shape();
+    let started = false, prevLng = null;
+    outer.forEach(([lng, lat]) => {
       const p = projection([lng, lat]);
       if (!p) return;
-      if (i === 0) shape.moveTo(p[0], -p[1]); else shape.lineTo(p[0], -p[1]);
+      // Antimeridyen atlama: önceki noktayla boylam farkı çok büyükse yeni shape başlat
+      if (prevLng !== null && Math.abs(lng - prevLng) > AM_THRESH) {
+        if (started) { shape.closePath(); shapes.push(shape); }
+        shape = new THREE.Shape();
+        started = false;
+      }
+      if (!started) { shape.moveTo(p[0], -p[1]); started = true; }
+      else shape.lineTo(p[0], -p[1]);
+      prevLng = lng;
     });
-    shape.closePath();
+    if (started) { shape.closePath(); shapes.push(shape); }
+    // Holes — aynı antimeridyen korumasıyla
     polygon.slice(1).forEach(hole => {
       if (hole.length < 3) return;
       const hp = new THREE.Path();
-      hole.forEach(([lng, lat], i) => {
+      let hs = false, hpLng = null;
+      hole.forEach(([lng, lat]) => {
         const p = projection([lng, lat]);
         if (!p) return;
-        if (i === 0) hp.moveTo(p[0], -p[1]); else hp.lineTo(p[0], -p[1]);
+        if (hpLng !== null && Math.abs(lng - hpLng) > AM_THRESH) return; // atlama varsa noktayı atla
+        if (!hs) { hp.moveTo(p[0], -p[1]); hs = true; }
+        else hp.lineTo(p[0], -p[1]);
+        hpLng = lng;
       });
-      hp.closePath();
-      shape.holes.push(hp);
+      if (hs) { hp.closePath(); shapes[shapes.length - 1]?.holes.push(hp); }
     });
-    shapes.push(shape);
   });
   return shapes;
 }
