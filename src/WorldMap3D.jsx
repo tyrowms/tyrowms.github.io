@@ -20,11 +20,19 @@ const NAME_TR = {
   'Singapore':'Singapur','China':'Çin','Russia':'Rusya'
 };
 
-// Bayrak ikonu URL — flagcdn.com SVG (CORS: *, curl ile doğrulanmış)
-// HTML <img> tag CORS gerektirmez (sadece gösterim, canvas/WebGL değil)
-function trNameToIso(trName){
+// Bayrak ikonu — Canvas data URL (kurumsal ağlarda CDN engelli, %100 lokal)
+const _flagImgCache={};
+function getFlagDataUrl(iso){
+  if(!iso)return'';
+  if(_flagImgCache[iso])return _flagImgCache[iso];
+  createFlagTexture(iso);
+  const tex=_flagCache[iso];
+  try{_flagImgCache[iso]=tex.source.data.toDataURL('image/png');}catch(e){return'';}
+  return _flagImgCache[iso];
+}
+function trNameToFlagDataUrl(trName){
   const eng=Object.entries(NAME_TR).find(([_,v])=>v===trName)?.[0]||trName;
-  return ISO_CODES[eng]||'';
+  return getFlagDataUrl(ISO_CODES[eng]);
 }
 
 // GeoJSON ülke adı → ISO alpha-2 kod (bayrak CDN için)
@@ -323,14 +331,14 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           background:'rgba(255,255,255,.72)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
           padding:'5px 12px', borderRadius:8,
           boxShadow:'0 2px 10px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.9)',
-          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:5 }}>{isDiger?<span>⚓</span>:trNameToIso(c.n)?<img src={`https://flagcdn.com/${trNameToIso(c.n)}.svg`} width={16} height={12} style={{borderRadius:2,objectFit:'cover',flexShrink:0}} onError={e=>{e.target.style.display='none';}}/>:null}{c.n}</div>
+          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:5 }}>{isDiger?<span>⚓</span>:trNameToFlagDataUrl(c.n)?<img src={trNameToFlagDataUrl(c.n)} width={16} height={12} style={{borderRadius:2,objectFit:'cover',flexShrink:0}}/>:null}{c.n}</div>
       </Html>
       {isHov && !isSel && (
         <Html position={[0, radius * 2 + 1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.72)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:16, padding:'14px 20px', boxShadow:'0 8px 32px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9)',
             border:'1px solid rgba(255,255,255,.7)', fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:180 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>{trNameToIso(c.n)?<img src={`https://flagcdn.com/${trNameToIso(c.n)}.svg`} width={24} height={18} style={{borderRadius:3,objectFit:'cover',boxShadow:'0 1px 4px rgba(0,0,0,.12)'}} onError={e=>{e.target.style.display='none';}}/>:null}{c.n}</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8, display:'flex', alignItems:'center', gap:8 }}>{trNameToFlagDataUrl(c.n)?<img src={trNameToFlagDataUrl(c.n)} width={24} height={18} style={{borderRadius:3,objectFit:'cover',boxShadow:'0 1px 4px rgba(0,0,0,.12)'}}/>:null}{c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:14 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:14 }}>₺{fmt(c.v)}</div></div>
@@ -346,7 +354,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           <div style={{ background:'rgba(255,255,255,.78)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:18, padding:'16px 22px', boxShadow:`0 12px 40px rgba(0,0,0,.12), 0 0 0 1px ${color}22, inset 0 1px 0 rgba(255,255,255,.9)`,
             border:`1.5px solid ${color}33`, fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:200 }}>
-            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>{trNameToIso(c.n)?<img src={`https://flagcdn.com/${trNameToIso(c.n)}.svg`} width={28} height={21} style={{borderRadius:3,objectFit:'cover',boxShadow:'0 2px 6px rgba(0,0,0,.15)'}} onError={e=>{e.target.style.display='none';}}/>:null}{c.n}</div>
+            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>{trNameToFlagDataUrl(c.n)?<img src={trNameToFlagDataUrl(c.n)} width={28} height={21} style={{borderRadius:3,objectFit:'cover',boxShadow:'0 2px 6px rgba(0,0,0,.15)'}}/>:null}{c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px 16px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:15 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:15 }}>₺{fmt(c.v)}</div></div>
