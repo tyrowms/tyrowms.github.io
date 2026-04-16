@@ -249,6 +249,7 @@ export default function App(){
   const [sel,setSel]=useState(null);
   const [hov,setHov]=useState(null);
   const [tab,setTab]=useState('f');
+  const [dashMapMode,setDashMapMode]=useState('turkey'); // 'turkey' | 'world'
   // Emerging Markets state
   const [emSel,setEmSel]=useState(null);
   const [emHov,setEmHov]=useState(null);
@@ -907,17 +908,21 @@ export default function App(){
                     </div>);})}
                 </div>);})()}
 
-                {/* MAP */}
+                {/* MAP — Türkiye / Dünya toggle */}
                 <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:18,overflow:'hidden'}}>
                   <div style={{padding:'15px 18px 13px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid '+$.bdL}}>
                     <div style={{fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
-                      <div style={{width:26,height:26,borderRadius:7,background:$.bluB,color:$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><MapPin size={14}/></div>
-                      {'Tiryaki Haritası'}
+                      <div style={{width:26,height:26,borderRadius:7,background:dashMapMode==='turkey'?$.bluB:$.purB,color:dashMapMode==='turkey'?$.blu:$.pur,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{dashMapMode==='turkey'?<MapPin size={14}/>:<Globe size={14}/>}</div>
+                      {dashMapMode==='turkey'?'Tiryaki Haritası':'Dünya Haritası'}
                       <span style={{fontSize:9,fontWeight:600,color:$.ac,background:$.acL,padding:'2px 8px',borderRadius:6,marginLeft:4}}>3D</span>
+                    </div>
+                    <div style={{display:'flex',gap:0}}>
+                      <button onClick={()=>{if(dashMapMode!=='turkey'){setDashMapMode('turkey');setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}}} style={{padding:'5px 12px',borderRadius:'7px 0 0 7px',fontSize:11,fontWeight:600,fontFamily:$.f,background:dashMapMode==='turkey'?$.ac:'transparent',color:dashMapMode==='turkey'?'#fff':$.t2,border:'1px solid '+(dashMapMode==='turkey'?$.ac:$.bdL),cursor:'pointer',display:'flex',alignItems:'center',gap:4,transition:'all .15s'}}><MapPin size={11}/>Türkiye</button>
+                      <button onClick={()=>{if(dashMapMode!=='world'){setDashMapMode('world');setSel(null);setDrillFac(null);setDrillWh(null);}}} style={{padding:'5px 12px',borderRadius:'0 7px 7px 0',fontSize:11,fontWeight:600,fontFamily:$.f,background:dashMapMode==='world'?$.ac:'transparent',color:dashMapMode==='world'?'#fff':$.t2,border:'1px solid '+(dashMapMode==='world'?$.ac:$.bdL),borderLeft:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,transition:'all .15s'}}><Globe size={11}/>Dünya</button>
                     </div>
                   </div>
                   <Suspense fallback={<div style={{height:450,display:'flex',alignItems:'center',justifyContent:'center',background:'linear-gradient(180deg,#f0f4f8,#f5f7fa)',borderRadius:'0 0 16px 16px'}}><span style={{fontSize:12,color:'#5a6b7f'}}>Harita yükleniyor...</span></div>}>
-                    <TurkeyMap3D
+                    {dashMapMode==='turkey'?<TurkeyMap3D
                       cities={D.ct.filter(c=>c.n!=='Yurtdışı')}
                       maxQty={mQ}
                       sel={sel}
@@ -925,12 +930,20 @@ export default function App(){
                       onSelect={(name)=>{setSel(sel===name?null:name);setDrillFac(null);setDrillWh(null);}}
                       onHover={setHov}
                       onHoverEnd={()=>setHov(null)}
-                      acFn={ac}
-                      fmt={fmt}
-                      fmtTon={fmtTon}
-                      fN={fN}
+                      acFn={ac} fmt={fmt} fmtTon={fmtTon} fN={fN}
                       yurtdisi={D.ct.find(c=>c.n==='Yurtdışı')||null}
-                    />
+                    />:<WorldMap3D
+                      countries={DW.countries}
+                      maxQty={mQW}
+                      sel={emSel}
+                      hov={emHov}
+                      onSelect={(name)=>{setEmSel(name===null?null:(emSel===name?null:name));setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}}
+                      onHover={n=>setEmHov(n)}
+                      onHoverEnd={()=>setEmHov(null)}
+                      acFn={ac} fmt={fmt} fmtTon={fmtTon} fN={fN}
+                      onGlobalClick={()=>{setEmSel('__global__');setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setEmTab('f');}}
+                      globalActive={emSel==='__global__'}
+                    />}
                   </Suspense>
                 </div>
 
