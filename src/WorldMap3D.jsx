@@ -330,13 +330,14 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           emissive={color} emissiveIntensity={isSel ? 0.45 : (isHov ? 0.22 : 0.12)}
           metalness={0.25} roughness={0.45} />
       </mesh>
-      <Html position={[0, radius * 2 + 0.3, 0]} center zIndexRange={[1,0]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
-        <div style={{ fontSize:isDiger?11:13, fontWeight:700, color:isDiger?'#6366f1':'#1a2332', fontFamily:"'Plus Jakarta Sans',sans-serif",
-          background:'rgba(255,255,255,.72)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
-          padding:'5px 12px', borderRadius:8,
-          boxShadow:'0 2px 10px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.9)',
-          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:5 }}>{isDiger?<span>⚓</span>:trNameToFlagDataUrl(c.n)?<img src={trNameToFlagDataUrl(c.n)} width={16} height={12} style={{borderRadius:2,objectFit:'cover',flexShrink:0}}/>:null}{c.n}</div>
-      </Html>
+      <Html position={[0, radius * 2 + 0.3, 0]} center zIndexRange={[1,0]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>{(()=>{
+        const big=c.n==='ABD'||c.n==='Kanada';const fs=isDiger?11:big?16:13;const ic=big?20:16;const pd=big?'7px 16px':'5px 12px';
+        return <div style={{ fontSize:fs, fontWeight:700, color:isDiger?'#6366f1':'#1a2332', fontFamily:"'Plus Jakarta Sans',sans-serif",
+          background:'rgba(255,255,255,.82)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
+          padding:pd, borderRadius:big?10:8,
+          boxShadow:big?'0 4px 16px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9)':'0 2px 10px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.9)',
+          border:'1px solid rgba(255,255,255,.65)',display:'flex',alignItems:'center',gap:big?7:5 }}>{isDiger?<span>⚓</span>:trNameToFlagDataUrl(c.n)?<img src={trNameToFlagDataUrl(c.n)} width={ic} height={Math.round(ic*0.75)} style={{borderRadius:big?3:2,objectFit:'cover',flexShrink:0}}/>:null}{c.n}</div>;
+      })()}</Html>
       {isHov && !isSel && (
         <Html position={[0, radius * 2 + 1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.72)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
