@@ -20,6 +20,11 @@ const NAME_TR = {
   'Singapore':'Singapur','China':'Çin','Russia':'Rusya'
 };
 
+// ISO alpha-2 koddan bayrak emojisi oluştur: 'tr' → 🇹🇷
+const flagEmoji=(iso)=>{if(!iso)return'';return String.fromCodePoint(...[...iso.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65));};
+// Türkçe ülke adından bayrak emojisi: 'ABD' → 🇺🇸
+const trNameToEmoji=(trName)=>{const eng=Object.entries(NAME_TR).find(([_,v])=>v===trName)?.[0]||trName;const iso=ISO_CODES[eng];return iso?flagEmoji(iso):'';};
+
 // GeoJSON ülke adı → ISO alpha-2 kod (bayrak CDN için)
 const ISO_CODES = {
   'Turkey':'tr','United States of America':'us','Canada':'ca','Belgium':'be',
@@ -316,14 +321,14 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           background:'rgba(255,255,255,.72)', backdropFilter:'blur(14px) saturate(180%)', WebkitBackdropFilter:'blur(14px) saturate(180%)',
           padding:'5px 12px', borderRadius:8,
           boxShadow:'0 2px 10px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.9)',
-          border:'1px solid rgba(255,255,255,.65)' }}>{isDiger?'⚓ ':''}{c.n}</div>
+          border:'1px solid rgba(255,255,255,.65)' }}>{isDiger?'⚓ ':trNameToEmoji(c.n)+' '}{c.n}</div>
       </Html>
       {isHov && !isSel && (
         <Html position={[0, radius * 2 + 1.2, 0]} center zIndexRange={[9999,9990]} style={{ pointerEvents:'none', whiteSpace:'nowrap' }}>
           <div style={{ background:'rgba(255,255,255,.72)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:16, padding:'14px 20px', boxShadow:'0 8px 32px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9)',
             border:'1px solid rgba(255,255,255,.7)', fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:180 }}>
-            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8 }}>{c.n}</div>
+            <div style={{ fontSize:16, fontWeight:700, color:'#1a2332', marginBottom:8 }}>{trNameToEmoji(c.n)} {c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 20px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:14 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:14 }}>₺{fmt(c.v)}</div></div>
@@ -339,7 +344,7 @@ function Marker({ c, maxQty, isSel, isHov, onSelect, onHover, onHoverEnd, acFn, 
           <div style={{ background:'rgba(255,255,255,.78)', backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)',
             borderRadius:18, padding:'16px 22px', boxShadow:`0 12px 40px rgba(0,0,0,.12), 0 0 0 1px ${color}22, inset 0 1px 0 rgba(255,255,255,.9)`,
             border:`1.5px solid ${color}33`, fontFamily:"'Plus Jakarta Sans',sans-serif", minWidth:200 }}>
-            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10 }}>{c.n}</div>
+            <div style={{ fontSize:17, fontWeight:700, color:'#1a2332', marginBottom:10 }}>{trNameToEmoji(c.n)} {c.n}</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'6px 16px', fontSize:13, marginBottom:10 }}>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Stok</div><div style={{ fontWeight:700, color:'#3b82f6', fontSize:15 }}>{fmtTon(c.q)}</div></div>
               <div><div style={{ color:'#8e9bb3', fontSize:11, marginBottom:2 }}>Değer</div><div style={{ fontWeight:700, color:'#0d6e4f', fontSize:15 }}>₺{fmt(c.v)}</div></div>
@@ -448,16 +453,14 @@ function createFlagTexture(iso) {
       // Yıldız
       g.fillStyle='#fff';star(W*0.565,H/2,H*0.1,H*0.04,5);
       break;
-    case 'us': // 🇺🇸 ABD
+    case 'us': { // 🇺🇸 ABD
       for(let i=0;i<13;i++){g.fillStyle=i%2===0?'#B22234':'#fff';g.fillRect(0,Math.floor(i*H/13),W,Math.ceil(H/13)+1);}
-      g.fillStyle='#3C3B6E';g.fillRect(0,0,Math.round(W*0.4),Math.round(H*7/13));
+      const cw=Math.round(W*0.4),ch=Math.round(H*7/13);
+      g.fillStyle='#3C3B6E';g.fillRect(0,0,cw,ch);
       g.fillStyle='#fff';
-      const bx=W*0.4,by=H*7/13;
-      for(let r=0;r<9;r++)for(let j=0;j<(r%2===0?6:5);j++){
-        const ox=r%2===0?bx/(12):bx/(10);
-        star(ox+j*(bx/6),by/18+r*(by/9),4*S,1.6*S,5);
-      }
-      break;
+      for(let r=0;r<9;r++){const cols=r%2===0?6:5;const gx=cw/6.5;const gy=ch/10;
+      for(let j=0;j<cols;j++){star((r%2===0?gx*0.6:gx)+j*gx,gy*0.7+r*gy, 6*S, 2.4*S, 5);}}
+      } break;
     case 'ca': // 🇨🇦 Kanada
       g.fillStyle='#FF0000';g.fillRect(0,0,W/4,H);g.fillRect(W*3/4,0,W/4,H);
       g.fillStyle='#fff';g.fillRect(W/4,0,W/2,H);
