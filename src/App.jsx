@@ -690,36 +690,81 @@ export default function App(){
               root.appendChild(vig);
               setTimeout(()=>{vig.style.opacity='1';},100);
 
-              // ═══ Faz 2 (0.8-1.8s): Sol panel fade + buton büyüme + typewriter ═══
+              // ═══ Faz 2 (0.8s): Sol panel fade + buton büyüme ═══
               setTimeout(()=>{
                 if(el){el.style.transform='scale(1.08)';el.style.background='rgba(255,255,255,.85)';}
                 if(leftPanel){leftPanel.style.transition='all 1.2s ease';leftPanel.style.opacity='0';leftPanel.style.transform='translateX(-60px)';leftPanel.style.filter='blur(8px)';}
-                // Typewriter metin
-                const tw=document.createElement('div');
-                tw.style.cssText='position:fixed;bottom:15%;left:50%;transform:translateX(-50%);z-index:11;font-family:Plus Jakarta Sans,sans-serif;font-size:14px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;border-right:2px solid rgba(255,255,255,.7);animation:typeChar 1.5s steps(30) forwards,blink .5s step-end infinite';
-                tw.textContent='Tyroverse\u2019e geçiş yapılıyor...';
-                tw.id='tyro-typewriter';
-                root.appendChild(tw);
               },800);
 
-              // ═══ Faz 3 (1.8-2.5s): Buton çekilir + portal kapanır ═══
+              // ═══ Faz 2b (1.0s): Sinematik typewriter — harf harf TYROVERSE ═══
+              setTimeout(()=>{
+                const tw=document.createElement('div');
+                tw.id='tyro-typewriter';
+                tw.style.cssText='position:fixed;bottom:16%;left:50%;transform:translateX(-50%);z-index:11;text-align:center;pointer-events:none';
+                // Üst satır: TYROVERSE harfleri
+                const title=document.createElement('div');
+                title.style.cssText='font-family:Plus Jakarta Sans,sans-serif;font-size:32px;font-weight:800;letter-spacing:10px;line-height:1.3;background:linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 20px rgba(45,212,160,.3)) drop-shadow(0 0 40px rgba(59,130,246,.2))';
+                title.id='tyro-title-chars';
+                tw.appendChild(title);
+                // Alt satır: geçiş yapılıyor
+                const sub=document.createElement('div');
+                sub.style.cssText='font-family:Plus Jakarta Sans,sans-serif;font-size:11px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:4px;text-transform:uppercase;margin-top:8px;opacity:0;transition:opacity 0.6s ease';
+                sub.textContent='geçiş yapılıyor...';
+                sub.id='tyro-sub';
+                tw.appendChild(sub);
+                root.appendChild(tw);
+                // Harf harf belirme
+                const text='TYROVERSE';let ci=0;
+                const charInterval=setInterval(()=>{
+                  if(ci<text.length){title.textContent+=text[ci];ci++;}
+                  else{clearInterval(charInterval);
+                    // Cursor yanıp sönme
+                    title.style.borderRight='2px solid rgba(45,212,160,.6)';
+                    title.style.paddingRight='4px';
+                    // Alt satır fade-in
+                    setTimeout(()=>{const s2=document.getElementById('tyro-sub');if(s2)s2.style.opacity='1';},200);
+                  }
+                },80);
+              },1000);
+
+              // ═══ Faz 3 (1.8s): Buton çekilir + portal kapanır ═══
               setTimeout(()=>{
                 if(el){el.style.transform='scale(0.4)';el.style.opacity='0';el.style.filter='blur(20px)';}
                 if(portal){portal.style.transition='all 0.7s cubic-bezier(.4,0,.2,1)';portal.style.transform='translate(-50%,-50%) scale(0.15)';portal.style.opacity='0';}
               },1800);
 
-              // ═══ Faz 4 (2.5-3.2s): FLASH — beyaz patlama ═══
+              // ═══ Faz 4 (2.0s): DISSOLVE — blur artışı + grain overlay ═══
               setTimeout(()=>{
-                const flash=document.createElement('div');
-                flash.style.cssText='position:fixed;inset:0;z-index:12;background:#fff;opacity:0;transition:opacity 0.4s ease';
-                root.appendChild(flash);
-                setTimeout(()=>{flash.style.opacity='1';},50);
-                // Typewriter kaldır
+                const dissolve=document.createElement('div');
+                dissolve.style.cssText='position:fixed;inset:0;z-index:11;pointer-events:none;backdrop-filter:blur(0px);-webkit-backdrop-filter:blur(0px);transition:backdrop-filter 0.8s ease,-webkit-backdrop-filter 0.8s ease';
+                root.appendChild(dissolve);
+                // Grain noise overlay
+                const grain=document.createElement('div');
+                grain.style.cssText='position:fixed;inset:0;z-index:11;pointer-events:none;opacity:0;transition:opacity 0.6s;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'200\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'200\' height=\'200\' filter=\'url(%23n)\' opacity=\'0.4\'/%3E%3C/svg%3E")';
+                root.appendChild(grain);
+                setTimeout(()=>{dissolve.style.backdropFilter='blur(12px)';dissolve.style.WebkitBackdropFilter='blur(12px)';grain.style.opacity='0.2';},50);
+              },2000);
+
+              // ═══ Faz 5 (2.5s): PİKSEL — kontrast + desatürasyon ═══
+              setTimeout(()=>{
+                const pixel=document.createElement('div');
+                pixel.style.cssText='position:fixed;inset:0;z-index:11;pointer-events:none;backdrop-filter:blur(6px) contrast(1.8) saturate(0.2);-webkit-backdrop-filter:blur(6px) contrast(1.8) saturate(0.2);opacity:0;transition:opacity 0.3s';
+                root.appendChild(pixel);
+                setTimeout(()=>{pixel.style.opacity='1';},50);
+                // Typewriter fade
                 const tw2=document.getElementById('tyro-typewriter');
-                if(tw2){tw2.style.transition='opacity .3s';tw2.style.opacity='0';}
+                if(tw2){tw2.style.transition='opacity .4s';tw2.style.opacity='0';}
               },2500);
 
-              // ═══ Faz 5 (3.5s): Auth tetikle ═══
+              // ═══ Faz 6 (2.8s): FLASH — beyaz patlama ═══
+              setTimeout(()=>{
+                const flash=document.createElement('div');
+                flash.style.cssText='position:fixed;inset:0;z-index:13;background:#fff;opacity:0;transition:opacity 0.3s ease';
+                root.appendChild(flash);
+                setTimeout(()=>{flash.style.opacity='1';},50);
+              },2800);
+
+              // ═══ Faz 7 (3.5s): Auth tetikle ═══
               setTimeout(handleLogin,3500);
             }} disabled={authLoading||!msalReady}
               id="tyroverse-btn"
