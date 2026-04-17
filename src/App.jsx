@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } fro
 import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye, MoreHorizontal, SlidersHorizontal, RotateCcw } from "lucide-react";
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 const WorldMap3D = lazy(() => import('./WorldMap3D'));
+const LoginGlobe = lazy(() => import('./LoginGlobe'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend } from './dataverseService';
 
 const INIT=[];
@@ -581,7 +582,7 @@ export default function App(){
   const clr=(cls)=>({blu:{c:$.blu,bg:$.bluB},grn:{c:'#0d6e4f',bg:$.grnB},pur:{c:$.pur,bg:$.purB},org:{c:$.org,bg:$.orgB},red:{c:$.red,bg:$.redB},tel:{c:$.tel,bg:$.telB}}[cls]);
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // LOGIN SCREEN — Apple iOS Glassmorphism
+  // LOGIN SCREEN — Interactive Globe + Liquid Glass
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if(MSAL_ENABLED&&!msalAccount){
     const features=[
@@ -591,36 +592,47 @@ export default function App(){
       {icon:ShieldAlert,t:'Risk Radarı',d:'Kritik yaşlanma uyarıları, FIFO analizi ve erken müdahale sistemi'},
     ];
     return(
-      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',background:'#f8fafb',position:'relative',overflow:'hidden'}}>
+      <div style={{fontFamily:"'Plus Jakarta Sans',-apple-system,sans-serif",minHeight:'100vh',background:'linear-gradient(135deg,#f0f4f8 0%,#e8f0f2 40%,#eef2f7 100%)',position:'relative',overflow:'hidden'}}>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
         <style>{`
-          @keyframes liquidA{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(40px,-50px) scale(1.1) rotate(10deg)}66%{transform:translate(-20px,30px) scale(.95) rotate(-5deg)}}
-          @keyframes liquidB{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(-50px,40px) scale(1.15) rotate(-8deg)}66%{transform:translate(30px,-20px) scale(.9) rotate(12deg)}}
-          @keyframes liquidC{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(25px,35px) scale(1.08)}}
-          @keyframes splashFadeUp{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-          @keyframes fadeInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
-          @keyframes featureIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-          .login-btn:hover{transform:scale(1.02)!important;box-shadow:0 8px 30px rgba(99,102,241,.35)!important}
-          .login-btn:active{transform:scale(.98)!important}
-          @keyframes auroraBorder{0%{border-color:rgba(45,212,160,.4)}25%{border-color:rgba(59,130,246,.4)}50%{border-color:rgba(139,92,246,.4)}75%{border-color:rgba(6,182,212,.4)}100%{border-color:rgba(45,212,160,.4)}}
-          .feat-card:hover{background:rgba(255,255,255,.7)!important}
-          .login-card{transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s ease}
-          .login-card:hover{transform:translateY(-4px);box-shadow:0 24px 60px rgba(13,110,79,.12),0 8px 24px rgba(99,102,241,.1)!important}
+          @keyframes splashFadeUp{from{opacity:0;transform:translateY(28px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+          @keyframes fadeInLeft{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+          @keyframes featureIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+          @keyframes pulseGlow{0%,100%{box-shadow:0 0 20px rgba(45,212,160,.12)}50%{box-shadow:0 0 40px rgba(45,212,160,.22)}}
+          @keyframes titleReveal{from{opacity:0;transform:translateY(20px);filter:blur(8px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+          @keyframes subtitleFade{from{opacity:0}to{opacity:1}}
+          @keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+          @keyframes portalOpen{0%{opacity:0;transform:translate(-50%,-50%) scale(0.3);filter:blur(12px)}40%{opacity:1;filter:blur(0)}100%{transform:translate(-50%,-50%) scale(1)}}
+          @keyframes portalRing{0%{transform:scale(1);opacity:.4}100%{transform:scale(2.5);opacity:0}}
+          @keyframes vignetteIn{0%{opacity:0}100%{opacity:1}}
+          @keyframes flashBang{0%{opacity:0}30%{opacity:1}100%{opacity:1}}
+          @keyframes typeChar{from{width:0}to{width:100%}}
+          @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+          .login-btn{transition:all .25s cubic-bezier(.4,0,.2,1)!important}
+          .login-btn:hover{transform:scale(1.03)!important;box-shadow:0 8px 32px rgba(99,102,241,.4)!important}
+          .login-btn:active{transform:scale(.97)!important}
+          .feat-pill{transition:all .25s cubic-bezier(.4,0,.2,1)!important}
+          .feat-pill:hover{background:rgba(255,255,255,.75)!important;transform:translateY(-2px)!important;box-shadow:0 6px 20px rgba(0,0,0,.06)!important}
+          .login-card{transition:transform .4s cubic-bezier(.4,0,.2,1),box-shadow .4s ease}
+          .login-card:hover{transform:translateY(-4px);box-shadow:0 28px 70px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.8)!important}
         `}</style>
 
-        {/* Liquid gradient blobs */}
-        <div style={{position:'absolute',width:500,height:500,borderRadius:'40% 60% 70% 30%/40% 50% 60% 50%',background:'linear-gradient(135deg,rgba(13,110,79,.15),rgba(45,212,160,.1))',top:'-15%',right:'-10%',animation:'liquidA 15s ease-in-out infinite',filter:'blur(60px)'}}/>
-        <div style={{position:'absolute',width:450,height:450,borderRadius:'60% 40% 30% 70%/50% 60% 40% 50%',background:'linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.08))',bottom:'-12%',left:'-8%',animation:'liquidB 18s ease-in-out infinite',filter:'blur(60px)'}}/>
-        <div style={{position:'absolute',width:300,height:300,borderRadius:'50% 60% 40% 70%/60% 40% 60% 40%',background:'linear-gradient(135deg,rgba(13,110,79,.06),rgba(45,212,160,.08))',top:'50%',left:'50%',marginLeft:-150,marginTop:-150,animation:'liquidC 12s ease-in-out infinite',filter:'blur(50px)'}}/>
+        {/* 3D Interactive Globe — full background */}
+        <Suspense fallback={null}>
+          <LoginGlobe/>
+        </Suspense>
 
-        {/* Content — single flex row */}
-        <div style={{position:'relative',zIndex:1,minHeight:'100vh',display:'flex',alignItems:'center',padding:mob?'1.5rem 1.2rem':'3rem 4rem',flexDirection:mob?'column':'row'}}>
+        {/* Overlay content */}
+        <div style={{position:'relative',zIndex:1,minHeight:'100vh',display:'flex',flexDirection:mob?'column':'row',alignItems:'center',justifyContent:mob?'center':'flex-start',padding:mob?'2rem 1.2rem':'2.5rem 3rem',gap:mob?20:40}}>
 
-          {/* Left — Brand & Features */}
-          <div style={{flex:mob?'none':1,maxWidth:mob?'100%':520,animation:'fadeInLeft .8s cubic-bezier(.4,0,.2,1)',textAlign:mob?'center':undefined,marginBottom:mob?24:0}}>
-            {/* Logo + Name */}
-            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:mob?20:40,justifyContent:mob?'center':undefined}}>
-              <svg width="50" height="50" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 2px 8px rgba(99,102,241,.2))'}}>
+          {/* Left — Frosted panel ile brand + features */}
+          <div data-login-panel style={{maxWidth:mob?'100%':520,animation:'fadeInLeft .6s cubic-bezier(.16,1,.3,1)',textAlign:mob?'center':undefined,
+            background:'rgba(255,255,255,.45)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',
+            borderRadius:mob?20:28,padding:mob?'1.5rem':'2.2rem 2.5rem',border:'1px solid rgba(255,255,255,.55)',
+            boxShadow:'0 8px 32px rgba(0,0,0,.04)'}}>
+            {/* Logo — ilk gelen element */}
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:mob?14:22,justifyContent:mob?'center':undefined,animation:'fadeInLeft .7s cubic-bezier(.16,1,.3,1) .1s both'}}>
+              <svg width="42" height="42" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 2px 8px rgba(99,102,241,.2))'}}>
                 <defs>
                   <linearGradient id="tyro-lg2" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#2dd4a0"/><stop offset="1" stopColor="#0d6e4f"/></linearGradient>
                   <linearGradient id="tyro-la2" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#3b82f6"/><stop offset=".5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
@@ -630,50 +642,115 @@ export default function App(){
                 <path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#tyro-la2)"/>
                 <path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/>
               </svg>
-              <div style={{fontWeight:800,fontSize:26,letterSpacing:.3,lineHeight:1.1}}><span style={{color:'#1a2332'}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
+              <div style={{fontWeight:800,fontSize:22,letterSpacing:.3,lineHeight:1.1}}><span style={{color:'#1a2332'}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
             </div>
 
-            <h1 style={{fontSize:mob?28:42,fontWeight:800,color:'#1a2332',lineHeight:1.2,letterSpacing:-.5,margin:mob?'0 0 10px':'0 0 14px'}}>Dijital Depo<br/><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Yönetim Ajanı</span></h1>
-            <p style={{fontSize:mob?13:15,color:'#6b7a8d',fontWeight:500,lineHeight:1.7,margin:mob?'0 0 20px':'0 0 40px',maxWidth:mob?'100%':440}}>Tiryaki Agro stok yaşlandırma verilerinizi gerçek zamanlı izleyin, AI destekli içgörülerle operasyonel verimliliği artırın.</p>
+            <h1 style={{fontSize:mob?26:42,fontWeight:800,color:'#1a2332',lineHeight:1.12,letterSpacing:-.7,margin:'0 0 10px',textShadow:'0 1px 3px rgba(0,0,0,.05)',animation:'titleReveal .8s cubic-bezier(.16,1,.3,1) .2s both'}}>Dijital Depo<br/><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Yönetim Ajanı</span></h1>
+            <p style={{fontSize:mob?12:14,color:'#5a6b7f',fontWeight:500,lineHeight:1.7,margin:'0 0 22px',maxWidth:mob?'100%':440,animation:'subtitleFade .8s ease .4s both'}}>Tiryaki Agro stok yaşlandırma verilerinizi gerçek zamanlı izleyin, AI destekli içgörülerle operasyonel verimliliği artırın.</p>
 
-            {!mob&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            {/* Feature kartları — 2×2 grid glassmorphism */}
+            {!mob&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
               {features.map((f,i)=>(
-                <div key={i} className="feat-card" style={{padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.5)',border:'1.5px solid rgba(45,212,160,.4)',backdropFilter:'blur(12px)',transition:'all .25s',animation:`featureIn .6s cubic-bezier(.4,0,.2,1) ${.15+i*.1}s both, auroraBorder 4s ease infinite ${i*.8}s`}}>
-                  <f.icon size={18} color="#0d6e4f" style={{marginBottom:8}}/>
-                  <div style={{fontSize:13.5,fontWeight:700,color:'#1a2332',marginBottom:4}}>{f.t}</div>
-                  <div style={{fontSize:11.5,color:'#6b7a8d',fontWeight:500,lineHeight:1.5}}>{f.d}</div>
+                <div key={i} className="feat-pill" style={{padding:'14px 16px',borderRadius:14,background:'rgba(255,255,255,.5)',border:'1px solid rgba(255,255,255,.65)',backdropFilter:'blur(12px)',transition:'all .25s',animation:`featureIn .5s ease ${.15+i*.1}s both`,cursor:'default'}}>
+                  <div style={{width:30,height:30,borderRadius:9,background:'linear-gradient(135deg,rgba(13,110,79,.08),rgba(59,130,246,.06))',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8}}>
+                    <f.icon size={15} color="#0d6e4f"/>
+                  </div>
+                  <div style={{fontSize:12.5,fontWeight:700,color:'#1a2332',marginBottom:3}}>{f.t}</div>
+                  <div style={{fontSize:10.5,color:'#6b7a8d',fontWeight:500,lineHeight:1.5}}>{f.d}</div>
                 </div>
               ))}
             </div>}
 
-            {!mob&&<div style={{marginTop:48}}>
-              <p style={{fontSize:10.5,fontWeight:700,letterSpacing:2.5,margin:0,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',opacity:.5}}>TTECH BUSINESS SOLUTIONS</p>
-              <p style={{fontSize:9.5,margin:'6px 0 0',fontWeight:500,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',opacity:.35}}>{'© 2026 Tiryaki Agro — Tüm hakları saklıdır.'}</p>
+            {!mob&&<div style={{borderTop:'1px solid rgba(0,0,0,.05)',paddingTop:14}}>
+              <p style={{fontSize:9.5,fontWeight:700,letterSpacing:2.5,margin:0,color:'#94a3b8'}}>TTECH BUSINESS SOLUTIONS</p>
+              <p style={{fontSize:8.5,margin:'3px 0 0',fontWeight:500,color:'#b8c4d0'}}>© 2026 Tiryaki Agro — Tüm hakları saklıdır.</p>
             </div>}
           </div>
 
-          {/* Right — Login Card */}
-          <div className="login-card" style={{textAlign:'center',padding:mob?'2rem 1.5rem 1.5rem':'3.5rem 3rem 3rem',background:'rgba(255,255,255,.55)',borderRadius:mob?20:28,width:mob?'100%':460,flexShrink:0,marginLeft:mob?0:'auto',marginRight:mob?0:'6%',border:'1px solid rgba(255,255,255,.6)',backdropFilter:'blur(40px) saturate(180%)',WebkitBackdropFilter:'blur(40px) saturate(180%)',boxShadow:'0 20px 60px rgba(13,110,79,.08),0 1px 3px rgba(13,110,79,.05)',animation:'splashFadeUp .7s cubic-bezier(.4,0,.2,1)',boxSizing:'border-box'}}>
-            <svg width={mob?48:64} height={mob?48:64} viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{marginBottom:mob?8:12}}>
-              <defs>
-                <linearGradient id="tyro-lg3" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#2dd4a0"/><stop offset="1" stopColor="#0d6e4f"/></linearGradient>
-                <linearGradient id="tyro-la3" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#3b82f6"/><stop offset=".5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
-              </defs>
-              <path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#tyro-lg3)"/>
-              <path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/>
-              <path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#tyro-la3)"/>
-              <path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/>
-            </svg>
-            <div style={{marginBottom:6}}>
-              <div style={{fontWeight:800,fontSize:mob?24:28,letterSpacing:.3,lineHeight:1.1}}><span style={{color:'#1a2332'}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>wms</span></div>
-            </div>
-            <p style={{fontSize:mob?14:16,margin:'.8rem 0 .4rem',fontWeight:600,color:'#1a2332'}}>Hoş geldiniz</p>
-            <p style={{fontSize:mob?12:13,margin:mob?'0 0 1.5rem':'0 0 2.5rem',fontWeight:500,color:'#6b7a8d'}}>Devam etmek için kurumsal hesabınızla giriş yapın</p>
-            <button className="login-btn" onClick={handleLogin} disabled={authLoading||!msalReady} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:mob?'14px 20px':'16px 24px',borderRadius:mob?12:14,border:'none',cursor:(authLoading||!msalReady)?'wait':'pointer',background:'linear-gradient(135deg,#3b82f6,#6366f1,#8b5cf6)',color:'#fff',fontSize:mob?14:15,fontWeight:600,fontFamily:"'Plus Jakarta Sans',sans-serif",transition:'all .25s cubic-bezier(.4,0,.2,1)',boxShadow:'0 4px 16px rgba(99,102,241,.3)',opacity:(authLoading||!msalReady)?0.6:1}}>
-              <svg width="20" height="20" viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-              {authLoading?'Giriş yapılıyor...':'Microsoft ile Giriş Yap'}
+          {/* Globe üzerinde yüzen portal buton — dünyanın içinden açılır */}
+          <div id="tyroverse-portal" style={{position:'fixed',top:'50%',left:mob?'50%':'58%',transform:'translate(-50%,-50%)',zIndex:2,
+            animation:'portalOpen 1.5s cubic-bezier(.16,1,.3,1) .8s both',textAlign:'center'}}>
+            {/* Portal halkalar */}
+            <div style={{position:'absolute',inset:-24,borderRadius:'50%',background:'radial-gradient(circle,rgba(45,212,160,.05) 0%,transparent 70%)',animation:'portalRing 3s ease infinite',pointerEvents:'none'}}/>
+            <div style={{position:'absolute',inset:-16,borderRadius:'50%',border:'1px dashed rgba(45,212,160,.12)',animation:'portalRing 4s ease .8s infinite',pointerEvents:'none'}}/>
+            {/* Ana buton */}
+            <button className="login-btn" onClick={()=>{
+              const el=document.getElementById('tyroverse-btn');
+              const portal=document.getElementById('tyroverse-portal');
+              const leftPanel=document.querySelector('[data-login-panel]');
+              const root=document.getElementById('root');
+              // Globe warp başlat
+              window._tyroLoginAnim=true;
+
+              // ═══ Faz 1 (0-0.8s): Buton parlama + vignette karartma ═══
+              if(el){el.style.boxShadow='0 0 50px rgba(45,212,160,.5),0 0 100px rgba(59,130,246,.25)';el.style.borderColor='rgba(45,212,160,.5)';}
+              // Vignette overlay ekle
+              const vig=document.createElement('div');
+              vig.style.cssText='position:fixed;inset:0;z-index:10;pointer-events:none;background:radial-gradient(ellipse at 58% 50%,transparent 30%,rgba(0,0,0,.5) 100%);opacity:0;transition:opacity 1.5s ease';
+              root.appendChild(vig);
+              setTimeout(()=>{vig.style.opacity='1';},100);
+
+              // ═══ Faz 2 (0.8-1.8s): Sol panel fade + buton büyüme + typewriter ═══
+              setTimeout(()=>{
+                if(el){el.style.transform='scale(1.08)';el.style.background='rgba(255,255,255,.85)';}
+                if(leftPanel){leftPanel.style.transition='all 1.2s ease';leftPanel.style.opacity='0';leftPanel.style.transform='translateX(-60px)';leftPanel.style.filter='blur(8px)';}
+                // Typewriter metin
+                const tw=document.createElement('div');
+                tw.style.cssText='position:fixed;bottom:15%;left:50%;transform:translateX(-50%);z-index:11;font-family:Plus Jakarta Sans,sans-serif;font-size:14px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;border-right:2px solid rgba(255,255,255,.7);animation:typeChar 1.5s steps(30) forwards,blink .5s step-end infinite';
+                tw.textContent='Tyroverse\u2019e geçiş yapılıyor...';
+                tw.id='tyro-typewriter';
+                root.appendChild(tw);
+              },800);
+
+              // ═══ Faz 3 (1.8-2.5s): Buton çekilir + portal kapanır ═══
+              setTimeout(()=>{
+                if(el){el.style.transform='scale(0.4)';el.style.opacity='0';el.style.filter='blur(20px)';}
+                if(portal){portal.style.transition='all 0.7s cubic-bezier(.4,0,.2,1)';portal.style.transform='translate(-50%,-50%) scale(0.15)';portal.style.opacity='0';}
+              },1800);
+
+              // ═══ Faz 4 (2.5-3.2s): FLASH — beyaz patlama ═══
+              setTimeout(()=>{
+                const flash=document.createElement('div');
+                flash.style.cssText='position:fixed;inset:0;z-index:12;background:#fff;opacity:0;transition:opacity 0.4s ease';
+                root.appendChild(flash);
+                setTimeout(()=>{flash.style.opacity='1';},50);
+                // Typewriter kaldır
+                const tw2=document.getElementById('tyro-typewriter');
+                if(tw2){tw2.style.transition='opacity .3s';tw2.style.opacity='0';}
+              },2500);
+
+              // ═══ Faz 5 (3.5s): Auth tetikle ═══
+              setTimeout(handleLogin,3500);
+            }} disabled={authLoading||!msalReady}
+              id="tyroverse-btn"
+              style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',gap:0,
+                padding:0,borderRadius:22,overflow:'hidden',
+                border:'1.5px solid rgba(255,255,255,.45)',
+                cursor:(authLoading||!msalReady)?'wait':'pointer',
+                background:'rgba(255,255,255,.5)',backdropFilter:'blur(30px) saturate(200%)',WebkitBackdropFilter:'blur(30px) saturate(200%)',
+                fontFamily:"'Plus Jakarta Sans',sans-serif",
+                transition:'all .5s cubic-bezier(.16,1,.3,1)',
+                boxShadow:'0 16px 48px rgba(0,0,0,.08),0 0 40px rgba(45,212,160,.06),inset 0 1px 0 rgba(255,255,255,.9)',
+                opacity:(authLoading||!msalReady)?0.5:1}}>
+              {/* Tek bant — Logo + tyroverse + geçişini tamamla */}
+              <div style={{width:'100%',padding:'16px 32px',display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+                <svg width="22" height="22" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0,filter:'drop-shadow(0 1px 4px rgba(99,102,241,.15))'}}>
+                  <defs>
+                    <linearGradient id="tyro-portal-g" x1="61" y1="117" x2="14" y2="47" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#2dd4a0"/><stop offset="1" stopColor="#0d6e4f"/></linearGradient>
+                    <linearGradient id="tyro-portal-a" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#3b82f6"/><stop offset=".5" stopColor="#8b5cf6"/><stop offset="1" stopColor="#06b6d4"/></linearGradient>
+                  </defs>
+                  <path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#tyro-portal-g)"/>
+                  <path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/>
+                  <path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#tyro-portal-a)"/>
+                  <path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/>
+                </svg>
+                <span style={{fontWeight:800,fontSize:16,letterSpacing:.2,lineHeight:1}}>
+                  <span style={{color:'#1a2332'}}>tyro</span><span style={{background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>verse</span>
+                </span>
+                <span style={{fontSize:13,fontWeight:600,color:'#5a6b7f'}}>{authLoading?'bağlanıyor...':'geçişini tamamla'}</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+              </div>
             </button>
-            <p style={{fontSize:12,color:'#94a3b8',marginTop:18,fontWeight:500}}>Tiryaki kurumsal hesabınız ile giriş yapın</p>
           </div>
         </div>
       </div>
