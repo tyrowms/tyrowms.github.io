@@ -298,6 +298,7 @@ export default function App(){
 
   // ─── KPI Trend Paneli (tüm 6 KPI için ortak) ───
   const [trendKPI,setTrendKPI]=useState(null); // null=kapalı, yoksa metric ID: 'qty'|'value'|'facilities'|'products'|'avgAge'|'criticalStock'
+  const trendPctCache=useRef({}); // % değişim cache — panel kapansa bile kalır
   const [trendRaw,setTrendRaw]=useState([]);
   const [trendLoading,setTrendLoading]=useState(false);
   const [trendErr,setTrendErr]=useState(null);
@@ -443,6 +444,16 @@ export default function App(){
     const all=getMonthlyPoints(trendRaw,trendYear);
     return trendMonth!==null?all.filter(p=>p.month===trendMonth):all;
   },[trendRaw,trendMode,trendYear,trendMonth]);
+
+  // % değişim cache'i güncelle — panel açıkken son iki noktanın farkı
+  useMemo(()=>{
+    if(!trendKPI||!trendPoints||trendPoints.length<2)return;
+    const valid=trendPoints.filter(p=>p.value!=null);
+    if(valid.length<2)return;
+    const cur=valid[valid.length-1].value,prev=valid[valid.length-2].value;
+    if(!prev||prev===0)return;
+    trendPctCache.current[trendKPI]=((cur-prev)/prev)*100;
+  },[trendKPI,trendPoints]);
 
   // Trend yıl seçenekleri (verideki unique yıllar, son 3 yılla sınırlı zaten)
   const trendYearOpts=useMemo(()=>{
@@ -1028,15 +1039,11 @@ export default function App(){
                 ];
                 return(
                 <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(6,1fr)',gap:mob?8:10,marginBottom:mob?14:20}}>
-                  {/* Son ayın değişim %'si — trendPoints'ten hesapla (panel açıkken) */}
+                  {/* Son ayın değişim %'si — cache'ten oku (panel kapansa bile kalır) */}
                   {(()=>{
                   const lastPct=(metric)=>{
-                    if(trendKPI!==metric||!trendPoints||trendPoints.length<2)return null;
-                    const valid=trendPoints.filter(p=>p.value!=null);
-                    if(valid.length<2)return null;
-                    const cur=valid[valid.length-1].value,prev=valid[valid.length-2].value;
-                    if(!prev||prev===0)return null;
-                    return((cur-prev)/prev)*100;
+                    const cached=trendPctCache.current[metric];
+                    return cached!==undefined?cached:null;
                   };
                   return[
                     {metric:'qty',l:'Toplam Stok',v:fmtTon(D.s.totalQty),cls:'blu',ic:<Package size={18}/>,pct:lastPct('qty')},
