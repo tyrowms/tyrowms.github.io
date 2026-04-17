@@ -112,7 +112,7 @@ ${dataContext}`;
         temperature: 0.7,
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 400,
+        maxOutputTokens: 512,
       }
     })
   });
