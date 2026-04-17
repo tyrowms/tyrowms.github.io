@@ -2976,7 +2976,7 @@ export default function App(){
           </div>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:700,color:$.t1,letterSpacing:-.2}}>TYRO AI</div>
-            <div style={{fontSize:10,color:$.t3,fontWeight:500}}>Stok analizi asistanı · Gemini 2.5</div>
+            <div style={{fontSize:10,color:$.t3,fontWeight:500}}>Stok yaşlandırma analiz asistanı</div>
           </div>
           {chatMsgs.length>0&&<div onClick={()=>setChatMsgs([])} style={{cursor:'pointer',fontSize:9.5,fontWeight:600,color:$.t3,padding:'4px 10px',borderRadius:8,background:'rgba(0,0,0,.04)',border:'1px solid rgba(0,0,0,.06)',transition:'all .15s'}} className="rh">Temizle</div>}
           <div onClick={()=>setChatOpen(false)} style={{cursor:'pointer',width:28,height:28,borderRadius:10,background:'rgba(0,0,0,.04)',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s'}} className="rh"><X size={14} color={$.t2}/></div>
@@ -3054,7 +3054,7 @@ export default function App(){
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={chatInput.trim()&&geminiKey?'#fff':'#b8c4d0'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
-          <div style={{textAlign:'center',marginTop:6,fontSize:9,color:$.t3,opacity:.5}}>Gemini 2.5 Flash · Veriler anlık dashboard'dan</div>
+          <div style={{textAlign:'center',marginTop:6,fontSize:9,color:$.t3,opacity:.5}}>TYRO AI · Veriler anlık dashboard'dan</div>
         </div>
       </div>
     </div>
