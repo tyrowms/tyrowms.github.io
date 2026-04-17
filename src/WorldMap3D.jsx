@@ -624,22 +624,36 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
           target={[view.cx, 0, view.cz]}
         />
       </Canvas>
-      <div onClick={onGlobalClick} style={{ position:'absolute', top:14, left:14, zIndex:5, cursor:'pointer',
+      <div onClick={onGlobalClick}
+        onMouseEnter={e=>{
+          const c=e.currentTarget,ic=c.querySelector('[data-glob-icon]'),bar=c.querySelector('[data-glob-bar]');
+          if(ic){ic.style.transform='scale(1.15)';ic.style.boxShadow='0 0 14px rgba(13,110,79,.25)';}
+          if(bar){bar.style.opacity='1';bar.style.height='3px';}
+          c.style.boxShadow='0 8px 28px rgba(13,110,79,.16)';
+        }}
+        onMouseLeave={e=>{
+          const c=e.currentTarget,ic=c.querySelector('[data-glob-icon]'),bar=c.querySelector('[data-glob-bar]');
+          if(ic){ic.style.transform='scale(1)';ic.style.boxShadow='none';}
+          if(bar){bar.style.opacity=globalActive?'.8':'.4';bar.style.height='2px';}
+          c.style.boxShadow=globalActive?'0 6px 24px rgba(13,110,79,.12)':'0 4px 16px rgba(0,0,0,.06)';
+        }}
+        style={{ position:'absolute', top:14, left:14, zIndex:5, cursor:'pointer',
         background: globalActive ? 'rgba(245,252,248,.92)' : 'rgba(255,255,255,.82)',
         backdropFilter:'blur(20px) saturate(180%)', WebkitBackdropFilter:'blur(20px) saturate(180%)',
         borderRadius:14, padding:0, overflow:'hidden',
         border: globalActive ? '1.5px solid rgba(13,110,79,.3)' : '1px solid rgba(0,0,0,.06)',
         boxShadow: globalActive ? '0 6px 24px rgba(13,110,79,.12)' : '0 4px 16px rgba(0,0,0,.06)',
-        transition:'all .25s ease', display:'flex', alignItems:'center' }}>
-        {/* Subtle accent line */}
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
+        transition:'all .3s cubic-bezier(.4,0,.2,1)', display:'flex', alignItems:'center' }}>
+        {/* Accent line */}
+        <div data-glob-bar style={{ position:'absolute', top:0, left:0, right:0, height:2,
           background: globalActive ? '#0d6e4f' : 'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6)',
-          opacity: globalActive ? .8 : .4 }}/>
+          opacity: globalActive ? .8 : .4, transition:'all .3s ease' }}/>
         {/* Globe icon with orbit ring */}
-        <div style={{ width:38, height:38, margin:'9px 0 9px 11px', borderRadius:'50%', position:'relative',
+        <div data-glob-icon style={{ width:38, height:38, margin:'9px 0 9px 11px', borderRadius:'50%', position:'relative',
           background: globalActive ? 'rgba(13,110,79,.08)' : 'rgba(0,0,0,.03)',
           border: globalActive ? '1.5px solid rgba(13,110,79,.2)' : '1px solid rgba(0,0,0,.06)',
-          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+          transition:'all .3s cubic-bezier(.4,0,.2,1)' }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={globalActive?'#0d6e4f':'#5a6b7f'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
           </svg>
