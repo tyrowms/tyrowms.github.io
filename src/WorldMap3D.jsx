@@ -441,9 +441,9 @@ function computeView(countries) {
 }
 
 // ═══════ Mini dönen dünya — TurkeyMap3D SpinGlobe ile aynı kalite ═══════
-function MiniSpinGlobe({ color }) {
+function MiniSpinGlobe({ color, active }) {
   const ref = useRef();
-  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.25; });
+  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * (active ? 0.5 : 0.25); });
   const { grid, continents } = useMemo(() => {
     const R = 1, segs = 48, gPts = [];
     for (const deg of [-60, -30, 0, 30, 60]) {
@@ -499,10 +499,32 @@ function MiniSpinGlobe({ color }) {
     cGeo.setAttribute('position', new THREE.Float32BufferAttribute(cPts, 3));
     return { grid: gridGeo, continents: cGeo };
   }, []);
+  // Hub tesis noktaları (küre üzerinde parlayan dot'lar)
+  const hubs = useMemo(() => {
+    const R2 = 1.01;
+    return [
+      [41.01, 28.98],  // İstanbul
+      [36.81, 34.64],  // Mersin
+      [29.95, -90.07], // New Orleans
+      [33.31, 44.37],  // Baghdad
+      [5.56, -0.19],   // Accra
+      [15.59, 32.53],  // Khartoum
+    ].map(([lat, lng]) => {
+      const phi = (90 - lat) * Math.PI / 180, th = lng * Math.PI / 180;
+      return [Math.cos(th)*Math.sin(phi)*R2, Math.cos(phi)*R2, Math.sin(th)*Math.sin(phi)*R2];
+    });
+  }, []);
+
   return (
     <group ref={ref}>
       <lineSegments geometry={grid}><lineBasicMaterial color={color} transparent opacity={0.08} /></lineSegments>
       <lineSegments geometry={continents}><lineBasicMaterial color={color} transparent opacity={0.5} /></lineSegments>
+      {hubs.map((pos, i) => (
+        <mesh key={i} position={pos}>
+          <sphereGeometry args={[0.03, 8, 6]} />
+          <meshBasicMaterial color={i < 2 ? '#2dd4a0' : '#60a5fa'} />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -693,15 +715,17 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
       </Canvas>
       <div onClick={onGlobalClick}
         onMouseEnter={e=>{
-          const c=e.currentTarget,ic=c.querySelector('[data-glob-icon]'),bar=c.querySelector('[data-glob-bar]');
-          if(ic){ic.style.transform='scale(1.15)';ic.style.boxShadow='0 0 14px rgba(13,110,79,.25)';}
+          const c=e.currentTarget,ic=c.querySelector('[data-glob-icon]'),bar=c.querySelector('[data-glob-bar]'),hint=c.querySelector('[data-glob-hint]');
+          if(ic){ic.style.transform='scale(1.08)';ic.style.boxShadow='0 0 14px rgba(13,110,79,.25)';}
           if(bar){bar.style.opacity='1';bar.style.height='3px';}
+          if(hint){hint.style.opacity='1';hint.style.transform='translateY(0)';}
           c.style.boxShadow='0 8px 28px rgba(13,110,79,.16)';
         }}
         onMouseLeave={e=>{
-          const c=e.currentTarget,ic=c.querySelector('[data-glob-icon]'),bar=c.querySelector('[data-glob-bar]');
+          const c=e.currentTarget,ic=c.querySelector('[data-glob-icon]'),bar=c.querySelector('[data-glob-bar]'),hint=c.querySelector('[data-glob-hint]');
           if(ic){ic.style.transform='scale(1)';ic.style.boxShadow='none';}
           if(bar){bar.style.opacity=globalActive?'.8':'.4';bar.style.height='2px';}
+          if(hint){hint.style.opacity='0';hint.style.transform='translateY(3px)';}
           c.style.boxShadow=globalActive?'0 6px 24px rgba(13,110,79,.12)':'0 4px 16px rgba(0,0,0,.06)';
         }}
         style={{ position:'absolute', top:14, left:14, zIndex:5, cursor:'pointer',
@@ -715,21 +739,32 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
         <div data-glob-bar style={{ position:'absolute', top:0, left:0, right:0, height:2,
           background: globalActive ? '#0d6e4f' : 'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6)',
           opacity: globalActive ? .8 : .4, transition:'all .3s ease' }}/>
-        {/* Mini dönen 3D dünya */}
-        <div data-glob-icon style={{ width:42, height:42, margin:'7px 0 7px 9px', borderRadius:'50%', position:'relative',
-          overflow:'hidden', flexShrink:0, transition:'all .3s cubic-bezier(.4,0,.2,1)',
-          border: globalActive ? '1.5px solid rgba(13,110,79,.2)' : '1px solid rgba(0,0,0,.06)',
-          boxShadow: globalActive ? '0 0 8px rgba(13,110,79,.1)' : 'none' }}>
-          <Canvas camera={{ position:[0,0,2.6], fov:40 }} gl={{ alpha:true }} dpr={[1,2]}
-            style={{ width:'100%', height:'100%', background:'transparent' }}>
-            <MiniSpinGlobe color={globalActive?'#0d6e4f':'#94a3b8'} />
-          </Canvas>
+        {/* Mini dönen 3D dünya + yörünge halkası */}
+        <div data-glob-icon style={{ width:42, height:42, margin:'10px 4px 10px 12px', borderRadius:'50%', position:'relative',
+          flexShrink:0, transition:'all .3s cubic-bezier(.4,0,.2,1)' }}>
+          {/* Yörünge halkası — dashed, dönen, belirgin */}
+          <div style={{ position:'absolute', inset:-4, borderRadius:'50%',
+            border:'1.5px dashed '+(globalActive?'rgba(13,110,79,.45)':'rgba(90,107,127,.2)'),
+            animation:'spin 8s linear infinite', transition:'border-color .3s' }}/>
+          {/* 3D Globe canvas */}
+          <div style={{ width:'100%', height:'100%', borderRadius:'50%', overflow:'hidden',
+            background: globalActive ? 'rgba(228,245,238,.5)' : 'rgba(240,244,248,.6)',
+            border: globalActive ? '1.5px solid rgba(13,110,79,.25)' : '1px solid rgba(0,0,0,.08)',
+            boxShadow: globalActive ? '0 0 10px rgba(13,110,79,.12)' : '0 0 4px rgba(0,0,0,.04)', transition:'all .3s' }}>
+            <Canvas camera={{ position:[0,0,2.6], fov:40 }} gl={{ alpha:true }} dpr={[1,2]}
+              style={{ width:'100%', height:'100%', background:'transparent' }}>
+              <MiniSpinGlobe color={globalActive?'#0d6e4f':'#94a3b8'} active={globalActive} />
+            </Canvas>
+          </div>
         </div>
         <div style={{ padding:'7px 14px 7px 10px' }}>
           <div style={{ fontSize:12, fontWeight:700, color: globalActive ? '#0d6e4f' : '#1a2332',
             fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Küresel Operasyonlar</div>
           <div style={{ fontSize:10, fontWeight:500, color: globalActive ? 'rgba(13,110,79,.7)' : '#5a6b7f',
             fontFamily:"'Plus Jakarta Sans',sans-serif" }}>{countries.length} ülke · {countries.reduce((s,c)=>s+c.fc,0)} tesis</div>
+          <div data-glob-hint style={{ fontSize:9.5, fontWeight:600, color:'#0d6e4f', marginTop:2,
+            opacity:0, transform:'translateY(3px)', transition:'all .25s ease',
+            fontFamily:"'Plus Jakarta Sans',sans-serif" }}>Detayı gör →</div>
         </div>
       </div>
     </div>
