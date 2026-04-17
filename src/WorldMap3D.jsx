@@ -440,6 +440,65 @@ function computeView(countries) {
   return { camY, cx, cz };
 }
 
+// ═══════ Mini dönen dünya (Küresel Operasyonlar butonu için) ═══════
+function MiniSpinGlobe({ color }) {
+  const ref = useRef();
+  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.3; });
+  const geo = useMemo(() => {
+    const R = 1, segs = 48, pts = [];
+    // Enlem çizgileri
+    for (const deg of [-45, 0, 45]) {
+      const r = Math.cos(deg * Math.PI / 180) * R, y = Math.sin(deg * Math.PI / 180) * R;
+      for (let i = 0; i < segs; i++) {
+        const a1 = (i / segs) * Math.PI * 2, a2 = ((i + 1) / segs) * Math.PI * 2;
+        pts.push(Math.cos(a1)*r, y, Math.sin(a1)*r, Math.cos(a2)*r, y, Math.sin(a2)*r);
+      }
+    }
+    // Boylam çizgileri
+    for (let lng = 0; lng < 180; lng += 30) {
+      const t = lng * Math.PI / 180;
+      for (let i = 0; i < segs; i++) {
+        const p1 = (i / segs) * Math.PI, p2 = ((i + 1) / segs) * Math.PI;
+        pts.push(Math.sin(p1)*Math.cos(t)*R, Math.cos(p1)*R, Math.sin(p1)*Math.sin(t)*R,
+                 Math.sin(p2)*Math.cos(t)*R, Math.cos(p2)*R, Math.sin(p2)*Math.sin(t)*R);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    return g;
+  }, []);
+  // Kıta çizgileri
+  const continentGeo = useMemo(() => {
+    const R2 = 1.005, pts = [];
+    geoData.features.forEach(f => {
+      const coords = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+      coords.forEach(poly => {
+        const ring = poly[0]; let prev = null;
+        for (let i = 0; i < ring.length; i++) {
+          const [lng, lat] = ring[i];
+          if (prev && Math.abs(lng - prev[0]) > 170) { prev = ring[i]; continue; }
+          const phi = (90 - lat) * Math.PI / 180, th = (lng + 180) * Math.PI / 180;
+          const x = -R2 * Math.sin(phi) * Math.cos(th), y = R2 * Math.cos(phi), z = R2 * Math.sin(phi) * Math.sin(th);
+          if (prev) {
+            const phi2 = (90 - prev[1]) * Math.PI / 180, th2 = (prev[0] + 180) * Math.PI / 180;
+            pts.push(-R2*Math.sin(phi2)*Math.cos(th2), R2*Math.cos(phi2), R2*Math.sin(phi2)*Math.sin(th2), x, y, z);
+          }
+          prev = ring[i];
+        }
+      });
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    return g;
+  }, []);
+  return (
+    <group ref={ref}>
+      <lineSegments geometry={geo}><lineBasicMaterial color={color} transparent opacity={0.12} /></lineSegments>
+      <lineSegments geometry={continentGeo}><lineBasicMaterial color={color} transparent opacity={0.4} /></lineSegments>
+    </group>
+  );
+}
+
 // Bayrak texture'ları — Canvas ile programatik çizim (CDN gereksiz, %100 lokal, senkron)
 const _flagCache = {};
 function createFlagTexture(iso) {
@@ -648,18 +707,15 @@ export default function WorldMap3D({ countries, maxQty, sel, hov, onSelect, onHo
         <div data-glob-bar style={{ position:'absolute', top:0, left:0, right:0, height:2,
           background: globalActive ? '#0d6e4f' : 'linear-gradient(90deg,#0d6e4f,#3b82f6,#8b5cf6)',
           opacity: globalActive ? .8 : .4, transition:'all .3s ease' }}/>
-        {/* Globe icon with orbit ring */}
-        <div data-glob-icon style={{ width:38, height:38, margin:'9px 0 9px 11px', borderRadius:'50%', position:'relative',
-          background: globalActive ? 'rgba(13,110,79,.08)' : 'rgba(0,0,0,.03)',
+        {/* Mini dönen 3D dünya */}
+        <div data-glob-icon style={{ width:42, height:42, margin:'7px 0 7px 9px', borderRadius:'50%', position:'relative',
+          overflow:'hidden', flexShrink:0, transition:'all .3s cubic-bezier(.4,0,.2,1)',
           border: globalActive ? '1.5px solid rgba(13,110,79,.2)' : '1px solid rgba(0,0,0,.06)',
-          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-          transition:'all .3s cubic-bezier(.4,0,.2,1)' }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={globalActive?'#0d6e4f':'#5a6b7f'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
-          </svg>
-          <div style={{ position:'absolute', inset:-5, borderRadius:'50%',
-            border:'1.5px dashed '+(globalActive?'rgba(13,110,79,.3)':'rgba(0,0,0,.1)'),
-            animation:'spin 10s linear infinite' }}/>
+          boxShadow: globalActive ? '0 0 8px rgba(13,110,79,.1)' : 'none' }}>
+          <Canvas camera={{ position:[0,0,2.6], fov:40 }} gl={{ alpha:true }} dpr={[1,2]}
+            style={{ width:'100%', height:'100%', background:'transparent' }}>
+            <MiniSpinGlobe color={globalActive?'#0d6e4f':'#94a3b8'} />
+          </Canvas>
         </div>
         <div style={{ padding:'7px 14px 7px 10px' }}>
           <div style={{ fontSize:12, fontWeight:700, color: globalActive ? '#0d6e4f' : '#1a2332',
