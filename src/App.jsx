@@ -4,6 +4,7 @@ const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 const WorldMap3D = lazy(() => import('./WorldMap3D'));
 const LoginGlobe = lazy(() => import('./LoginGlobe'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend } from './dataverseService';
+import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
 
 const INIT=[];
 const DEMO=INIT;
@@ -339,6 +340,27 @@ export default function App(){
   const [repSC,setRepSC]=useState('total'); // sort column: n, total, avg, or bucket key
   const [repSD,setRepSD]=useState(-1); // sort direction
   const [mobMenu,setMobMenu]=useState(false); // three-dot menu on mobile bottom nav
+
+  // ─── AI Chatbot (Gemini) ───
+  const [chatOpen,setChatOpen]=useState(false);
+  const [chatMsgs,setChatMsgs]=useState([]);
+  const [chatInput,setChatInput]=useState('');
+  const [chatLoading,setChatLoading]=useState(false);
+  const [geminiKey,setGeminiKey]=useState(()=>localStorage.getItem('tyrowms_gemini_key')||'');
+  const chatEndRef=useRef(null);
+  const sendChat=useCallback(async()=>{
+    const q=chatInput.trim();if(!q||chatLoading)return;
+    const newMsgs=[...chatMsgs,{role:'user',text:q}];
+    setChatMsgs(newMsgs);setChatInput('');setChatLoading(true);
+    try{
+      const ctx=buildDataContext(D,DW,fmtTon,fmt,fN);
+      const answer=await askGemini(geminiKey,newMsgs,ctx);
+      setChatMsgs(m=>[...m,{role:'model',text:answer}]);
+    }catch(e){
+      setChatMsgs(m=>[...m,{role:'model',text:'❌ '+e.message}]);
+    }finally{setChatLoading(false);}
+  },[chatInput,chatMsgs,chatLoading,geminiKey,D,DW]);
+  useEffect(()=>{if(chatEndRef.current)chatEndRef.current.scrollIntoView({behavior:'smooth'});},[chatMsgs]);
 
   // ─── KPI Trend Paneli (tüm 6 KPI için ortak) ───
   const [trendKPI,setTrendKPI]=useState(null); // null=kapalı, yoksa metric ID: 'qty'|'value'|'facilities'|'products'|'avgAge'|'criticalStock'
@@ -2363,6 +2385,31 @@ export default function App(){
             {/* ===== AYARLAR ===== */}
             {pg==='set'&&(
               <div style={{maxWidth:720}}>
+                {/* AI Chatbot */}
+                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16}}>
+                  <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
+                    <div style={{width:26,height:26,borderRadius:7,background:'linear-gradient(135deg,rgba(13,110,79,.1),rgba(59,130,246,.1))',color:$.ac,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Zap size={14}/></div>
+                    {'AI Chatbot (Gemini)'}
+                  </div>
+                  <div style={{padding:'16px 18px'}}>
+                    <div style={{fontSize:12,color:$.t2,marginBottom:12,lineHeight:1.6}}>Google Gemini AI ile stok verilerinizi doğal dille sorgulayın. Ücretsiz API key gereklidir.</div>
+                    <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:12}}>
+                      <input type="password" className="fi" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)}
+                        placeholder="Gemini API Key" style={{flex:1,fontSize:12}}/>
+                      <button className="tb-b pr" onClick={()=>{localStorage.setItem('tyrowms_gemini_key',geminiKey);
+                        testGeminiKey(geminiKey).then(ok=>{alert(ok?'✅ API key geçerli — bağlantı başarılı!':'❌ API key geçersiz veya bağlantı hatası.');});}}
+                        style={{fontSize:11,padding:'8px 14px',whiteSpace:'nowrap'}}>Test Et</button>
+                    </div>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                      <div style={{width:8,height:8,borderRadius:'50%',background:geminiKey?'#2dd4a0':'#e5484d'}}/>
+                      <span style={{fontSize:11,fontWeight:600,color:geminiKey?'#0d6e4f':'#e5484d'}}>{geminiKey?'Key girildi':'Key girilmedi'}</span>
+                    </div>
+                    <div style={{fontSize:10,color:$.t3,lineHeight:1.6}}>
+                      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style={{color:$.blu,textDecoration:'none',fontWeight:600}}>Google AI Studio</a>'dan ücretsiz key alabilirsiniz. Key sadece bu tarayıcıda saklanır.
+                    </div>
+                  </div>
+                </div>
+
                 {/* Veri Yönetimi */}
                 <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:16}}>
                   <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
@@ -2886,6 +2933,86 @@ export default function App(){
           <div style={{position:'absolute',top:-6,left:'50%',marginLeft:-6,width:12,height:12,background:$.bg2,border:'1px solid '+$.bd,borderBottom:'none',borderRight:'none',transform:'rotate(45deg)'}}/>
           {tips2[hovTip.i]}
         </div>);})()}
+
+      {/* ═══════ AI CHATBOT ═══════ */}
+      {/* Floating chat butonu — sağ alt */}
+      <div onClick={()=>setChatOpen(v=>!v)} style={{position:'fixed',bottom:mob?80:24,right:20,zIndex:997,
+        width:48,height:48,borderRadius:'50%',cursor:'pointer',
+        background:'linear-gradient(135deg,#0d6e4f,#3b82f6)',
+        boxShadow:chatOpen?'0 4px 20px rgba(13,110,79,.3)':'0 6px 24px rgba(13,110,79,.25)',
+        display:'flex',alignItems:'center',justifyContent:'center',
+        transition:'all .3s cubic-bezier(.4,0,.2,1)',transform:chatOpen?'scale(0.9) rotate(90deg)':'scale(1)'}}>
+        {chatOpen?<X size={20} color="#fff"/>:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+      </div>
+
+      {/* Chat panel — sağ taraf */}
+      {chatOpen&&<div onClick={()=>setChatOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.15)',zIndex:998}}/>}
+      <div style={{position:'fixed',top:0,right:0,width:mob?'100%':420,height:'100vh',background:'rgba(255,255,255,.95)',
+        backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',
+        borderLeft:'1px solid '+$.bdL,boxShadow:'-8px 0 30px rgba(0,0,0,.06)',
+        zIndex:999,transform:chatOpen?'translateX(0)':'translateX(100%)',transition:'transform .3s cubic-bezier(.4,0,.2,1)',
+        display:'flex',flexDirection:'column',overflow:'hidden'}}>
+        {/* Header */}
+        <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+          <div style={{width:32,height:32,borderRadius:10,background:'linear-gradient(135deg,rgba(13,110,79,.1),rgba(59,130,246,.1))',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <Zap size={16} color="#0d6e4f"/>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:700,color:$.t1}}>TYRO AI Asistan</div>
+            <div style={{fontSize:10,color:$.t3,fontWeight:500}}>Gemini ile stok analizi</div>
+          </div>
+          {chatMsgs.length>0&&<div onClick={()=>setChatMsgs([])} style={{cursor:'pointer',fontSize:10,fontWeight:600,color:$.t3,padding:'4px 8px',borderRadius:6,border:'1px solid '+$.bdL}} className="rh">Temizle</div>}
+          <div onClick={()=>setChatOpen(false)} style={{cursor:'pointer',width:28,height:28,borderRadius:8,background:'rgba(0,0,0,.05)',display:'flex',alignItems:'center',justifyContent:'center'}} className="rh"><X size={14} color={$.t2}/></div>
+        </div>
+
+        {/* Mesaj listesi */}
+        <div style={{flex:1,overflowY:'auto',padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+          {!geminiKey&&<div style={{padding:'16px',borderRadius:12,background:'rgba(245,166,35,.08)',border:'1px solid rgba(245,166,35,.2)',textAlign:'center'}}>
+            <div style={{fontSize:12,fontWeight:600,color:'#b45309',marginBottom:4}}>API Key Gerekli</div>
+            <div style={{fontSize:11,color:'#92400e'}}>Ayarlar → AI Chatbot bölümünden Gemini API key girin.</div>
+          </div>}
+          {chatMsgs.length===0&&geminiKey&&<div style={{textAlign:'center',padding:'30px 20px',color:$.t3}}>
+            <Zap size={28} color={$.ac} style={{margin:'0 auto 10px',opacity:.4}}/>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:6}}>Stok verilerinizi sorun</div>
+            <div style={{fontSize:11,lineHeight:1.6}}>
+              "Toplam stok ne kadar?"<br/>
+              "En yaşlı tesis hangisi?"<br/>
+              "Kritik stok için ne önerirsin?"
+            </div>
+          </div>}
+          {chatMsgs.map((m,i)=>(
+            <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
+              <div style={{maxWidth:'85%',padding:'10px 14px',borderRadius:m.role==='user'?'14px 14px 4px 14px':'14px 14px 14px 4px',
+                background:m.role==='user'?'linear-gradient(135deg,#0d6e4f,#3b82f6)':'rgba(0,0,0,.04)',
+                color:m.role==='user'?'#fff':$.t1,fontSize:12,fontWeight:500,lineHeight:1.6,
+                whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {chatLoading&&<div style={{display:'flex',gap:4,padding:'10px 14px'}}>
+            <div style={{width:6,height:6,borderRadius:'50%',background:$.ac,animation:'fadeUp .6s ease infinite'}}/>
+            <div style={{width:6,height:6,borderRadius:'50%',background:$.ac,animation:'fadeUp .6s ease .15s infinite'}}/>
+            <div style={{width:6,height:6,borderRadius:'50%',background:$.ac,animation:'fadeUp .6s ease .3s infinite'}}/>
+          </div>}
+          <div ref={chatEndRef}/>
+        </div>
+
+        {/* Input */}
+        <div style={{padding:'12px 16px',borderTop:'1px solid '+$.bdL,display:'flex',gap:8,flexShrink:0}}>
+          <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}}
+            placeholder={geminiKey?'Stok hakkında bir şey sorun...':'API key gerekli'}
+            disabled={!geminiKey||chatLoading}
+            className="fi" style={{flex:1,fontSize:12,padding:'10px 14px',borderRadius:12}}/>
+          <button onClick={sendChat} disabled={!geminiKey||chatLoading||!chatInput.trim()}
+            style={{width:38,height:38,borderRadius:10,border:'none',cursor:'pointer',flexShrink:0,
+              background:chatInput.trim()&&geminiKey?'linear-gradient(135deg,#0d6e4f,#3b82f6)':'rgba(0,0,0,.06)',
+              display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'}}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={chatInput.trim()&&geminiKey?'#fff':'#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
