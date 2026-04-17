@@ -2945,20 +2945,6 @@ export default function App(){
         </div>);})()}
 
       {/* ═══════ AI CHATBOT ═══════ */}
-      {/* Floating chat butonu — aurora gradient, sağ alt */}
-      <div onClick={()=>setChatOpen(v=>!v)} style={{position:'fixed',bottom:mob?80:24,right:20,zIndex:997,
-        width:52,height:52,borderRadius:18,cursor:'pointer',
-        background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',backgroundSize:'200% 200%',
-        boxShadow:chatOpen?'0 4px 16px rgba(45,212,160,.25)':'0 6px 24px rgba(45,212,160,.2),0 2px 8px rgba(59,130,246,.15)',
-        display:'flex',alignItems:'center',justifyContent:'center',
-        transition:'all .3s cubic-bezier(.4,0,.2,1)',transform:chatOpen?'scale(0.9)':'scale(1)'}}>
-        {chatOpen?<X size={20} color="#fff"/>:
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 2C6.5 2 2 5.8 2 10.5c0 2.6 1.5 4.9 3.8 6.4L4 22l4.5-2.5c1.1.3 2.3.5 3.5.5 5.5 0 10-3.8 10-8.5S17.5 2 12 2z"/>
-            <circle cx="8" cy="10.5" r="1" fill="#fff"/><circle cx="12" cy="10.5" r="1" fill="#fff"/><circle cx="16" cy="10.5" r="1" fill="#fff"/>
-          </svg>}
-      </div>
-
       {/* Chat panel — premium glassmorphism */}
       {chatOpen&&<div onClick={()=>setChatOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.12)',zIndex:998,backdropFilter:'blur(2px)'}}/>}
       <div style={{position:'fixed',top:mob?0:12,right:mob?0:12,bottom:mob?0:12,width:mob?'100%':400,
