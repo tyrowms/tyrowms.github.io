@@ -2992,7 +2992,7 @@ export default function App(){
                 background:m.role==='user'?'linear-gradient(135deg,#0d6e4f,#3b82f6)':'rgba(0,0,0,.04)',
                 color:m.role==='user'?'#fff':$.t1,fontSize:12,fontWeight:500,lineHeight:1.6,
                 whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
-                {m.text}
+                {m.role==='model'?<span dangerouslySetInnerHTML={{__html:m.text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/\n/g,'<br/>')}}/>:m.text}
               </div>
             </div>
           ))}
