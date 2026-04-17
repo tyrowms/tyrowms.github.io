@@ -2403,7 +2403,7 @@ export default function App(){
                         </div>
                       </div>
                       <button className="tb-b pr" onClick={()=>{localStorage.setItem('tyrowms_gemini_key',geminiKey);
-                        testGeminiKey(geminiKey).then(ok=>{alert(ok?'✅ API key geçerli — bağlantı başarılı!':'❌ API key geçersiz veya bağlantı hatası.');});}}
+                        testGeminiKey(geminiKey).then(r=>{alert(r.ok?'✅ API key geçerli — bağlantı başarılı!':'❌ Hata: '+(r.error||'Bilinmeyen hata'));});}}
                         style={{fontSize:11,padding:'8px 14px',whiteSpace:'nowrap'}}>Test Et</button>
                     </div>
                     <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>

@@ -2,7 +2,7 @@
 // Google Gemini free API ile stok verisi sorgulama
 // Model: gemini-2.0-flash (ücretsiz, 15 RPM, 1M token/dk)
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // Veri context'ini token-efficient metin özetine çevir
 export function buildDataContext(D, DW, fmtTon, fmt, fN) {
@@ -108,10 +108,13 @@ export async function testGeminiKey(apiKey) {
         generationConfig: { maxOutputTokens: 10 }
       })
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { ok: false, error: err.error?.message || `HTTP ${res.status}` };
+    }
     const data = await res.json();
-    return !!data.candidates?.[0]?.content?.parts?.[0]?.text;
-  } catch {
-    return false;
+    return { ok: !!data.candidates?.[0]?.content?.parts?.[0]?.text };
+  } catch (e) {
+    return { ok: false, error: e.message };
   }
 }
