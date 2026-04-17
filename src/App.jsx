@@ -3052,7 +3052,6 @@ export default function App(){
           </div>
           <div style={{textAlign:'center',marginTop:6,fontSize:9,color:$.t3,opacity:.5}}>Gemini 2.5 Flash · Veriler anlık dashboard'dan</div>
         </div>
-        </div>
       </div>
     </div>
   );
