@@ -843,14 +843,14 @@ export default function App(){
         <div style={{padding:sbExpanded?'0 12px':'0 8px',flex:1,overflowY:'auto'}}>
           {sbExpanded&&<div style={{padding:'10px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Genel'}</div>}
           {!sbExpanded&&<div style={{height:10}}/>}
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz & Risk'},{id:'yon',icon:Briefcase,label:'Yönetim'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Risk Radarı'},{id:'yon',icon:Briefcase,label:'AI | İçgörüler'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
             </div>);})}
           {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>}
           {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
-          {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Globe,label:'ERP Verileri'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Globe,label:'Ham Veriler'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
@@ -958,8 +958,8 @@ export default function App(){
             {/* Desktop: original single-row layout */}
             <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Analiz & Risk','yon':'Yönetim','raw':'Rapor Satırları','rep':'Raporlar','erp':'ERP Verileri','set':'Ayarlar'}[pg]}</div>
-                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'Üst Yönetim Stok Yaşlandırma İçgörüleri','em':'Küresel Operasyonlar','raw':'İşlem Kayıtları','rep':'Stok Yaşlandırma Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Risk Radarı','yon':'AI | İçgörüler','raw':'ERP Veriler','rep':'Kırılım Raporu','erp':'Ham Veriler','set':'Ayarlar'}[pg]}</div>
+                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'AI Destekli Stok Yaşlandırma İçgörüleri','raw':'ERP İşlem Kayıtları','rep':'Stok Yaşlandırma Kırılım Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6,flex:1,maxWidth:400,margin:'0 auto',position:'relative'}}>
@@ -1577,24 +1577,7 @@ export default function App(){
                   {/* ── BENTO GRID ── */}
                   <div style={{display:'grid',gridTemplateColumns:mob?'1fr':'repeat(4,1fr)',gap:mob?10:14}}>
 
-                    {/* ROW 1: Executive KPIs — 4 cards */}
-                    {[
-                      {l:'Toplam Stok',v:fmtTon(D.s.totalQty),sub:`${fN(D.s.prodCount)} ürün`,icon:Package,c:$.blu,bg:$.bluB},
-                      {l:'Toplam Değer ($)',v:'$'+fmt(D.s.totalVal),icon:TrendingUp,c:'#0d6e4f',bg:$.grnB},
-                      {l:'Ortalama Yaş',v:avgAge+' gün',sub:avgAge<90?'İyi durumda':avgAge<180?'İzlenmeli':'Dikkat',icon:Clock,c:ac(avgAge),bg:acBg(avgAge)},
-                      {l:'Aktif Varlıklar',v:D.s.facilityCount+' tesis',sub:`${D.s.whCount} depo · ${D.s.cityCount} şehir`,icon:Building2,c:$.pur,bg:$.purB}
-                    ].map((k,i)=>(
-                      <BCard key={i}><div style={{padding:'16px 18px'}}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-                          <span style={{fontSize:10.5,fontWeight:600,color:$.t3,textTransform:'uppercase',letterSpacing:.5}}>{k.l}</span>
-                          <div style={{width:28,height:28,borderRadius:8,background:k.bg,color:k.c,display:'flex',alignItems:'center',justifyContent:'center'}}><k.icon size={14}/></div>
-                        </div>
-                        <div style={{fontSize:22,fontWeight:700,fontFamily:$.mo,color:k.c,lineHeight:1.1,marginBottom:4}}>{k.v}</div>
-                        <div style={{fontSize:12,color:$.t2,fontWeight:500}}>{k.sub}</div>
-                      </div></BCard>
-                    ))}
-
-                    {/* ROW 2: AI Insights (span 1) + Aksiyon Önerileri (span 2) + Risk Radarı (span 1) */}
+                    {/* AI Insights (span 1) + Aksiyon Önerileri (span 2) + Risk Radarı (span 1) */}
                     <BCard span={1}>
                       <BHead icon={Eye} color={'#6366f1'} bg={'rgba(99,102,241,.06)'} title="AI Insights"/>
                       <div style={{padding:'12px 16px'}}>
@@ -2825,7 +2808,7 @@ export default function App(){
       {mob&&<>
         {mobMenu&&<div style={{position:'fixed',inset:0,zIndex:1099}} onClick={()=>setMobMenu(false)}/>}
         <div style={{position:'fixed',bottom:12,left:12,right:12,zIndex:1100,background:'rgba(255,255,255,.92)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',borderRadius:22,boxShadow:'0 4px 24px rgba(0,0,0,.1), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px 8px',display:'flex',alignItems:'center',justifyContent:'space-around'}}>
-          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Analiz'},{id:'yon',icon:Briefcase,label:'Yönetim'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'dash',icon:BarChart3,label:'Dashboard'},{id:'ana',icon:Activity,label:'Risk Radarı'},{id:'yon',icon:Briefcase,label:'AI | İçgörüler'}].map(p=>{const isA=pg===p.id;return(
             <button key={p.id} className={'bnav-btn'+(isA?' active':'')} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}}>
               <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:isA?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><p.icon size={20} strokeWidth={isA?2.2:1.6}/></div>
               <span>{p.label}</span>
@@ -2837,7 +2820,7 @@ export default function App(){
               <span>Diğer</span>
             </button>
             {mobMenu&&<div style={{position:'absolute',bottom:'100%',right:-8,marginBottom:12,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,.12), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px',minWidth:180,animation:'mobMenuUp .2s ease'}}>
-              {[{id:'rep',icon:FileBarChart,label:'Raporlar'},{id:'raw',icon:Database,label:'Rapor Satırları'},{id:'erp',icon:Database,label:'ERP Verileri'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
+              {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Database,label:'Ham Veriler'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
                 <div key={p.id} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,cursor:'pointer',background:isA?'rgba(13,110,79,.07)':'transparent',color:isA?$.ac:$.t1,fontWeight:isA?600:500,fontSize:13,transition:'all .15s'}} className="rh">
                   <p.icon size={17} strokeWidth={isA?2.2:1.6}/>{p.label}
                   {p.id==='raw'&&rows.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff'}}>{rows.length}</span>}
