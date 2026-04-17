@@ -2941,82 +2941,117 @@ export default function App(){
         </div>);})()}
 
       {/* ═══════ AI CHATBOT ═══════ */}
-      {/* Floating chat butonu — sağ alt */}
+      {/* Floating chat butonu — aurora gradient, sağ alt */}
       <div onClick={()=>setChatOpen(v=>!v)} style={{position:'fixed',bottom:mob?80:24,right:20,zIndex:997,
-        width:48,height:48,borderRadius:'50%',cursor:'pointer',
-        background:'linear-gradient(135deg,#0d6e4f,#3b82f6)',
-        boxShadow:chatOpen?'0 4px 20px rgba(13,110,79,.3)':'0 6px 24px rgba(13,110,79,.25)',
+        width:52,height:52,borderRadius:18,cursor:'pointer',
+        background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',backgroundSize:'200% 200%',
+        boxShadow:chatOpen?'0 4px 16px rgba(45,212,160,.25)':'0 6px 24px rgba(45,212,160,.2),0 2px 8px rgba(59,130,246,.15)',
         display:'flex',alignItems:'center',justifyContent:'center',
-        transition:'all .3s cubic-bezier(.4,0,.2,1)',transform:chatOpen?'scale(0.9) rotate(90deg)':'scale(1)'}}>
-        {chatOpen?<X size={20} color="#fff"/>:<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+        transition:'all .3s cubic-bezier(.4,0,.2,1)',transform:chatOpen?'scale(0.9)':'scale(1)'}}>
+        {chatOpen?<X size={20} color="#fff"/>:
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2C6.5 2 2 5.8 2 10.5c0 2.6 1.5 4.9 3.8 6.4L4 22l4.5-2.5c1.1.3 2.3.5 3.5.5 5.5 0 10-3.8 10-8.5S17.5 2 12 2z"/>
+            <circle cx="8" cy="10.5" r="1" fill="#fff"/><circle cx="12" cy="10.5" r="1" fill="#fff"/><circle cx="16" cy="10.5" r="1" fill="#fff"/>
+          </svg>}
       </div>
 
-      {/* Chat panel — sağ taraf */}
-      {chatOpen&&<div onClick={()=>setChatOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.15)',zIndex:998}}/>}
-      <div style={{position:'fixed',top:0,right:0,width:mob?'100%':420,height:'100vh',background:'rgba(255,255,255,.95)',
-        backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',
-        borderLeft:'1px solid '+$.bdL,boxShadow:'-8px 0 30px rgba(0,0,0,.06)',
-        zIndex:999,transform:chatOpen?'translateX(0)':'translateX(100%)',transition:'transform .3s cubic-bezier(.4,0,.2,1)',
+      {/* Chat panel — premium glassmorphism */}
+      {chatOpen&&<div onClick={()=>setChatOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.12)',zIndex:998,backdropFilter:'blur(2px)'}}/>}
+      <div style={{position:'fixed',top:mob?0:12,right:mob?0:12,bottom:mob?0:12,width:mob?'100%':400,
+        background:'rgba(255,255,255,.92)',backdropFilter:'blur(24px) saturate(180%)',WebkitBackdropFilter:'blur(24px) saturate(180%)',
+        borderRadius:mob?0:24,border:'1px solid rgba(255,255,255,.6)',
+        boxShadow:'-12px 0 40px rgba(0,0,0,.08),0 0 0 1px rgba(0,0,0,.04)',
+        zIndex:999,transform:chatOpen?'translateX(0)':'translateX(calc(100% + 24px))',transition:'transform .35s cubic-bezier(.16,1,.3,1)',
         display:'flex',flexDirection:'column',overflow:'hidden'}}>
-        {/* Header */}
-        <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
-          <div style={{width:32,height:32,borderRadius:10,background:'linear-gradient(135deg,rgba(13,110,79,.1),rgba(59,130,246,.1))',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <Zap size={16} color="#0d6e4f"/>
+
+        {/* Header — gradient accent + avatar */}
+        <div style={{position:'relative',padding:'16px 18px 14px',display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
+          <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',borderRadius:'24px 24px 0 0'}}/>
+          <div style={{width:36,height:36,borderRadius:12,background:'linear-gradient(135deg,#2dd4a0,#3b82f6)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 8px rgba(45,212,160,.2)'}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           </div>
           <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:700,color:$.t1}}>TYRO AI Asistan</div>
-            <div style={{fontSize:10,color:$.t3,fontWeight:500}}>Gemini ile stok analizi</div>
+            <div style={{fontSize:14,fontWeight:700,color:$.t1,letterSpacing:-.2}}>TYRO AI</div>
+            <div style={{fontSize:10,color:$.t3,fontWeight:500}}>Stok analizi asistanı · Gemini 2.5</div>
           </div>
-          {chatMsgs.length>0&&<div onClick={()=>setChatMsgs([])} style={{cursor:'pointer',fontSize:10,fontWeight:600,color:$.t3,padding:'4px 8px',borderRadius:6,border:'1px solid '+$.bdL}} className="rh">Temizle</div>}
-          <div onClick={()=>setChatOpen(false)} style={{cursor:'pointer',width:28,height:28,borderRadius:8,background:'rgba(0,0,0,.05)',display:'flex',alignItems:'center',justifyContent:'center'}} className="rh"><X size={14} color={$.t2}/></div>
+          {chatMsgs.length>0&&<div onClick={()=>setChatMsgs([])} style={{cursor:'pointer',fontSize:9.5,fontWeight:600,color:$.t3,padding:'4px 10px',borderRadius:8,background:'rgba(0,0,0,.04)',border:'1px solid rgba(0,0,0,.06)',transition:'all .15s'}} className="rh">Temizle</div>}
+          <div onClick={()=>setChatOpen(false)} style={{cursor:'pointer',width:28,height:28,borderRadius:10,background:'rgba(0,0,0,.04)',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s'}} className="rh"><X size={14} color={$.t2}/></div>
         </div>
 
         {/* Mesaj listesi */}
-        <div style={{flex:1,overflowY:'auto',padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
-          {!geminiKey&&<div style={{padding:'16px',borderRadius:12,background:'rgba(245,166,35,.08)',border:'1px solid rgba(245,166,35,.2)',textAlign:'center'}}>
-            <div style={{fontSize:12,fontWeight:600,color:'#b45309',marginBottom:4}}>API Key Gerekli</div>
-            <div style={{fontSize:11,color:'#92400e'}}>Ayarlar → AI Chatbot bölümünden Gemini API key girin.</div>
+        <div style={{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:12}}>
+          {!geminiKey&&<div style={{padding:'20px',borderRadius:16,background:'linear-gradient(135deg,rgba(245,166,35,.06),rgba(245,166,35,.02))',border:'1px solid rgba(245,166,35,.15)',textAlign:'center'}}>
+            <div style={{width:36,height:36,borderRadius:12,background:'rgba(245,166,35,.1)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 10px'}}><AlertTriangle size={18} color="#b45309"/></div>
+            <div style={{fontSize:13,fontWeight:700,color:'#92400e',marginBottom:4}}>API Key Gerekli</div>
+            <div style={{fontSize:11,color:'#a16207',lineHeight:1.5}}>Ayarlar → AI Chatbot bölümünden<br/>Gemini API key girin.</div>
           </div>}
-          {chatMsgs.length===0&&geminiKey&&<div style={{textAlign:'center',padding:'30px 20px',color:$.t3}}>
-            <Zap size={28} color={$.ac} style={{margin:'0 auto 10px',opacity:.4}}/>
-            <div style={{fontSize:13,fontWeight:600,marginBottom:6}}>Stok verilerinizi sorun</div>
-            <div style={{fontSize:11,lineHeight:1.6}}>
-              "Toplam stok ne kadar?"<br/>
-              "En yaşlı tesis hangisi?"<br/>
-              "Kritik stok için ne önerirsin?"
+
+          {chatMsgs.length===0&&geminiKey&&<div style={{textAlign:'center',padding:'40px 24px'}}>
+            <div style={{width:48,height:48,borderRadius:16,background:'linear-gradient(135deg,rgba(45,212,160,.1),rgba(59,130,246,.1))',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px'}}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0d6e4f" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </div>
+            <div style={{fontSize:15,fontWeight:700,color:$.t1,marginBottom:6}}>Nasıl yardımcı olabilirim?</div>
+            <div style={{fontSize:12,color:$.t3,lineHeight:1.6,marginBottom:20}}>Stok yaşlandırma verilerinizi analiz<br/>edebilir, öneriler sunabilirim.</div>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {['Toplam stok durumu nedir?','En yaşlı tesisi analiz et','Kritik stok için aksiyon öner','Ülke bazlı dağılımı özetle'].map((q,i)=>(
+                <div key={i} onClick={()=>{setChatInput(q);}} style={{padding:'10px 14px',borderRadius:12,background:'rgba(0,0,0,.03)',border:'1px solid rgba(0,0,0,.04)',fontSize:11.5,fontWeight:500,color:$.t2,cursor:'pointer',textAlign:'left',transition:'all .15s'}} className="rh">{q}</div>
+              ))}
             </div>
           </div>}
+
           {chatMsgs.map((m,i)=>(
-            <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
-              <div style={{maxWidth:'85%',padding:'10px 14px',borderRadius:m.role==='user'?'14px 14px 4px 14px':'14px 14px 14px 4px',
-                background:m.role==='user'?'linear-gradient(135deg,#0d6e4f,#3b82f6)':'rgba(0,0,0,.04)',
-                color:m.role==='user'?'#fff':$.t1,fontSize:12,fontWeight:500,lineHeight:1.6,
+            <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start',gap:8,alignItems:'flex-end'}}>
+              {m.role==='model'&&<div style={{width:24,height:24,borderRadius:8,background:'linear-gradient(135deg,#2dd4a0,#3b82f6)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2"/></svg>
+              </div>}
+              <div style={{maxWidth:'80%',padding:'11px 15px',
+                borderRadius:m.role==='user'?'16px 16px 4px 16px':'16px 16px 16px 4px',
+                background:m.role==='user'?'linear-gradient(135deg,#0d6e4f,#2563EB)':'rgba(255,255,255,.8)',
+                border:m.role==='model'?'1px solid rgba(0,0,0,.06)':'none',
+                boxShadow:m.role==='model'?'0 1px 4px rgba(0,0,0,.04)':'0 2px 8px rgba(13,110,79,.12)',
+                color:m.role==='user'?'#fff':$.t1,fontSize:12.5,fontWeight:m.role==='user'?500:400,lineHeight:1.65,
                 whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
-                {m.role==='model'?<span dangerouslySetInnerHTML={{__html:m.text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/\n/g,'<br/>')}}/>:m.text}
+                {m.role==='model'?<span dangerouslySetInnerHTML={{__html:m.text
+                  .replace(/\*\*(.+?)\*\*/g,'<strong style="font-weight:700;color:#1a2332">$1</strong>')
+                  .replace(/\*(.+?)\*/g,'<em>$1</em>')
+                  .replace(/^- (.+)/gm,'<div style="display:flex;gap:6px;margin:2px 0"><span style="color:#2dd4a0;font-weight:700">•</span><span>$1</span></div>')
+                  .replace(/\n/g,'<br/>')}}/>:m.text}
               </div>
+              {m.role==='user'&&<div style={{width:24,height:24,borderRadius:8,background:'linear-gradient(135deg,#0d6e4f,#2563EB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10,fontWeight:700,color:'#fff'}}>S</div>}
             </div>
           ))}
-          {chatLoading&&<div style={{display:'flex',gap:4,padding:'10px 14px'}}>
-            <div style={{width:6,height:6,borderRadius:'50%',background:$.ac,animation:'fadeUp .6s ease infinite'}}/>
-            <div style={{width:6,height:6,borderRadius:'50%',background:$.ac,animation:'fadeUp .6s ease .15s infinite'}}/>
-            <div style={{width:6,height:6,borderRadius:'50%',background:$.ac,animation:'fadeUp .6s ease .3s infinite'}}/>
+
+          {chatLoading&&<div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:24,height:24,borderRadius:8,background:'linear-gradient(135deg,#2dd4a0,#3b82f6)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div style={{padding:'12px 16px',borderRadius:16,background:'rgba(255,255,255,.8)',border:'1px solid rgba(0,0,0,.06)',display:'flex',gap:5}}>
+              <div style={{width:5,height:5,borderRadius:'50%',background:'#2dd4a0',animation:'fadeUp .8s ease infinite'}}/>
+              <div style={{width:5,height:5,borderRadius:'50%',background:'#3b82f6',animation:'fadeUp .8s ease .2s infinite'}}/>
+              <div style={{width:5,height:5,borderRadius:'50%',background:'#8b5cf6',animation:'fadeUp .8s ease .4s infinite'}}/>
+            </div>
           </div>}
           <div ref={chatEndRef}/>
         </div>
 
-        {/* Input */}
-        <div style={{padding:'12px 16px',borderTop:'1px solid '+$.bdL,display:'flex',gap:8,flexShrink:0}}>
-          <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}}
-            placeholder={geminiKey?'Stok hakkında bir şey sorun...':'API key gerekli'}
-            disabled={!geminiKey||chatLoading}
-            className="fi" style={{flex:1,fontSize:12,padding:'10px 14px',borderRadius:12}}/>
-          <button onClick={sendChat} disabled={!geminiKey||chatLoading||!chatInput.trim()}
-            style={{width:38,height:38,borderRadius:10,border:'none',cursor:'pointer',flexShrink:0,
-              background:chatInput.trim()&&geminiKey?'linear-gradient(135deg,#0d6e4f,#3b82f6)':'rgba(0,0,0,.06)',
-              display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'}}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={chatInput.trim()&&geminiKey?'#fff':'#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
+        {/* Input — rounded glassmorphism */}
+        <div style={{padding:'12px 14px 14px',flexShrink:0}}>
+          <div style={{display:'flex',gap:8,padding:'6px 6px 6px 16px',borderRadius:18,background:'rgba(255,255,255,.7)',border:'1px solid rgba(0,0,0,.06)',boxShadow:'0 2px 8px rgba(0,0,0,.04)'}}>
+            <input value={chatInput} onChange={e=>setChatInput(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}}
+              placeholder={geminiKey?'Stok hakkında bir şey sorun...':'API key gerekli'}
+              disabled={!geminiKey||chatLoading}
+              style={{flex:1,border:'none',outline:'none',background:'transparent',fontSize:12.5,fontFamily:'inherit',color:$.t1,fontWeight:500}}/>
+            <button onClick={sendChat} disabled={!geminiKey||chatLoading||!chatInput.trim()}
+              style={{width:34,height:34,borderRadius:12,border:'none',cursor:'pointer',flexShrink:0,
+                background:chatInput.trim()&&geminiKey?'linear-gradient(135deg,#2dd4a0,#3b82f6)':'rgba(0,0,0,.05)',
+                display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s',
+                boxShadow:chatInput.trim()&&geminiKey?'0 2px 8px rgba(45,212,160,.2)':'none'}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={chatInput.trim()&&geminiKey?'#fff':'#b8c4d0'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div style={{textAlign:'center',marginTop:6,fontSize:9,color:$.t3,opacity:.5}}>Gemini 2.5 Flash · Veriler anlık dashboard'dan</div>
+        </div>
         </div>
       </div>
     </div>
