@@ -198,6 +198,50 @@ function buildPivot(rows,groupIdx,labelIdx){
 const $={bg:'#fafbfc',bg2:'#fff',bg3:'#edf1f6',t1:'#1a2332',t2:'#5a6b7f',t3:'#8e9bb3',ac:'#0d6e4f',acL:'#e4f5ee',grn:'#2dd4a0',grnB:'rgba(45,212,160,.1)',blu:'#3b82f6',bluB:'rgba(59,130,246,.08)',red:'#e5484d',redB:'rgba(229,72,77,.08)',pur:'#8b5cf6',purB:'rgba(139,92,246,.08)',org:'#f5a623',orgB:'rgba(245,166,35,.08)',tel:'#14b8a6',telB:'rgba(20,184,166,.08)',bd:'#e2e7ee',bdL:'#eef1f6',sh:'0 1px 3px rgba(0,0,0,.04)',shM:'0 4px 16px rgba(0,0,0,.07)',r:'8px',rM:'12px',rL:'16px',f:"'Plus Jakarta Sans',-apple-system,sans-serif",mo:"'Plus Jakarta Sans',-apple-system,sans-serif"};
 
 const KI=({children,bg,color})=><div style={{width:30,height:30,borderRadius:8,background:bg,color,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{children}</div>;
+// Custom Dropdown — native select yerine glassmorphism açılır liste
+const CustomSelect=({value,onChange,options,placeholder='Tümü'})=>{
+  const [open,setOpen]=useState(false);
+  const ref=useRef(null);
+  const selected=options.find(o=>o===value);
+  useEffect(()=>{
+    if(!open)return;
+    const close=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener('mousedown',close);return()=>document.removeEventListener('mousedown',close);
+  },[open]);
+  return(
+    <div ref={ref} style={{position:'relative'}}>
+      <div onClick={()=>setOpen(v=>!v)} style={{
+        padding:'7px 28px 7px 10px',borderRadius:10,fontSize:11,fontFamily:'inherit',cursor:'pointer',
+        background:open?'rgba(255,255,255,.95)':'rgba(255,255,255,.7)',
+        backdropFilter:'blur(8px)',border:'1px solid '+(open?'rgba(13,110,79,.3)':'rgba(226,231,238,.5)'),
+        boxShadow:open?'0 0 0 3px rgba(13,110,79,.08),0 2px 6px rgba(0,0,0,.04)':'0 1px 3px rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.8)',
+        color:value?'#1a2332':'#8e9bb3',fontWeight:value?600:500,transition:'all .2s',
+        whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+        {selected||placeholder}
+        <svg width="10" height="6" viewBox="0 0 10 6" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)'+(open?' rotate(180deg)':''),transition:'transform .2s'}}>
+          <path d="M1 1l4 4 4-4" stroke="#0d6e4f" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {open&&<div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,zIndex:300,
+        background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px) saturate(180%)',
+        borderRadius:12,border:'1px solid rgba(0,0,0,.06)',
+        boxShadow:'0 8px 28px rgba(0,0,0,.1)',
+        maxHeight:180,overflowY:'auto',padding:4}}>
+        <div onClick={()=>{onChange('');setOpen(false);}} style={{
+          padding:'7px 10px',borderRadius:8,fontSize:11,cursor:'pointer',color:!value?'#0d6e4f':'#5a6b7f',
+          fontWeight:!value?700:500,background:!value?'rgba(13,110,79,.06)':'transparent',
+          transition:'background .15s'}} className="rh">{placeholder}</div>
+        {options.map(o=>(
+          <div key={o} onClick={()=>{onChange(o);setOpen(false);}} style={{
+            padding:'7px 10px',borderRadius:8,fontSize:11,cursor:'pointer',
+            color:o===value?'#0d6e4f':'#1a2332',fontWeight:o===value?700:500,
+            background:o===value?'rgba(13,110,79,.06)':'transparent',
+            transition:'background .15s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}} className="rh">{o}</div>
+        ))}
+      </div>}
+    </div>
+  );
+};
 const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
 const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
 
@@ -944,13 +988,13 @@ export default function App(){
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 10px'}}>
-                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket Grubu</div><select className="fi" value={gFilter.grp} onChange={e=>setGFilter(p=>({...p,grp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.grps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket</div><select className="fi" value={gFilter.comp} onChange={e=>setGFilter(p=>({...p,comp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.comps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Ürün</div><select className="fi" value={gFilter.urun} onChange={e=>setGFilter(p=>({...p,urun:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.uruns.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Menşe</div><select className="fi" value={gFilter.mense} onChange={e=>setGFilter(p=>({...p,mense:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.menses.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Tesis</div><select className="fi" value={gFilter.tesis} onChange={e=>setGFilter(p=>({...p,tesis:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.tesisler.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 2</div><select className="fi" value={gFilter.l2} onChange={e=>setGFilter(p=>({...p,l2:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l2s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 3</div><select className="fi" value={gFilter.l3} onChange={e=>setGFilter(p=>({...p,l3:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l3s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket Grubu</div><CustomSelect value={gFilter.grp} onChange={v=>setGFilter(p=>({...p,grp:v}))} options={gFilterOpts.grps}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket</div><CustomSelect value={gFilter.comp} onChange={v=>setGFilter(p=>({...p,comp:v}))} options={gFilterOpts.comps}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Ürün</div><CustomSelect value={gFilter.urun} onChange={v=>setGFilter(p=>({...p,urun:v}))} options={gFilterOpts.uruns}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Menşe</div><CustomSelect value={gFilter.mense} onChange={v=>setGFilter(p=>({...p,mense:v}))} options={gFilterOpts.menses}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Tesis</div><CustomSelect value={gFilter.tesis} onChange={v=>setGFilter(p=>({...p,tesis:v}))} options={gFilterOpts.tesisler}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 2</div><CustomSelect value={gFilter.l2} onChange={v=>setGFilter(p=>({...p,l2:v}))} options={gFilterOpts.l2s}/></div>
+                <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 3</div><CustomSelect value={gFilter.l3} onChange={v=>setGFilter(p=>({...p,l3:v}))} options={gFilterOpts.l3s}/></div>
               </div>
               {gFilterCount>0&&<div style={{marginTop:10,padding:'5px 8px',borderRadius:6,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt</div>}
             </div>}
@@ -998,13 +1042,13 @@ export default function App(){
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 12px'}}>
-                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket Grubu</div><select className="fi" value={gFilter.grp} onChange={e=>setGFilter(p=>({...p,grp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.grps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket</div><select className="fi" value={gFilter.comp} onChange={e=>setGFilter(p=>({...p,comp:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.comps.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ürün</div><select className="fi" value={gFilter.urun} onChange={e=>setGFilter(p=>({...p,urun:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.uruns.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Menşe</div><select className="fi" value={gFilter.mense} onChange={e=>setGFilter(p=>({...p,mense:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.menses.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Tesis</div><select className="fi" value={gFilter.tesis} onChange={e=>setGFilter(p=>({...p,tesis:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.tesisler.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 2</div><select className="fi" value={gFilter.l2} onChange={e=>setGFilter(p=>({...p,l2:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l2s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
-                  <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 3</div><select className="fi" value={gFilter.l3} onChange={e=>setGFilter(p=>({...p,l3:e.target.value}))} style={{width:'100%',fontSize:11}}><option value="">Tümü</option>{gFilterOpts.l3s.map(v=><option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket Grubu</div><CustomSelect value={gFilter.grp} onChange={v=>setGFilter(p=>({...p,grp:v}))} options={gFilterOpts.grps}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket</div><CustomSelect value={gFilter.comp} onChange={v=>setGFilter(p=>({...p,comp:v}))} options={gFilterOpts.comps}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ürün</div><CustomSelect value={gFilter.urun} onChange={v=>setGFilter(p=>({...p,urun:v}))} options={gFilterOpts.uruns}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Menşe</div><CustomSelect value={gFilter.mense} onChange={v=>setGFilter(p=>({...p,mense:v}))} options={gFilterOpts.menses}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Tesis</div><CustomSelect value={gFilter.tesis} onChange={v=>setGFilter(p=>({...p,tesis:v}))} options={gFilterOpts.tesisler}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 2</div><CustomSelect value={gFilter.l2} onChange={v=>setGFilter(p=>({...p,l2:v}))} options={gFilterOpts.l2s}/></div>
+                  <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 3</div><CustomSelect value={gFilter.l3} onChange={v=>setGFilter(p=>({...p,l3:v}))} options={gFilterOpts.l3s}/></div>
                 </div>
                 {gFilterCount>0&&<div style={{marginTop:12,padding:'6px 10px',borderRadius:8,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt filtrelendi</div>}
               </div></>}
