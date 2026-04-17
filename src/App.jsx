@@ -1028,25 +1028,85 @@ export default function App(){
                 ];
                 return(
                 <div style={{display:'grid',gridTemplateColumns:mob?'repeat(2,1fr)':'repeat(6,1fr)',gap:mob?8:10,marginBottom:mob?14:20}}>
-                  {[
-                    {metric:'qty',l:'Toplam Stok',v:fmtTon(D.s.totalQty),cls:'blu',ic:<Package size={18}/>},
-                    {metric:'value',l:'Toplam Değer',v:'$'+fmt(D.s.totalVal),cls:'grn',ic:<TrendingUp size={18}/>},
-                    {metric:'facilities',l:'Tesis / Depo',v:D.s.facilityCount+' / '+D.s.whCount,cls:'pur',ic:<Building2 size={18}/>},
-                    {metric:'products',l:'Aktif Ürün',v:String(D.s.prodCount),cls:'tel',ic:<Layers size={18}/>},
-                    {metric:'avgAge',l:'Ort. Yaşlanma (FIFO)',v:String(D.s.avgAge)+' gün',cls:'org',ic:<Clock size={18}/>},
-                    {metric:'criticalStock',l:'Kritik Stok (180+ gün)',v:fmtTon(critQty),cls:'red',ic:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,sub:critPct+'% toplam stokun'},
+                  {/* Son ayın değişim %'si — trendPoints'ten hesapla (panel açıkken) */}
+                  {(()=>{
+                  const lastPct=(metric)=>{
+                    if(trendKPI!==metric||!trendPoints||trendPoints.length<2)return null;
+                    const valid=trendPoints.filter(p=>p.value!=null);
+                    if(valid.length<2)return null;
+                    const cur=valid[valid.length-1].value,prev=valid[valid.length-2].value;
+                    if(!prev||prev===0)return null;
+                    return((cur-prev)/prev)*100;
+                  };
+                  return[
+                    {metric:'qty',l:'Toplam Stok',v:fmtTon(D.s.totalQty),cls:'blu',ic:<Package size={18}/>,pct:lastPct('qty')},
+                    {metric:'value',l:'Toplam Değer',v:'$'+fmt(D.s.totalVal),cls:'grn',ic:<TrendingUp size={18}/>,pct:lastPct('value')},
+                    {metric:'facilities',l:'Tesis / Depo',v:D.s.facilityCount+' / '+D.s.whCount,cls:'pur',ic:<Building2 size={18}/>,pct:lastPct('facilities')},
+                    {metric:'products',l:'Aktif Ürün',v:String(D.s.prodCount),cls:'tel',ic:<Layers size={18}/>,pct:lastPct('products')},
+                    {metric:'avgAge',l:'Ort. Yaşlanma (FIFO)',v:String(D.s.avgAge)+' gün',cls:'org',ic:<Clock size={18}/>,pct:lastPct('avgAge')},
+                    {metric:'criticalStock',l:'Kritik Stok (180+ gün)',v:fmtTon(critQty),cls:'red',ic:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,sub:critPct+'% toplam stokun',pct:lastPct('criticalStock')},
                   ].map((k,i)=>{const cc=clr(k.cls);const clickable=!!k.metric;return(
-                    <div key={i} className="kp fu" onClick={clickable?()=>setTrendKPI(k.metric):undefined} style={{animationDelay:i*70+'ms',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'13px 14px',position:'relative',overflow:'hidden',boxShadow:$.sh,cursor:clickable?'pointer':'default'}}>
-                      <div style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,'+cc.c+',transparent)',opacity:.6,borderRadius:'12px 12px 0 0'}}/>
+                    <div key={i} className="kp fu" onClick={clickable?()=>setTrendKPI(k.metric):undefined}
+                      onMouseEnter={e=>{
+                        const card=e.currentTarget;
+                        const icon=card.querySelector('[data-kpi-icon]');
+                        const bar=card.querySelector('[data-kpi-bar]');
+                        const hint=card.querySelector('[data-kpi-hint]');
+                        if(icon){icon.style.transform='scale(1.15)';icon.style.boxShadow='0 0 12px '+cc.c+'33';}
+                        if(bar){bar.style.opacity='1';bar.style.background='linear-gradient(90deg,'+cc.c+','+cc.c+'66)';}
+                        if(hint){hint.style.opacity='1';hint.style.transform='translateY(0)';}
+                      }}
+                      onMouseLeave={e=>{
+                        const card=e.currentTarget;
+                        const icon=card.querySelector('[data-kpi-icon]');
+                        const bar=card.querySelector('[data-kpi-bar]');
+                        const hint=card.querySelector('[data-kpi-hint]');
+                        if(icon){icon.style.transform='scale(1)';icon.style.boxShadow='none';}
+                        if(bar){bar.style.opacity='.6';bar.style.background='linear-gradient(90deg,'+cc.c+',transparent)';}
+                        if(hint){hint.style.opacity='0';hint.style.transform='translateY(4px)';}
+                      }}
+                      style={{animationDelay:i*70+'ms',background:'rgba(255,255,255,.7)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',border:'1px solid rgba(255,255,255,.6)',borderRadius:$.rM,padding:'13px 14px',position:'relative',overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.8)',cursor:clickable?'pointer':'default'}}>
+                      <div data-kpi-bar style={{position:'absolute',top:0,left:0,right:0,height:3,background:'linear-gradient(90deg,'+cc.c+',transparent)',opacity:.6,borderRadius:'12px 12px 0 0',transition:'all .3s ease'}}/>
                       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:7}}>
-                        <KI bg={cc.bg} color={cc.c}>{k.ic}</KI>
-                        <div onMouseEnter={e=>{const r=e.currentTarget.getBoundingClientRect();setHovTip({i,x:r.left+r.width/2,y:r.bottom+8});}} onMouseLeave={()=>setHovTip(null)} style={{width:21,height:21,borderRadius:'50%',border:'1.5px solid '+$.bd,background:$.bg2,display:'flex',alignItems:'center',justifyContent:'center',cursor:'help',fontSize:10,fontWeight:800,color:hovTip?.i===i?cc.c:$.t3,transition:'all .15s',flexShrink:0}}>
+                        <div data-kpi-icon style={{transition:'all .3s cubic-bezier(.4,0,.2,1)',borderRadius:8,overflow:'hidden'}}><KI bg={cc.bg} color={cc.c}>{k.ic}</KI></div>
+                        <div onMouseEnter={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setHovTip({i,x:r.left+r.width/2,y:r.bottom+8});}} onMouseLeave={e=>{e.stopPropagation();setHovTip(null);}} style={{width:21,height:21,borderRadius:'50%',border:'1.5px solid '+$.bd,background:$.bg2,display:'flex',alignItems:'center',justifyContent:'center',cursor:'help',fontSize:10,fontWeight:800,color:hovTip?.i===i?cc.c:$.t3,transition:'all .15s',flexShrink:0}}>
                           i
                         </div>
                       </div>
-                      <div style={{fontSize:19,fontWeight:700,marginBottom:1,fontFamily:$.mo,fontVariantNumeric:'tabular-nums',color:k.cls==='red'?$.red:$.t1}}>{k.v}</div>
-                      <div style={{fontSize:12,color:$.t2,fontWeight:500}}>{k.sub||k.l}</div>
-                    </div>);})}
+                      <div ref={el=>{
+                        // Sayı sayma animasyonu — mount'ta 0'dan hedefe say
+                        if(!el||el.dataset.counted)return;el.dataset.counted='1';
+                        const target=k.v;const numMatch=target.match(/[\d,.]+/);
+                        if(!numMatch){el.textContent=target;return;}
+                        const numStr=numMatch[0];const numVal=parseFloat(numStr.replace(/,/g,''));
+                        if(isNaN(numVal)||numVal===0){el.textContent=target;return;}
+                        const prefix=target.slice(0,target.indexOf(numStr));
+                        const suffix=target.slice(target.indexOf(numStr)+numStr.length);
+                        const hasDecimal=numStr.includes('.');const decimals=hasDecimal?numStr.split('.')[1].length:0;
+                        let start=0;const duration=800;const startTime=performance.now()+(i*80);
+                        const step=(now)=>{
+                          const elapsed=now-startTime;
+                          if(elapsed<0){el.textContent=prefix+'0'+suffix;requestAnimationFrame(step);return;}
+                          const progress=Math.min(elapsed/duration,1);
+                          const eased=1-Math.pow(1-progress,3); // easeOutCubic
+                          const current=numVal*eased;
+                          const formatted=hasDecimal?current.toFixed(decimals):Math.round(current).toLocaleString('tr-TR');
+                          el.textContent=prefix+formatted+suffix;
+                          if(progress<1)requestAnimationFrame(step);else el.textContent=target;
+                        };
+                        requestAnimationFrame(step);
+                      }} style={{fontSize:i<2?22:19,fontWeight:700,marginBottom:1,fontFamily:$.mo,fontVariantNumeric:'tabular-nums',color:k.cls==='red'?$.red:$.t1}}>{k.v}</div>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                        <div style={{fontSize:12,color:$.t2,fontWeight:500}}>{k.sub||k.l}</div>
+                        {k.pct!=null&&<div style={{display:'flex',alignItems:'center',gap:2,padding:'1px 6px',borderRadius:6,fontSize:10,fontWeight:700,
+                          background:k.pct>=0?'rgba(13,110,79,.08)':'rgba(229,72,77,.08)',
+                          color:k.pct>=0?'#0d6e4f':'#e5484d'}}>
+                          {k.pct>=0?'▲':'▼'}{Math.abs(k.pct).toFixed(1)}%
+                        </div>}
+                      </div>
+                      {/* Hover hint */}
+                      {clickable&&<div data-kpi-hint style={{fontSize:10,fontWeight:600,color:cc.c,marginTop:4,opacity:0,transform:'translateY(4px)',transition:'all .25s ease'}}>Trend'i gör →</div>}
+                    </div>);})})()}
                 </div>);})()}
 
                 {/* MAP — Türkiye / Dünya (harita içi öğelerle geçiş) */}
