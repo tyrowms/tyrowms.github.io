@@ -440,61 +440,69 @@ function computeView(countries) {
   return { camY, cx, cz };
 }
 
-// ═══════ Mini dönen dünya (Küresel Operasyonlar butonu için) ═══════
+// ═══════ Mini dönen dünya — TurkeyMap3D SpinGlobe ile aynı kalite ═══════
 function MiniSpinGlobe({ color }) {
   const ref = useRef();
-  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.3; });
-  const geo = useMemo(() => {
-    const R = 1, segs = 48, pts = [];
-    // Enlem çizgileri
-    for (const deg of [-45, 0, 45]) {
+  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta * 0.25; });
+  const { grid, continents } = useMemo(() => {
+    const R = 1, segs = 48, gPts = [];
+    for (const deg of [-60, -30, 0, 30, 60]) {
       const r = Math.cos(deg * Math.PI / 180) * R, y = Math.sin(deg * Math.PI / 180) * R;
       for (let i = 0; i < segs; i++) {
         const a1 = (i / segs) * Math.PI * 2, a2 = ((i + 1) / segs) * Math.PI * 2;
-        pts.push(Math.cos(a1)*r, y, Math.sin(a1)*r, Math.cos(a2)*r, y, Math.sin(a2)*r);
+        gPts.push(Math.cos(a1)*r, y, Math.sin(a1)*r, Math.cos(a2)*r, y, Math.sin(a2)*r);
       }
     }
-    // Boylam çizgileri
     for (let lng = 0; lng < 180; lng += 30) {
       const t = lng * Math.PI / 180;
       for (let i = 0; i < segs; i++) {
         const p1 = (i / segs) * Math.PI, p2 = ((i + 1) / segs) * Math.PI;
-        pts.push(Math.sin(p1)*Math.cos(t)*R, Math.cos(p1)*R, Math.sin(p1)*Math.sin(t)*R,
-                 Math.sin(p2)*Math.cos(t)*R, Math.cos(p2)*R, Math.sin(p2)*Math.sin(t)*R);
+        gPts.push(Math.sin(p1)*Math.cos(t)*R, Math.cos(p1)*R, Math.sin(p1)*Math.sin(t)*R,
+                  Math.sin(p2)*Math.cos(t)*R, Math.cos(p2)*R, Math.sin(p2)*Math.sin(t)*R);
       }
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    return g;
-  }, []);
-  // Kıta çizgileri
-  const continentGeo = useMemo(() => {
-    const R2 = 1.005, pts = [];
-    geoData.features.forEach(f => {
-      const coords = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-      coords.forEach(poly => {
-        const ring = poly[0]; let prev = null;
-        for (let i = 0; i < ring.length; i++) {
-          const [lng, lat] = ring[i];
-          if (prev && Math.abs(lng - prev[0]) > 170) { prev = ring[i]; continue; }
-          const phi = (90 - lat) * Math.PI / 180, th = (lng + 180) * Math.PI / 180;
-          const x = -R2 * Math.sin(phi) * Math.cos(th), y = R2 * Math.cos(phi), z = R2 * Math.sin(phi) * Math.sin(th);
-          if (prev) {
-            const phi2 = (90 - prev[1]) * Math.PI / 180, th2 = (prev[0] + 180) * Math.PI / 180;
-            pts.push(-R2*Math.sin(phi2)*Math.cos(th2), R2*Math.cos(phi2), R2*Math.sin(phi2)*Math.sin(th2), x, y, z);
-          }
-          prev = ring[i];
-        }
-      });
+    const gridGeo = new THREE.BufferGeometry();
+    gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gPts, 3));
+    // Kıta çizgileri — TurkeyMap3D SpinGlobe ile birebir aynı path'ler
+    const CR = 1.004;
+    const ll = (lat, lng) => {
+      const phi = (90 - lat) * Math.PI / 180, th = lng * Math.PI / 180;
+      return [Math.cos(th)*Math.sin(phi)*CR, Math.cos(phi)*CR, Math.sin(th)*Math.sin(phi)*CR];
+    };
+    const paths = [
+      [[68,-168],[62,-150],[57,-136],[50,-125],[45,-124],[38,-122],[32,-117],[28,-112],[22,-105]],
+      [[68,-58],[62,-65],[55,-60],[48,-55],[44,-66],[40,-74],[35,-80],[30,-82],[25,-80],[22,-90]],
+      [[68,-168],[71,-155],[72,-130],[72,-100],[70,-80],[68,-58]],
+      [[22,-105],[18,-95],[15,-87],[10,-84],[8,-77],[5,-77],[0,-80],[-5,-81],[-10,-78],[-18,-72],[-30,-72],[-40,-73],[-48,-75],[-55,-68]],
+      [[-55,-68],[-48,-65],[-40,-60],[-32,-52],[-25,-45],[-18,-40],[-10,-37],[-3,-34],[0,-50],[5,-52],[8,-60],[10,-67],[10,-75],[8,-77]],
+      [[36,-8],[39,-9],[43,-9],[48,-5],[51,2],[54,6],[57,8],[60,5],[63,5],[66,14],[70,26]],
+      [[36,-8],[37,-2],[39,0],[42,3],[44,8],[44,13],[41,15],[39,20],[37,27],[41,29],[42,35]],
+      [[36,-8],[32,-10],[25,-15],[18,-17],[12,-17],[6,-8],[4,5],[2,10],[-2,10],[-8,13],[-20,12],[-28,16],[-34,18]],
+      [[-34,18],[-34,27],[-28,33],[-18,38],[-8,42],[2,42],[8,45],[12,44],[18,40],[22,38],[28,34],[30,32],[34,35],[37,36]],
+      [[70,26],[68,45],[65,60],[63,80],[62,100],[64,120],[66,140],[67,160],[66,175]],
+      [[42,35],[38,48],[30,48],[25,57],[22,60],[20,67]],
+      [[20,67],[23,72],[20,76],[14,77],[8,77],[10,73],[16,74],[20,67]],
+      [[22,60],[25,68],[28,72],[30,80],[28,90],[22,100],[18,107],[10,106],[4,103],[-2,105],[-6,106],[-8,115]],
+      [[18,107],[22,114],[28,120],[32,122],[36,128],[40,130],[44,135],[48,140],[52,140],[56,137],[60,142],[64,155],[66,175]],
+      [[31,131],[34,132],[36,136],[39,140],[42,141],[44,145]],
+      [[-24,114],[-18,122],[-14,130],[-12,136],[-17,141],[-22,148],[-28,153],[-34,151],[-38,146],[-38,140],[-35,136],[-32,128],[-28,115],[-24,114]],
+      [[50,-5],[52,-3],[55,-2],[58,-3],[58,-6],[55,-7],[51,-6],[50,-5]],
+    ];
+    const cPts = [];
+    paths.forEach(path => {
+      for (let i = 0; i < path.length - 1; i++) {
+        const a = ll(path[i][0], path[i][1]), b = ll(path[i+1][0], path[i+1][1]);
+        cPts.push(...a, ...b);
+      }
     });
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-    return g;
+    const cGeo = new THREE.BufferGeometry();
+    cGeo.setAttribute('position', new THREE.Float32BufferAttribute(cPts, 3));
+    return { grid: gridGeo, continents: cGeo };
   }, []);
   return (
     <group ref={ref}>
-      <lineSegments geometry={geo}><lineBasicMaterial color={color} transparent opacity={0.12} /></lineSegments>
-      <lineSegments geometry={continentGeo}><lineBasicMaterial color={color} transparent opacity={0.4} /></lineSegments>
+      <lineSegments geometry={grid}><lineBasicMaterial color={color} transparent opacity={0.08} /></lineSegments>
+      <lineSegments geometry={continents}><lineBasicMaterial color={color} transparent opacity={0.5} /></lineSegments>
     </group>
   );
 }
