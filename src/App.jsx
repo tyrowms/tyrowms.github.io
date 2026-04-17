@@ -354,7 +354,7 @@ export default function App(){
     const newMsgs=[...chatMsgs,{role:'user',text:q}];
     setChatMsgs(newMsgs);setChatInput('');setChatLoading(true);
     try{
-      const ctx=buildDataContext(D,DW,fmtTon,fmt,fN);
+      const ctx=buildDataContext(D,DW,fmtTon,fmt,fN,gRows);
       const answer=await askGemini(geminiKey,newMsgs,ctx);
       setChatMsgs(m=>[...m,{role:'model',text:answer}]);
     }catch(e){

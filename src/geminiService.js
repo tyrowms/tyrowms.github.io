@@ -5,7 +5,7 @@
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // Veri context'ini token-efficient metin özetine çevir
-export function buildDataContext(D, DW, fmtTon, fmt, fN) {
+export function buildDataContext(D, DW, fmtTon, fmt, fN, gRows) {
   if (!D || !D.s) return 'Veri yüklenmemiş.';
 
   const agBuckets = ['0-30','31-60','61-90','91-120','121-180','181-365','365+'];
@@ -40,6 +40,25 @@ ${DW.countries.sort((a,b) => b.q - a.q).map(c =>
 ${[...D.ct].sort((a,b) => b.q - a.q).slice(0, 10).map(c =>
   `  ${c.n}: ${fmtTon(c.q)}, ${c.fc} tesis, ort.yaş ${c.a} gün`
 ).join('\n')}`;
+  }
+
+  // Ürün bazlı özet (top 15 ürün — stok miktarına göre)
+  if (gRows && gRows.length > 0) {
+    const prodMap = {};
+    gRows.forEach(r => {
+      const n = r[3] || 'Bilinmeyen'; // Ürün Adı
+      if (!prodMap[n]) prodMap[n] = { q: 0, v: 0, td: 0, tq: 0 };
+      prodMap[n].q += r[8]; // Miktar
+      prodMap[n].v += r[8] * r[25]; // USD değer
+      prodMap[n].td += r[8] * r[27]; // yaş ağırlıklı
+      prodMap[n].tq += r[8];
+    });
+    const prods = Object.entries(prodMap).map(([n, d]) => ({
+      n, q: d.q, v: d.v, a: d.tq > 0 ? Math.round(d.td / d.tq) : 0
+    })).sort((a, b) => b.q - a.q).slice(0, 15);
+
+    ctx += `\n\nTop 15 Ürün (stok miktarına göre):
+${prods.map((p, i) => `  ${i + 1}. ${p.n}: ${fmtTon(p.q)}, $${fmt(p.v)}, ort.yaş ${p.a} gün`).join('\n')}`;
   }
 
   return ctx;
