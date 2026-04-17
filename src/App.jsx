@@ -347,6 +347,7 @@ export default function App(){
   const [chatInput,setChatInput]=useState('');
   const [chatLoading,setChatLoading]=useState(false);
   const [geminiKey,setGeminiKey]=useState(()=>localStorage.getItem('tyrowms_gemini_key')||'');
+  const [showGeminiKey,setShowGeminiKey]=useState(false);
   const chatEndRef=useRef(null);
   const sendChat=useCallback(async()=>{
     const q=chatInput.trim();if(!q||chatLoading)return;
@@ -2394,8 +2395,13 @@ export default function App(){
                   <div style={{padding:'16px 18px'}}>
                     <div style={{fontSize:12,color:$.t2,marginBottom:12,lineHeight:1.6}}>Google Gemini AI ile stok verilerinizi doğal dille sorgulayın. Ücretsiz API key gereklidir.</div>
                     <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:12}}>
-                      <input type="password" className="fi" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)}
-                        placeholder="Gemini API Key" style={{flex:1,fontSize:12}}/>
+                      <div style={{position:'relative',flex:1}}>
+                        <input type={showGeminiKey?'text':'password'} className="fi" value={geminiKey} onChange={e=>setGeminiKey(e.target.value)}
+                          placeholder="Gemini API Key" style={{width:'100%',fontSize:12,paddingRight:36}}/>
+                        <div onClick={()=>setShowGeminiKey(v=>!v)} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',cursor:'pointer',color:$.t3,transition:'color .15s'}} className="rh">
+                          {showGeminiKey?<Eye size={15}/>:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
+                        </div>
+                      </div>
                       <button className="tb-b pr" onClick={()=>{localStorage.setItem('tyrowms_gemini_key',geminiKey);
                         testGeminiKey(geminiKey).then(ok=>{alert(ok?'✅ API key geçerli — bağlantı başarılı!':'❌ API key geçersiz veya bağlantı hatası.');});}}
                         style={{fontSize:11,padding:'8px 14px',whiteSpace:'nowrap'}}>Test Et</button>
