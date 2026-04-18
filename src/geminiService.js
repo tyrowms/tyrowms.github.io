@@ -2,7 +2,7 @@
 // Google Gemini free API ile stok verisi sorgulama
 // Model: gemini-2.0-flash (ücretsiz, 15 RPM, 1M token/dk)
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 // Veri context'ini token-efficient metin özetine çevir
 export function buildDataContext(D, DW, fmtTon, fmt, fN, gRows) {
@@ -57,15 +57,53 @@ ${[...D.ct].sort((a,b) => b.q - a.q).slice(0, 10).map(c =>
       n, q: d.q, v: d.v, a: d.tq > 0 ? Math.round(d.td / d.tq) : 0
     })).sort((a, b) => b.q - a.q).slice(0, 15);
 
-    ctx += `\n\nTop 15 Ürün (stok miktarına göre):
+    ctx += `\n\nTop 15 Ürün (global, stok miktarına göre):
 ${prods.map((p, i) => `  ${i + 1}. ${p.n}: ${fmtTon(p.q)}, $${fmt(p.v)}, ort.yaş ${p.a} gün`).join('\n')}`;
+
+    // Ülke bazlı ürün kırılımı — tesis→ülke eşlemesi üzerinden
+    if (D.f && D.f.length > 0) {
+      const facCountry = {}; D.f.forEach(f => { facCountry[f.id] = f.country; });
+      const byCountry = {};
+      gRows.forEach(r => {
+        const c = facCountry[r[9]] || 'Bilinmeyen';
+        const n = r[3] || 'Bilinmeyen';
+        if (!byCountry[c]) byCountry[c] = {};
+        if (!byCountry[c][n]) byCountry[c][n] = { q: 0, v: 0, td: 0, tq: 0 };
+        byCountry[c][n].q += r[8];
+        byCountry[c][n].v += r[8] * r[25];
+        byCountry[c][n].td += r[8] * r[27];
+        byCountry[c][n].tq += r[8];
+      });
+      const countryOrder = Object.entries(byCountry)
+        .map(([c, pm]) => ({ c, total: Object.values(pm).reduce((s, p) => s + p.q, 0), pm }))
+        .sort((a, b) => b.total - a.total);
+
+      ctx += `\n\nÜlke Bazlı Top Ürünler (her ülkede en çok stoklu 8 ürün):`;
+      countryOrder.forEach(({ c, pm }) => {
+        const list = Object.entries(pm).map(([n, d]) => ({
+          n, q: d.q, v: d.v, a: d.tq > 0 ? Math.round(d.td / d.tq) : 0
+        })).sort((a, b) => b.q - a.q).slice(0, 8);
+        ctx += `\n${c}:\n${list.map((p, i) => `  ${i + 1}. ${p.n}: ${fmtTon(p.q)}, $${fmt(p.v)}, ort.yaş ${p.a} gün`).join('\n')}`;
+      });
+
+      // En yaşlı ürünler — ülke bazlı
+      ctx += `\n\nÜlke Bazlı En Yaşlı Ürünler (her ülkede ort. yaşı en yüksek 5 ürün, min 100 birim):`;
+      countryOrder.forEach(({ c, pm }) => {
+        const list = Object.entries(pm).map(([n, d]) => ({
+          n, q: d.q, a: d.tq > 0 ? Math.round(d.td / d.tq) : 0
+        })).filter(p => p.q >= 100).sort((a, b) => b.a - a.a).slice(0, 5);
+        if (list.length > 0) {
+          ctx += `\n${c}:\n${list.map((p, i) => `  ${i + 1}. ${p.n}: ort.yaş ${p.a} gün, ${fmtTon(p.q)}`).join('\n')}`;
+        }
+      });
+    }
   }
 
   return ctx;
 }
 
 // Gemini API'ye soru gönder
-export async function askGemini(apiKey, messages, dataContext) {
+export async function askGemini(apiKey, messages, dataContext, model = 'gemini-2.5-flash') {
   if (!apiKey) throw new Error('TYRO AI API key girilmemiş. Ayarlardan ekleyin.');
 
   const systemPrompt = `Sen TYRO AI — Tiryaki Agro'nun stok yaşlandırma asistanısın. TYRO WMS platformunda çalışıyorsun.
@@ -93,7 +131,7 @@ ${dataContext}`;
     }))
   ];
 
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -128,12 +166,12 @@ ${dataContext}`;
 // API key'i test et (basit bir soru gönder)
 export async function testGeminiKey(apiKey) {
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    const res = await fetch(`${GEMINI_BASE}/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: 'Merhaba, test.' }] }],
-        generationConfig: { maxOutputTokens: 10 }
+        generationConfig: { maxOutputTokens: 10, thinkingConfig: { thinkingBudget: 0 } }
       })
     });
     if (!res.ok) {
