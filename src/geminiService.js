@@ -66,7 +66,7 @@ ${prods.map((p, i) => `  ${i + 1}. ${p.n}: ${fmtTon(p.q)}, $${fmt(p.v)}, ort.ya�
 
 // Gemini API'ye soru gönder
 export async function askGemini(apiKey, messages, dataContext) {
-  if (!apiKey) throw new Error('Gemini API key girilmemiş. Ayarlardan ekleyin.');
+  if (!apiKey) throw new Error('TYRO AI API key girilmemiş. Ayarlardan ekleyin.');
 
   const systemPrompt = `Sen TYRO AI — Tiryaki Agro'nun stok yaşlandırma asistanısın. TYRO WMS platformunda çalışıyorsun.
 
@@ -102,19 +102,26 @@ ${dataContext}`;
         temperature: 0.7,
         topP: 0.95,
         topK: 40,
-        maxOutputTokens: 1000,
+        maxOutputTokens: 2048,
+        thinkingConfig: { thinkingBudget: 0 }
       }
     })
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Gemini API hatası: ${res.status}`);
+    throw new Error(err.error?.message || `TYRO AI API hatası: ${res.status}`);
   }
 
   const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini boş yanıt döndü.');
+  const cand = data.candidates?.[0];
+  const text = cand?.content?.parts?.[0]?.text;
+  if (!text) {
+    const reason = cand?.finishReason;
+    if (reason === 'MAX_TOKENS') throw new Error('TYRO AI cevabı token limitine takıldı — soruyu daha kısa sorun.');
+    if (reason === 'SAFETY') throw new Error('TYRO AI güvenlik filtresine takıldı.');
+    throw new Error(`TYRO AI boş yanıt döndü${reason ? ` (${reason})` : ''}.`);
+  }
   return text;
 }
 

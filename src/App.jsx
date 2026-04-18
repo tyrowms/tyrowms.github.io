@@ -3011,7 +3011,7 @@ export default function App(){
                   .replace(/^- (.+)/gm,'<div style="display:flex;gap:6px;margin:2px 0"><span style="color:#2dd4a0;font-weight:700">•</span><span>$1</span></div>')
                   .replace(/\n/g,'<br/>')}}/>:m.text}
               </div>
-              {m.role==='user'&&<div style={{width:24,height:24,borderRadius:8,background:'linear-gradient(135deg,#0d6e4f,#2563EB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10,fontWeight:700,color:'#fff'}}>S</div>}
+              {m.role==='user'&&<div style={{width:24,height:24,borderRadius:8,background:'linear-gradient(135deg,#0d6e4f,#2563EB)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10,fontWeight:700,color:'#fff'}} title={msalAccount?.name||msalAccount?.username||''}>{((msalAccount?.name||msalAccount?.username||'').split(/[\s.@]/).filter(Boolean).map(n=>n[0]||'').join('').slice(0,2).toLocaleUpperCase('tr-TR'))||'?'}</div>}
             </div>
           ))}
 
