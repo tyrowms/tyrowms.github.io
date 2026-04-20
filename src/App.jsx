@@ -277,8 +277,22 @@ export default function App(){
   const [showGFilter,setShowGFilter]=useState(false);
   useEffect(()=>{try{localStorage.setItem('tyrowms_gfilter',JSON.stringify(gFilter));}catch(e){}},[gFilter]);
   const gFilterCount=useMemo(()=>Object.values(gFilter).filter(v=>v!=='').length,[gFilter]);
+  // Transit/Fark ambar dahil et — default false (hesaplamadan çıkar)
+  const [incTransit,setIncTransit]=useState(()=>{try{return localStorage.getItem('tyrowms_inc_transit')==='1';}catch(e){return false;}});
+  const [incFark,setIncFark]=useState(()=>{try{return localStorage.getItem('tyrowms_inc_fark')==='1';}catch(e){return false;}});
+  useEffect(()=>{try{localStorage.setItem('tyrowms_inc_transit',incTransit?'1':'0');}catch(e){}},[incTransit]);
+  useEffect(()=>{try{localStorage.setItem('tyrowms_inc_fark',incFark?'1':'0');}catch(e){}},[incFark]);
   // calcRows: only rows where madde kodu (index 2) starts with 1, 2 or 3 — used in all calculations
-  const calcRows=useMemo(()=>rows.filter(r=>/^[123]/.test(String(r[2]||''))),[rows]);
+  // Ayrıca transit/fark ambar adlı satırlar opsiyonel (default dışarıda)
+  // Türkçe/İngilizce farkı için İ/I/ı hepsi i'ye normalize edilir; TRANSIT, TRANSİT, INTRANSIT, In-Transit hepsi yakalanır
+  const normWh=s=>String(s||'').replace(/[İIı]/g,'i').toLowerCase();
+  const calcRows=useMemo(()=>rows.filter(r=>{
+    if(!/^[123]/.test(String(r[2]||'')))return false;
+    const wh=normWh(r[12]);
+    if(!incTransit&&wh.includes('transit'))return false;
+    if(!incFark&&wh.includes('fark'))return false;
+    return true;
+  }),[rows,incTransit,incFark]);
   const gFilterOpts=useMemo(()=>({grps:[...new Set(calcRows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),comps:[...new Set(calcRows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),uruns:[...new Set(calcRows.map(r=>r[3]||''))].filter(Boolean).sort(),menses:[...new Set(calcRows.map(r=>r[4]||''))].filter(v=>v).sort(),tesisler:[...new Set(calcRows.map(r=>r[10]||''))].filter(v=>v).sort(),l2s:[...new Set(calcRows.map(r=>r[17]||''))].filter(v=>v).sort(),l3s:[...new Set(calcRows.map(r=>r[19]||''))].filter(v=>v).sort()}),[calcRows]);
   const applyGF=(r,gf)=>{if(gf.grp&&gGrp(r[0])!==gf.grp)return false;if(gf.comp&&(r[1]||r[0])!==gf.comp)return false;if(gf.urun&&(r[3]||'')!==gf.urun)return false;if(gf.mense&&(r[4]||'')!==gf.mense)return false;if(gf.tesis&&(r[10]||'')!==gf.tesis)return false;if(gf.l2&&(r[17]||'')!==gf.l2)return false;if(gf.l3&&(r[19]||'')!==gf.l3)return false;return true;};
   const gRows=useMemo(()=>{let r=calcRows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[calcRows,gSearch,gFilter,gFilterCount]);
@@ -1018,6 +1032,18 @@ export default function App(){
                 <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Tesis</div><CustomSelect value={gFilter.tesis} onChange={v=>setGFilter(p=>({...p,tesis:v}))} options={gFilterOpts.tesisler}/></div>
                 <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 2</div><CustomSelect value={gFilter.l2} onChange={v=>setGFilter(p=>({...p,l2:v}))} options={gFilterOpts.l2s}/></div>
                 <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Seviye 3</div><CustomSelect value={gFilter.l3} onChange={v=>setGFilter(p=>({...p,l3:v}))} options={gFilterOpts.l3s}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Transit Ambar</div>
+                  <div onClick={()=>setIncTransit(v=>!v)} style={{padding:'7px 28px 7px 10px',borderRadius:10,fontSize:11,cursor:'pointer',background:incTransit?'rgba(13,110,79,.08)':'rgba(255,255,255,.7)',backdropFilter:'blur(8px)',border:'1px solid '+(incTransit?'rgba(13,110,79,.35)':'rgba(226,231,238,.5)'),boxShadow:incTransit?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 3px rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.8)',color:incTransit?'#0d6e4f':'#8e9bb3',fontWeight:incTransit?700:500,transition:'all .2s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative'}}>
+                    {incTransit?'Dahil ediliyor':'Hariç tutuluyor'}
+                    <svg width="12" height="12" viewBox="0 0 12 12" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)'}}>{incTransit?<path d="M2 6l3 3 5-6" stroke="#0d6e4f" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>:<circle cx="6" cy="6" r="4" stroke="#c7ced8" strokeWidth="1.4" fill="none"/>}</svg>
+                  </div>
+                </div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Fark Ambar</div>
+                  <div onClick={()=>setIncFark(v=>!v)} style={{padding:'7px 28px 7px 10px',borderRadius:10,fontSize:11,cursor:'pointer',background:incFark?'rgba(13,110,79,.08)':'rgba(255,255,255,.7)',backdropFilter:'blur(8px)',border:'1px solid '+(incFark?'rgba(13,110,79,.35)':'rgba(226,231,238,.5)'),boxShadow:incFark?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 3px rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.8)',color:incFark?'#0d6e4f':'#8e9bb3',fontWeight:incFark?700:500,transition:'all .2s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative'}}>
+                    {incFark?'Dahil ediliyor':'Hariç tutuluyor'}
+                    <svg width="12" height="12" viewBox="0 0 12 12" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)'}}>{incFark?<path d="M2 6l3 3 5-6" stroke="#0d6e4f" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>:<circle cx="6" cy="6" r="4" stroke="#c7ced8" strokeWidth="1.4" fill="none"/>}</svg>
+                  </div>
+                </div>
               </div>
               {gFilterCount>0&&<div style={{marginTop:10,padding:'5px 8px',borderRadius:6,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt</div>}
             </div>}
@@ -1072,6 +1098,18 @@ export default function App(){
                   <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Tesis</div><CustomSelect value={gFilter.tesis} onChange={v=>setGFilter(p=>({...p,tesis:v}))} options={gFilterOpts.tesisler}/></div>
                   <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 2</div><CustomSelect value={gFilter.l2} onChange={v=>setGFilter(p=>({...p,l2:v}))} options={gFilterOpts.l2s}/></div>
                   <div style={{gridColumn:'span 2'}}><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Seviye 3</div><CustomSelect value={gFilter.l3} onChange={v=>setGFilter(p=>({...p,l3:v}))} options={gFilterOpts.l3s}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Transit Ambar</div>
+                    <div onClick={()=>setIncTransit(v=>!v)} style={{padding:'7px 28px 7px 10px',borderRadius:10,fontSize:11,cursor:'pointer',background:incTransit?'rgba(13,110,79,.08)':'rgba(255,255,255,.7)',backdropFilter:'blur(8px)',border:'1px solid '+(incTransit?'rgba(13,110,79,.35)':'rgba(226,231,238,.5)'),boxShadow:incTransit?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 3px rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.8)',color:incTransit?'#0d6e4f':'#8e9bb3',fontWeight:incTransit?700:500,transition:'all .2s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative'}}>
+                      {incTransit?'Dahil ediliyor':'Hariç tutuluyor'}
+                      <svg width="12" height="12" viewBox="0 0 12 12" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)'}}>{incTransit?<path d="M2 6l3 3 5-6" stroke="#0d6e4f" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>:<circle cx="6" cy="6" r="4" stroke="#c7ced8" strokeWidth="1.4" fill="none"/>}</svg>
+                    </div>
+                  </div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Fark Ambar</div>
+                    <div onClick={()=>setIncFark(v=>!v)} style={{padding:'7px 28px 7px 10px',borderRadius:10,fontSize:11,cursor:'pointer',background:incFark?'rgba(13,110,79,.08)':'rgba(255,255,255,.7)',backdropFilter:'blur(8px)',border:'1px solid '+(incFark?'rgba(13,110,79,.35)':'rgba(226,231,238,.5)'),boxShadow:incFark?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 3px rgba(0,0,0,.03),inset 0 1px 0 rgba(255,255,255,.8)',color:incFark?'#0d6e4f':'#8e9bb3',fontWeight:incFark?700:500,transition:'all .2s',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative'}}>
+                      {incFark?'Dahil ediliyor':'Hariç tutuluyor'}
+                      <svg width="12" height="12" viewBox="0 0 12 12" style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)'}}>{incFark?<path d="M2 6l3 3 5-6" stroke="#0d6e4f" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>:<circle cx="6" cy="6" r="4" stroke="#c7ced8" strokeWidth="1.4" fill="none"/>}</svg>
+                    </div>
+                  </div>
                 </div>
                 {gFilterCount>0&&<div style={{marginTop:12,padding:'6px 10px',borderRadius:8,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt filtrelendi</div>}
               </div></>}
