@@ -1979,20 +1979,20 @@ export default function App(){
                           </div>
                           {/* Facility list */}
                           {emTab==='f'&&emSD.facs.sort((a,b)=>b.q-a.q).map((f,i)=>(
-                            <div key={f.id} onClick={()=>{setEmDrillFac(f.id);setEmDrillWh(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL,borderLeft:'3px solid '+(TI[f.type]?.color||$.t3)}} className="rh">
-                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f.n||f.id}</span>
-                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>${fmt(f.v)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                              <ChevronRight size={13} color={$.t2}/>
+                            <div key={f.id} onClick={()=>{setEmDrillFac(f.id);setEmDrillWh(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'flex-start',gap:8,border:'1px solid '+$.bdL,borderLeft:'3px solid '+(TI[f.type]?.color||$.t3)}} className="rh">
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,minWidth:0,wordBreak:'break-word',lineHeight:1.4}}>{f.n||f.id}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2,whiteSpace:'nowrap',flexShrink:0}}>{fmtTon(f.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f',whiteSpace:'nowrap',flexShrink:0}}>${fmt(f.v)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a),whiteSpace:'nowrap',flexShrink:0}}>{f.a}g</span>
+                              <ChevronRight size={13} color={$.t2} style={{flexShrink:0,marginTop:2}}/>
                             </div>))}
                           {/* Warehouse list */}
                           {emTab==='w'&&emSD.whs.sort((a,b)=>b.q-a.q).map((w,i)=>(
-                            <div key={w.id} onClick={()=>{setEmDrillWh(w.id);setEmDrillFac(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
-                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{w.n||w.id}</span>
-                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(w.q)}</span>
-                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:4,background:acBg(w.a)}}>{w.a}g</span>
-                              <ChevronRight size={13} color={$.t2}/>
+                            <div key={w.id} onClick={()=>{setEmDrillWh(w.id);setEmDrillFac(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'flex-start',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                              <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,minWidth:0,wordBreak:'break-word',lineHeight:1.4}}>{w.n||w.id}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2,whiteSpace:'nowrap',flexShrink:0}}>{fmtTon(w.q)}</span>
+                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:4,background:acBg(w.a),whiteSpace:'nowrap',flexShrink:0}}>{w.a}g</span>
+                              <ChevronRight size={13} color={$.t2} style={{flexShrink:0,marginTop:2}}/>
                             </div>))}
                         </div>
                       )}
@@ -2874,19 +2874,19 @@ export default function App(){
                         <div key={t.id} onClick={()=>setEmTab(t.id)} style={{flex:1,textAlign:'center',padding:'7px 0',borderRadius:6,fontSize:12,fontWeight:emTab===t.id?700:500,cursor:'pointer',background:emTab===t.id?'#fff':'transparent',color:emTab===t.id?$.t1:$.t2,boxShadow:emTab===t.id?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .2s'}}>{t.l}</div>))}
                     </div>
                     {emTab==='f'&&emSD.facs.sort((a,b)=>b.q-a.q).map(f=>(
-                      <div key={f.id} onClick={()=>{setEmDrillFac(f.id);setEmDrillWh(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL,borderLeft:'3px solid '+(TI[f.type]?.color||$.t3)}} className="rh">
-                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{f.n||f.id}</span>
-                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(f.q)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f'}}>${fmt(f.v)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a)}}>{f.a}g</span>
-                        <ChevronRight size={13} color={$.t2}/>
+                      <div key={f.id} onClick={()=>{setEmDrillFac(f.id);setEmDrillWh(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'flex-start',gap:8,border:'1px solid '+$.bdL,borderLeft:'3px solid '+(TI[f.type]?.color||$.t3)}} className="rh">
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,minWidth:0,wordBreak:'break-word',lineHeight:1.4}}>{f.n||f.id}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2,whiteSpace:'nowrap',flexShrink:0}}>{fmtTon(f.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:'#0d6e4f',whiteSpace:'nowrap',flexShrink:0}}>${fmt(f.v)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(f.a),padding:'2px 7px',borderRadius:4,background:acBg(f.a),whiteSpace:'nowrap',flexShrink:0}}>{f.a}g</span>
+                        <ChevronRight size={13} color={$.t2} style={{flexShrink:0,marginTop:2}}/>
                       </div>))}
                     {emTab==='w'&&emSD.whs.sort((a,b)=>b.q-a.q).map(w=>(
-                      <div key={w.id} onClick={()=>{setEmDrillWh(w.id);setEmDrillFac(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'center',gap:8,border:'1px solid '+$.bdL}} className="rh">
-                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{w.n||w.id}</span>
-                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(w.q)}</span>
-                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:4,background:acBg(w.a)}}>{w.a}g</span>
-                        <ChevronRight size={13} color={$.t2}/>
+                      <div key={w.id} onClick={()=>{setEmDrillWh(w.id);setEmDrillFac(null);setEmDrillL2(null);}} style={{padding:'9px 12px',borderRadius:8,marginBottom:4,cursor:'pointer',display:'flex',alignItems:'flex-start',gap:8,border:'1px solid '+$.bdL}} className="rh">
+                        <span style={{fontSize:12,fontWeight:600,color:$.t1,flex:1,minWidth:0,wordBreak:'break-word',lineHeight:1.4}}>{w.n||w.id}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2,whiteSpace:'nowrap',flexShrink:0}}>{fmtTon(w.q)}</span>
+                        <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(w.a),padding:'2px 7px',borderRadius:4,background:acBg(w.a),whiteSpace:'nowrap',flexShrink:0}}>{w.a}g</span>
+                        <ChevronRight size={13} color={$.t2} style={{flexShrink:0,marginTop:2}}/>
                       </div>))}
                   </div>
                 )}
