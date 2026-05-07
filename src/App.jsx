@@ -353,6 +353,10 @@ export default function App(){
   const [repSearch,setRepSearch]=useState('');
   const [repSC,setRepSC]=useState('total'); // sort column: n, total, avg, or bucket key
   const [repSD,setRepSD]=useState(-1); // sort direction
+  // ─── Stok Raporu (sto) ───
+  const [stoSearch,setStoSearch]=useState('');
+  const [stoSC,setStoSC]=useState('q'); // sort column
+  const [stoSD,setStoSD]=useState(-1); // sort direction
   const [mobMenu,setMobMenu]=useState(false); // three-dot menu on mobile bottom nav
 
   // ─── AI Chatbot (Gemini) ───
@@ -931,7 +935,7 @@ export default function App(){
             </div>);})}
           {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri & Raporlama'}</div>}
           {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
-          {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Globe,label:'Ham Veriler'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'sto',icon:Package,label:'Stok Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Globe,label:'Ham Veriler'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
               <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
@@ -1051,8 +1055,8 @@ export default function App(){
             {/* Desktop: original single-row layout */}
             <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Risk Radarı','yon':'AI | İçgörüler','raw':'ERP Veriler','rep':'Kırılım Raporu','erp':'Ham Veriler','set':'Ayarlar'}[pg]}</div>
-                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'AI Destekli Stok Yaşlandırma İçgörüleri','raw':'ERP İşlem Kayıtları','rep':'Stok Yaşlandırma Kırılım Analizleri','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Risk Radarı','yon':'AI | İçgörüler','raw':'ERP Veriler','rep':'Kırılım Raporu','sto':'Stok Raporu','erp':'Ham Veriler','set':'Ayarlar'}[pg]}</div>
+                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'AI Destekli Stok Yaşlandırma İçgörüleri','raw':'ERP İşlem Kayıtları','rep':'Stok Yaşlandırma Kırılım Analizleri','sto':'Şirket / Tesis / Ambar Bazlı Stok Dökümü','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6,flex:1,maxWidth:400,margin:'0 auto',position:'relative'}}>
@@ -2333,6 +2337,120 @@ export default function App(){
                 </div>
               );})()}
 
+            {/* ===== STOK RAPORU ===== */}
+            {pg==='sto'&&(()=>{
+              // Şirket Kodu, Şirket Adı, Tesis Kodu, Tesis Adı, Ambar Kodu, Ambar Adı bazında grupla
+              const groups={};
+              gRows.forEach(r=>{
+                const sk=String(r[0]||''),sn=String(r[1]||r[0]||''),tk=String(r[9]||''),tn=String(r[10]||''),ak=String(r[11]||''),an=String(r[12]||'');
+                const key=sk+'|'+sn+'|'+tk+'|'+tn+'|'+ak+'|'+an;
+                if(!groups[key])groups[key]={sk,sn,tk,tn,ak,an,q:0};
+                groups[key].q+=Number(r[8])||0;
+              });
+              let arr=Object.values(groups);
+              if(stoSearch.trim()){
+                const t=stoSearch.toLowerCase();
+                arr=arr.filter(g=>[g.sk,g.sn,g.tk,g.tn,g.ak,g.an].some(s=>String(s).toLowerCase().includes(t)));
+              }
+              arr.sort((a,b)=>{
+                if(stoSC==='q')return((a.q||0)-(b.q||0))*stoSD;
+                return String(a[stoSC]||'').localeCompare(String(b[stoSC]||''),'tr')*stoSD;
+              });
+              const totalQ=arr.reduce((s,g)=>s+g.q,0);
+              const sH=(col)=>({onClick:()=>{if(stoSC===col)setStoSD(d=>d*-1);else{setStoSC(col);setStoSD(col==='q'?-1:1);}},style:{cursor:'pointer',userSelect:'none'}});
+              const sI=(col)=>stoSC===col?<ArrowUpDown size={9} style={{marginLeft:3,verticalAlign:'middle'}} color={$.blu}/>:null;
+              const cols=[
+                {k:'sk',l:'Şirket Kodu',a:'left',w:110},
+                {k:'sn',l:'Şirket Adı',a:'left',w:220},
+                {k:'tk',l:'Tesis Kodu',a:'left',w:100},
+                {k:'tn',l:'Tesis Adı',a:'left',w:240},
+                {k:'ak',l:'Ambar Kodu',a:'left',w:100},
+                {k:'an',l:'Ambar Adı',a:'left',w:220},
+                {k:'q',l:'Toplam Miktar (kg)',a:'right',w:150}
+              ];
+              const exportXLSX=()=>{
+                const doIt=()=>{
+                  const X=window.XLSX;
+                  const headers=['Şirket Kodu','Şirket Adı','Tesis Kodu','Tesis Adı','Ambar Kodu','Ambar Adı','Toplam Miktar (kg)'];
+                  const rowsX=arr.map(g=>[g.sk,g.sn,g.tk,g.tn,g.ak,g.an,Math.round(g.q)]);
+                  const totalRow=['ALT TOPLAM','','','','','',Math.round(totalQ)];
+                  const data=[headers,...rowsX,totalRow];
+                  const ws=X.utils.aoa_to_sheet(data);
+                  ws['!cols']=[{wch:14},{wch:34},{wch:12},{wch:36},{wch:12},{wch:32},{wch:20}];
+                  ws['!freeze']={ySplit:1};
+                  // Sayısal hücreye format uygula (kolon 6 = G)
+                  for(let r=1;r<data.length;r++){
+                    const ref=X.utils.encode_cell({r,c:6});
+                    if(ws[ref]){ws[ref].t='n';ws[ref].z='#,##0';}
+                  }
+                  // Header bold (community sheetjs sınırlı destek)
+                  for(let c=0;c<headers.length;c++){
+                    const ref=X.utils.encode_cell({r:0,c});
+                    if(ws[ref])ws[ref].s={font:{bold:true}};
+                  }
+                  const wb=X.utils.book_new();
+                  X.utils.book_append_sheet(wb,ws,'Stok Raporu');
+                  X.writeFile(wb,'TYRO_StokRaporu_'+new Date().toISOString().slice(0,10)+'.xlsx');
+                };
+                if(window.XLSX)doIt();
+                else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
+              };
+              return(
+                <div>
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden'}}>
+                    <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                      <div style={{width:28,height:28,borderRadius:8,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Package size={15}/></div>
+                      <div style={{display:'flex',flexDirection:'column'}}>
+                        <span style={{fontSize:13.5,fontWeight:700,color:$.t1}}>Stok Dökümü</span>
+                        <span style={{fontSize:10.5,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{arr.length} satır · Alt Toplam {fmtTon(totalQ)}</span>
+                      </div>
+                      <div style={{position:'relative',marginLeft:'auto',minWidth:220,maxWidth:280,flex:1}}>
+                        <Search size={13} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:$.t3,pointerEvents:'none'}}/>
+                        <input value={stoSearch} onChange={e=>setStoSearch(e.target.value)} placeholder="Şirket / Tesis / Ambar ara..." className="fi" style={{paddingLeft:32,paddingRight:stoSearch?28:10,fontSize:12,width:'100%',boxSizing:'border-box'}}/>
+                        {stoSearch&&<div onClick={()=>setStoSearch('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',cursor:'pointer',width:18,height:18,borderRadius:9,background:'rgba(0,0,0,.08)',display:'flex',alignItems:'center',justifyContent:'center'}}><X size={10} color={$.t2}/></div>}
+                      </div>
+                      <button className="tb-b pr" onClick={exportXLSX} disabled={arr.length===0} style={{fontSize:11,opacity:arr.length===0?.5:1}}><Download size={13}/>Excel'e Aktar</button>
+                    </div>
+                    <div style={{maxHeight:'calc(100vh - 220px)',overflow:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11.5}}>
+                        <thead>
+                          <tr>
+                            {cols.map(c=>(
+                              <th key={c.k} {...sH(c.k)} style={{padding:'10px 12px',textAlign:c.a,fontWeight:700,fontSize:10,color:stoSC===c.k?$.blu:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd,background:$.bg,minWidth:c.w,whiteSpace:'nowrap',position:'sticky',top:0,zIndex:5}}>{c.l}{sI(c.k)}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {arr.map((g,i)=>(
+                            <tr key={i} style={{background:i%2?$.bg:$.bg2,borderBottom:'1px solid '+$.bdL}}>
+                              <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t1,whiteSpace:'nowrap'}}>{g.sk}</td>
+                              <td style={{padding:'8px 12px',fontWeight:500,color:$.t1}}>{g.sn}</td>
+                              <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t1,whiteSpace:'nowrap'}}>{g.tk}</td>
+                              <td style={{padding:'8px 12px',fontWeight:500,color:$.t1}}>{g.tn}</td>
+                              <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t1,whiteSpace:'nowrap'}}>{g.ak}</td>
+                              <td style={{padding:'8px 12px',fontWeight:500,color:$.t1}}>{g.an}</td>
+                              <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:700,color:$.t1,textAlign:'right',whiteSpace:'nowrap'}}>{fmtTon(g.q)}</td>
+                            </tr>
+                          ))}
+                          {arr.length===0&&(
+                            <tr><td colSpan={cols.length} style={{padding:'48px 16px',textAlign:'center',color:$.t3,fontSize:12}}>{gRows.length===0?'Önce ERP verilerini yükleyin':'Filtreye uyan kayıt bulunamadı'}</td></tr>
+                          )}
+                        </tbody>
+                        {arr.length>0&&(
+                          <tfoot>
+                            <tr style={{background:$.grnB,borderTop:'2px solid '+$.ac,position:'sticky',bottom:0,zIndex:5}}>
+                              <td colSpan={6} style={{padding:'10px 12px',fontWeight:800,color:'#0d6e4f',fontSize:12}}>ALT TOPLAM ({arr.length} satır)</td>
+                              <td style={{padding:'10px 12px',fontFamily:$.mo,fontSize:12,fontWeight:800,color:'#0d6e4f',textAlign:'right',whiteSpace:'nowrap'}}>{fmtTon(totalQ)}</td>
+                            </tr>
+                          </tfoot>
+                        )}
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ===== ERP VERİLERİ ===== */}
             {pg==='erp'&&(
               <div>
@@ -2954,12 +3072,12 @@ export default function App(){
             </button>);})}
           {/* Three-dot menu */}
           <div style={{position:'relative'}}>
-            <button className={'bnav-btn'+(['rep','raw','erp','set'].includes(pg)?' active':'')} onClick={()=>setMobMenu(m=>!m)}>
-              <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:mobMenu||['rep','raw','erp','set'].includes(pg)?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><MoreHorizontal size={20} strokeWidth={['rep','raw','erp','set'].includes(pg)?2.2:1.6}/></div>
+            <button className={'bnav-btn'+(['rep','sto','raw','erp','set'].includes(pg)?' active':'')} onClick={()=>setMobMenu(m=>!m)}>
+              <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:mobMenu||['rep','sto','raw','erp','set'].includes(pg)?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><MoreHorizontal size={20} strokeWidth={['rep','sto','raw','erp','set'].includes(pg)?2.2:1.6}/></div>
               <span>Diğer</span>
             </button>
             {mobMenu&&<div style={{position:'absolute',bottom:'100%',right:-8,marginBottom:12,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,.12), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px',minWidth:180,animation:'mobMenuUp .2s ease'}}>
-              {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Database,label:'Ham Veriler'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
+              {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'sto',icon:Package,label:'Stok Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Database,label:'Ham Veriler'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
                 <div key={p.id} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,cursor:'pointer',background:isA?'rgba(13,110,79,.07)':'transparent',color:isA?$.ac:$.t1,fontWeight:isA?600:500,fontSize:13,transition:'all .15s'}} className="rh">
                   <p.icon size={17} strokeWidth={isA?2.2:1.6}/>{p.label}
                   {p.id==='raw'&&rows.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff'}}>{rows.length}</span>}
