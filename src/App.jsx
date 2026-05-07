@@ -2344,8 +2344,9 @@ export default function App(){
               gRows.forEach(r=>{
                 const sk=String(r[0]||''),sn=String(r[1]||r[0]||''),tk=String(r[9]||''),tn=String(r[10]||''),ak=String(r[11]||''),an=String(r[12]||'');
                 const key=sk+'|'+sn+'|'+tk+'|'+tn+'|'+ak+'|'+an;
-                if(!groups[key])groups[key]={sk,sn,tk,tn,ak,an,q:0};
+                if(!groups[key])groups[key]={sk,sn,tk,tn,ak,an,q:0,v:0};
                 groups[key].q+=Number(r[8])||0;
+                groups[key].v+=(Number(r[8])||0)*(Number(r[25])||0);
               });
               let arr=Object.values(groups);
               if(stoSearch.trim()){
@@ -2353,12 +2354,18 @@ export default function App(){
                 arr=arr.filter(g=>[g.sk,g.sn,g.tk,g.tn,g.ak,g.an].some(s=>String(s).toLowerCase().includes(t)));
               }
               arr.sort((a,b)=>{
-                if(stoSC==='q')return((a.q||0)-(b.q||0))*stoSD;
+                if(stoSC==='q'||stoSC==='v')return((a[stoSC]||0)-(b[stoSC]||0))*stoSD;
                 return String(a[stoSC]||'').localeCompare(String(b[stoSC]||''),'tr')*stoSD;
               });
               const totalQ=arr.reduce((s,g)=>s+g.q,0);
-              const sH=(col)=>({onClick:()=>{if(stoSC===col)setStoSD(d=>d*-1);else{setStoSC(col);setStoSD(col==='q'?-1:1);}},style:{cursor:'pointer',userSelect:'none'}});
-              const sI=(col)=>stoSC===col?<ArrowUpDown size={9} style={{marginLeft:3,verticalAlign:'middle'}} color={$.blu}/>:null;
+              const totalV=arr.reduce((s,g)=>s+g.v,0);
+              const sH=(col)=>({onClick:()=>{if(stoSC===col)setStoSD(d=>d*-1);else{setStoSC(col);setStoSD(col==='q'||col==='v'?-1:1);}},title:'Sırala',style:{cursor:'pointer',userSelect:'none'}});
+              const sI=(col)=>{
+                if(stoSC!==col)return <ArrowUpDown size={10} style={{marginLeft:4,verticalAlign:'middle',opacity:.35}} color={$.t3}/>;
+                return stoSD===-1
+                  ? <svg width="10" height="10" viewBox="0 0 10 10" style={{marginLeft:4,verticalAlign:'middle'}}><path d="M5 7.5L1.5 3h7L5 7.5z" fill={$.blu}/></svg>
+                  : <svg width="10" height="10" viewBox="0 0 10 10" style={{marginLeft:4,verticalAlign:'middle'}}><path d="M5 2.5L8.5 7h-7L5 2.5z" fill={$.blu}/></svg>;
+              };
               const cols=[
                 {k:'sk',l:'Şirket Kodu',a:'left',w:110},
                 {k:'sn',l:'Şirket Adı',a:'left',w:220},
@@ -2366,22 +2373,25 @@ export default function App(){
                 {k:'tn',l:'Tesis Adı',a:'left',w:240},
                 {k:'ak',l:'Ambar Kodu',a:'left',w:100},
                 {k:'an',l:'Ambar Adı',a:'left',w:220},
-                {k:'q',l:'Toplam Miktar (kg)',a:'right',w:150}
+                {k:'q',l:'Toplam Miktar (kg)',a:'right',w:150},
+                {k:'v',l:'Toplam Değer ($)',a:'right',w:140}
               ];
               const exportXLSX=()=>{
                 const doIt=()=>{
                   const X=window.XLSX;
-                  const headers=['Şirket Kodu','Şirket Adı','Tesis Kodu','Tesis Adı','Ambar Kodu','Ambar Adı','Toplam Miktar (kg)'];
-                  const rowsX=arr.map(g=>[g.sk,g.sn,g.tk,g.tn,g.ak,g.an,Math.round(g.q)]);
-                  const totalRow=['ALT TOPLAM','','','','','',Math.round(totalQ)];
+                  const headers=['Şirket Kodu','Şirket Adı','Tesis Kodu','Tesis Adı','Ambar Kodu','Ambar Adı','Toplam Miktar (kg)','Toplam Değer ($)'];
+                  const rowsX=arr.map(g=>[g.sk,g.sn,g.tk,g.tn,g.ak,g.an,Math.round(g.q),Math.round(g.v)]);
+                  const totalRow=['ALT TOPLAM','','','','','',Math.round(totalQ),Math.round(totalV)];
                   const data=[headers,...rowsX,totalRow];
                   const ws=X.utils.aoa_to_sheet(data);
-                  ws['!cols']=[{wch:14},{wch:34},{wch:12},{wch:36},{wch:12},{wch:32},{wch:20}];
+                  ws['!cols']=[{wch:14},{wch:34},{wch:12},{wch:36},{wch:12},{wch:32},{wch:20},{wch:20}];
                   ws['!freeze']={ySplit:1};
-                  // Sayısal hücreye format uygula (kolon 6 = G)
+                  // Sayısal hücrelere format uygula
                   for(let r=1;r<data.length;r++){
-                    const ref=X.utils.encode_cell({r,c:6});
-                    if(ws[ref]){ws[ref].t='n';ws[ref].z='#,##0';}
+                    const refQ=X.utils.encode_cell({r,c:6});
+                    if(ws[refQ]){ws[refQ].t='n';ws[refQ].z='#,##0';}
+                    const refV=X.utils.encode_cell({r,c:7});
+                    if(ws[refV]){ws[refV].t='n';ws[refV].z='"$"#,##0';}
                   }
                   // Header bold (community sheetjs sınırlı destek)
                   for(let c=0;c<headers.length;c++){
@@ -2402,7 +2412,7 @@ export default function App(){
                       <div style={{width:28,height:28,borderRadius:8,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Package size={15}/></div>
                       <div style={{display:'flex',flexDirection:'column'}}>
                         <span style={{fontSize:13.5,fontWeight:700,color:$.t1}}>Stok Dökümü</span>
-                        <span style={{fontSize:10.5,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{arr.length} satır · Alt Toplam {fmtTon(totalQ)}</span>
+                        <span style={{fontSize:10.5,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{arr.length} satır · {fmtTon(totalQ)} · ${fmt(totalV)}</span>
                       </div>
                       <div style={{position:'relative',marginLeft:'auto',minWidth:220,maxWidth:280,flex:1}}>
                         <Search size={13} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:$.t3,pointerEvents:'none'}}/>
@@ -2411,7 +2421,7 @@ export default function App(){
                       </div>
                       <button className="tb-b pr" onClick={exportXLSX} disabled={arr.length===0} style={{fontSize:11,opacity:arr.length===0?.5:1}}><Download size={13}/>Excel'e Aktar</button>
                     </div>
-                    <div style={{maxHeight:'calc(100vh - 220px)',overflow:'auto'}}>
+                    <div style={{maxHeight:'calc(100vh - 260px)',overflow:'auto'}}>
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:11.5}}>
                         <thead>
                           <tr>
@@ -2430,22 +2440,34 @@ export default function App(){
                               <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t1,whiteSpace:'nowrap'}}>{g.ak}</td>
                               <td style={{padding:'8px 12px',fontWeight:500,color:$.t1}}>{g.an}</td>
                               <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:700,color:$.t1,textAlign:'right',whiteSpace:'nowrap'}}>{fmtTon(g.q)}</td>
+                              <td style={{padding:'8px 12px',fontFamily:$.mo,fontSize:11,fontWeight:700,color:'#0d6e4f',textAlign:'right',whiteSpace:'nowrap'}}>${fmt(g.v)}</td>
                             </tr>
                           ))}
                           {arr.length===0&&(
                             <tr><td colSpan={cols.length} style={{padding:'48px 16px',textAlign:'center',color:$.t3,fontSize:12}}>{gRows.length===0?'Önce ERP verilerini yükleyin':'Filtreye uyan kayıt bulunamadı'}</td></tr>
                           )}
                         </tbody>
-                        {arr.length>0&&(
-                          <tfoot>
-                            <tr style={{background:$.grnB,borderTop:'2px solid '+$.ac,position:'sticky',bottom:0,zIndex:5}}>
-                              <td colSpan={6} style={{padding:'10px 12px',fontWeight:800,color:'#0d6e4f',fontSize:12}}>ALT TOPLAM ({arr.length} satır)</td>
-                              <td style={{padding:'10px 12px',fontFamily:$.mo,fontSize:12,fontWeight:800,color:'#0d6e4f',textAlign:'right',whiteSpace:'nowrap'}}>{fmtTon(totalQ)}</td>
-                            </tr>
-                          </tfoot>
-                        )}
                       </table>
                     </div>
+                    {/* ALT TOPLAM banner — scroll alanının dışında, her zaman altta sabit */}
+                    {arr.length>0&&(
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:14,padding:'12px 18px',background:'linear-gradient(90deg,rgba(13,110,79,.08),rgba(13,110,79,.04))',borderTop:'2px solid '+$.ac,fontFamily:$.mo}}>
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <span style={{padding:'3px 9px',borderRadius:6,background:$.ac,color:'#fff',fontSize:10,fontWeight:800,letterSpacing:.6}}>ALT TOPLAM</span>
+                          <span style={{fontSize:11.5,fontWeight:600,color:$.t2}}>{arr.length} satır</span>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:18}}>
+                          <div style={{display:'flex',alignItems:'baseline',gap:5}}>
+                            <span style={{fontSize:9.5,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5}}>Miktar</span>
+                            <span style={{fontSize:13.5,fontWeight:800,color:$.t1}}>{fmtTon(totalQ)}</span>
+                          </div>
+                          <div style={{display:'flex',alignItems:'baseline',gap:5}}>
+                            <span style={{fontSize:9.5,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5}}>Değer</span>
+                            <span style={{fontSize:13.5,fontWeight:800,color:'#0d6e4f'}}>${fmt(totalV)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
