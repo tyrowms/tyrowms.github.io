@@ -317,6 +317,24 @@ function buildFetchFilter(gFilter, cutoffISO) {
     const vals = gFilter.grpCompanies.map(c => `<value>${xmlEsc(c)}</value>`).join('');
     conds.push(`<condition attribute="mserp_companyid" operator="in">${vals}</condition>`);
   }
+  // Transit/Fark ambar dışlama — dashboard calcRows ile aynı mantık
+  // İşaret false ise ambar adında "transit" / "fark" geçen satırlar elenir; null ambar adları korunur
+  if (gFilter.incTransit !== true) {
+    conds.push(
+      `<filter type="or">` +
+        `<condition attribute="mserp_inventlocationname" operator="null" />` +
+        `<condition attribute="mserp_inventlocationname" operator="not-like" value="%transit%" />` +
+      `</filter>`
+    );
+  }
+  if (gFilter.incFark !== true) {
+    conds.push(
+      `<filter type="or">` +
+        `<condition attribute="mserp_inventlocationname" operator="null" />` +
+        `<condition attribute="mserp_inventlocationname" operator="not-like" value="%fark%" />` +
+      `</filter>`
+    );
+  }
   // Global arama: her terim için, aranabilir alanlar arasında LIKE %term% OR bloğu
   // Dashboard GS_IDX = [1,3,4,10,12,15,17,19,21,23] (şirket, ürün, menşe, tesis, ambar, L1-L4 adları)
   if (gFilter.searchTerms && gFilter.searchTerms.length > 0) {

@@ -20,7 +20,14 @@ const RL=[{k:'fresh',l:'Taze Stok',r:'0-60 gün',c:'#0d6e4f',bg:'rgba(45,212,160
 const ac=d=>d<60?'#0d6e4f':d<90?'#16a34a':d<180?'#f5a623':d<365?'#ea580c':'#e5484d';
 const acBg=d=>d<60?'rgba(45,212,160,.1)':d<90?'rgba(22,163,74,.08)':d<180?'rgba(245,166,35,.08)':d<365?'rgba(234,88,12,.08)':'rgba(229,72,77,.08)';
 const TI={own:{color:'#0d6e4f',label:'Öz Tesis'},fason:{color:'#8b5cf6',label:'Fason'},dis:{color:'#3b82f6',label:'Dış Tesis'},disticaret:{color:'#f5a623',label:'Dış Ticaret'}};
-const gC=c=>{if(CTM[c])return CTM[c];const p=c.split('-')[0];return CTM[p]||Object.entries(CTM).find(([k])=>c.includes(k))?.[1]||'Yurtdışı';};
+// Tesis adı override'ları — kod CTM/FCTM'de yanlış prefix'e eşlense bile ad üzerinden zorla doğru yere koy
+// Eklendikçe burayı genişlet: rx tesis adında match ediyorsa city/country zorlanır
+const FAC_NAME_OVERRIDES=[
+  {rx:/\bTREBIL\b/i,  city:'Yurtdışı', country:'Irak'},     // TRB→Trabzon çakışması
+  {rx:/SILAMAGRO/i,    city:'Bursa',   country:'Türkiye'},  // SILAM→Samsun çakışması
+];
+const facOverride=name=>{if(!name)return null;for(const o of FAC_NAME_OVERRIDES)if(o.rx.test(name))return o;return null;};
+const gC=(c,name)=>{const ov=facOverride(name);if(ov)return ov.city;if(CTM[c])return CTM[c];const p=c.split('-')[0];return CTM[p]||Object.entries(CTM).find(([k])=>c.includes(k))?.[1]||'Yurtdışı';};
 const gT=c=>{if(!c)return'dis';const u=c.toUpperCase();if(u.includes('FSN'))return'fason';if(u==='DISTICARET'||u.includes('DTC'))return'disticaret';if(u.startsWith('TRY-')||u.startsWith('YLD-'))return'own';return'dis';};
 const CGRP={'TAND':'Tiryaki Anadolu','TGFZ':'Tiryaki Anadolu','TSHY':'Tiryaki Anadolu','DNSG':'Tiryaki Anadolu','DPFZ':'Tiryaki Anadolu','THSG':'Tiryaki Anadolu','DANE':'Tiryaki Anadolu','ENUT':'Tiryaki Anadolu','LNUT':'Tiryaki Anadolu','LNCN':'Tiryaki Anadolu','DLDN':'Tiryaki Anadolu','LNFZ':'Tiryaki Anadolu','LSGA':'Tiryaki Anadolu','DYLD':'Tiryaki Anadolu','DLDP':'Tiryaki Anadolu','TSRY':'Tiryaki Anadolu','SUHO':'Tiryaki Emerging Markets','SAMA':'Tiryaki Emerging Markets','MESQ':'Tiryaki Emerging Markets','MFZC':'Tiryaki Emerging Markets','HFLT':'Tiryaki Emerging Markets','HNLT':'Tiryaki Emerging Markets','TOGO':'Tiryaki Emerging Markets','TGAN':'Tiryaki Emerging Markets','GANA':'Tiryaki Emerging Markets','NOVA':'Tiryaki Emerging Markets','TNGA':'Tiryaki Emerging Markets','DMES':'Tiryaki Emerging Markets','DTRK':'Tiryaki Emerging Markets','DARG':'Tiryaki Emerging Markets','AFZE':'Tiryaki Emerging Markets','SARG':'Tiryaki Emerging Markets','TARG':'Tiryaki Emerging Markets','MERC':'Tiryaki Emerging Markets','VMES':'Tiryaki Emerging Markets','TMES':'Tiryaki Emerging Markets','SRCA':'Tiryaki Organics','SRNL':'Tiryaki Organics','SRUS':'Tiryaki Organics','SRDE':'Tiryaki Organics','SRIL':'Tiryaki Organics','GPOR':'Tiryaki Organics','GLON':'Tiryaki Organics','DSSM':'Tiryaki Organics','DDIA':'Tiryaki Organics','DSSA':'Tiryaki Organics','DIAS':'Tiryaki Organics','TTEC':'Tiryaki Strategic Services','DNAI':'Tiryaki Strategic Services','DTFZ':'Tiryaki Strategic Services','EDGA':'Tiryaki Energy','EGNY':'Tiryaki Energy','EGNS':'Tiryaki Energy','EHUR':'Tiryaki Energy','ENIL':'Tiryaki Energy','EOKL':'Tiryaki Energy','EOZB':'Tiryaki Energy','ESFZ':'Tiryaki Energy','ETRY':'Tiryaki Energy','DTGT':'Tiryaki Energy','EYIL':'Tiryaki Energy','EYZY':'Tiryaki Energy','ASET':'Tiryaki Holding','DHDG':'Tiryaki Holding','MAEP':'Tiryaki Holding','MEFA':'Tiryaki Holding','DTMX':'Tiryaki Holding'};
 const gGrp=code=>{if(!code)return'Diğer';const u=code.toUpperCase().trim();return CGRP[u]||'Diğer';};
@@ -71,7 +78,7 @@ function getYearlyPoints(trendRaw){
 function buildD(rows){
   const fm={},wm={};
   rows.forEach(r=>{const mi=r[8],ts=r[9],ta=r[10],dp=r[11],da=r[12],ua=r[3],fu=r[25],fifo=r[27];
-    if(!fm[ts])fm[ts]={id:ts,n:ta,city:gC(ts),type:gT(ts),q:0,v:0,ws:new Set(),ps:new Set(),td:0,tq:0};
+    if(!fm[ts])fm[ts]={id:ts,n:ta,city:gC(ts,ta),type:gT(ts),q:0,v:0,ws:new Set(),ps:new Set(),td:0,tq:0};
     const f=fm[ts];f.q+=mi;f.v+=mi*fu;f.ws.add(dp);f.ps.add(ua);f.td+=mi*fifo;f.tq+=mi;
     const wk=ts+'|'+dp;if(!wm[wk])wm[wk]={fc:ts,id:dp,n:da,q:0,v:0,ps:new Set(),td:0,tq:0};
     const w=wm[wk];w.q+=mi;w.v+=mi*fu;w.ps.add(ua);w.td+=mi*fifo;w.tq+=mi;});
@@ -95,7 +102,7 @@ const FCTM={
   // Avrupa
   'ANTW':'Belçika','CALINESTI':'Romanya','MARACINENI':'Romanya','GBI':'Romanya',
   // Orta Doğu / Irak
-  'BBL':'Irak','BGD':'Irak','BSR':'Irak','KBR':'Irak','KUT':'Irak','NJF':'Irak',
+  'BBL':'Irak','BGD':'Irak','BSR':'Irak','KBR':'Irak','KUT':'Irak','NJF':'Irak','DHK':'Irak','DUHOK':'Irak','ERB':'Irak','ERBIL':'Irak','MSL':'Irak','MOSUL':'Irak','SLM':'Irak',
   // Afrika
   'GHANA':'Gana',
   // Özel Türk kodları (TRY- prefix ama yurtdışı)
@@ -113,6 +120,8 @@ const US_STATES=new Set(['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI',
 const CA_PROVS=new Set(['AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','PQ','QC','SK','YT']);
 
 const gCountry=(code,name)=>{
+  // 0. Tesis adı override — kod Türkçe prefix'le çakışan tesisler (örn: TRB→TREBIL Irak, SILAM→Sılamagro Bursa)
+  const ov=facOverride(name);if(ov)return ov.country;
   // 1. Tam kodu FCTM'de ara
   if(FCTM[code])return FCTM[code];
   // 2. Tam kodu CTM'de ara (Türkiye)
@@ -501,6 +510,9 @@ export default function App(){
         // Global arama terimlerini geç
         const terms=gSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
         if(terms.length>0)gf.searchTerms=terms;
+        // Transit/Fark ambar bayrakları — dashboard calcRows davranışını trend'e taşı
+        gf.incTransit=incTransit;
+        gf.incFark=incFark;
         const data=await fetchKPITrend(msalAccount,gf,trendKPI);
         if(!cancelled)setTrendRaw(data);
       }catch(e){
@@ -510,7 +522,7 @@ export default function App(){
       }
     })();
     return()=>{cancelled=true;};
-  },[trendKPI,gFilter,gSearch,msalAccount]);
+  },[trendKPI,gFilter,gSearch,msalAccount,incTransit,incFark]);
 
   // KPI Metric Config — her kart için ayrı
   const KPI_METRICS=useMemo(()=>({
