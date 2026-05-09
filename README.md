@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="public/ttech-logo.svg" alt="TYRO WMS Agent" width="80" />
+  <img src="public/ttech-logo.svg" alt="TYRO STOCK Agent" width="80" />
 </p>
 
-<h1 align="center">TYRO WMS Agent</h1>
+<h1 align="center">TYRO STOCK Agent</h1>
 
 <p align="center">
-  <strong>Warehouse Management System &mdash; Digital Twin Dashboard</strong><br/>
+  <strong>Stock Management Agent &mdash; Digital Twin Dashboard</strong><br/>
   <em>by TTECH Business Solutions for Tiryaki Agro</em>
 </p>
 
@@ -20,7 +20,7 @@
 
 ## Overview
 
-TYRO WMS Agent is an enterprise-grade warehouse inventory aging analysis dashboard. It connects to Microsoft D365 ERP via Dataverse API, providing real-time visibility into stock aging, facility distribution, and risk analysis across all Tiryaki Agro warehouses.
+TYRO STOCK Agent is an enterprise-grade stock inventory aging analysis dashboard. It connects to Microsoft D365 ERP via Dataverse API, providing real-time visibility into stock aging, facility distribution, and risk analysis across all Tiryaki Agro warehouses.
 
 ## Features
 

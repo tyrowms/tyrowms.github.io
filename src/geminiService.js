@@ -10,7 +10,7 @@ export function buildDataContext(D, DW, fmtTon, fmt, fN, gRows) {
 
   const agBuckets = ['0-30','31-60','61-90','91-120','121-180','181-365','365+'];
 
-  let ctx = `TYRO WMS Stok Yaşlandırma Verileri (güncel snapshot):
+  let ctx = `TYRO STOCK Stok Yaşlandırma Verileri (güncel snapshot):
 Toplam Stok: ${fmtTon(D.s.totalQty)}
 Toplam Değer (USD): $${fmt(D.s.totalVal)}
 Tesis Sayısı: ${D.s.facilityCount}
@@ -106,7 +106,7 @@ ${prods.map((p, i) => `  ${i + 1}. ${p.n}: ${fmtTon(p.q)}, $${fmt(p.v)}, ort.ya�
 export async function askGemini(apiKey, messages, dataContext, model = 'gemini-2.5-flash') {
   if (!apiKey) throw new Error('TYRO AI API key girilmemiş. Ayarlardan ekleyin.');
 
-  const systemPrompt = `Sen TYRO AI — Tiryaki Agro'nun stok yaşlandırma asistanısın. TYRO WMS platformunda çalışıyorsun.
+  const systemPrompt = `Sen TYRO AI — Tiryaki Agro'nun stok yaşlandırma asistanısın. TYRO STOCK platformunda çalışıyorsun.
 
 Kullanıcının sorularını aşağıdaki verilere dayanarak Türkçe cevapla.
 
@@ -124,7 +124,7 @@ ${dataContext}`;
 
   const contents = [
     { role: 'user', parts: [{ text: systemPrompt }] },
-    { role: 'model', parts: [{ text: 'Anladım, TYRO WMS stok yaşlandırma verilerine dayanarak sorularınızı cevaplayacağım. Nasıl yardımcı olabilirim?' }] },
+    { role: 'model', parts: [{ text: 'Anladım, TYRO STOCK stok yaşlandırma verilerine dayanarak sorularınızı cevaplayacağım. Nasıl yardımcı olabilirim?' }] },
     ...messages.map(m => ({
       role: m.role === 'user' ? 'user' : 'model',
       parts: [{ text: m.text }]
