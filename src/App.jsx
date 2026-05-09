@@ -3,8 +3,9 @@ import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Lay
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 const WorldMap3D = lazy(() => import('./WorldMap3D'));
 const LoginGlobe = lazy(() => import('./LoginGlobe'));
-import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend } from './dataverseService';
+import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend, fetchHistoricalSalesByTrader, fetchTraderNames, getDataverseToken } from './dataverseService';
 import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
+import { aggregateMonthly, mapToSeries, selectBestFit, buildTraderProfile, FORECAST_MODELS } from './salesForecast';
 
 const INIT=[];
 const DEMO=INIT;
@@ -380,6 +381,7 @@ export default function App(){
   const [geminiKey,setGeminiKey]=useState(()=>localStorage.getItem('tyrowms_gemini_key')||'');
   const [showGeminiKey,setShowGeminiKey]=useState(false);
   const chatEndRef=useRef(null);
+
   const sendChat=useCallback(async()=>{
     const q=chatInput.trim();if(!q||chatLoading)return;
     const newMsgs=[...chatMsgs,{role:'user',text:q}];
@@ -485,6 +487,85 @@ export default function App(){
   const [showRawFilter,setShowRawFilter]=useState(false);
   const [pageSize,setPageSize]=useState(100);
   const ERP_KEEP=useMemo(()=>new Set(['mserp_inventcolorid','mserp_closingpricemst','mserp_purchlifo','mserp_purchpricemst','mserp_amountmst','mserp_qty','mserp_itemname','mserp_headerreportdate','mserp_companyid','mserp_etgproductlevel03name','mserp_sfilotid','mserp_purchweav','mserp_amountsec','mserp_itemid','mserp_inventsizeid','mserp_inventdimension1','mserp_etgproductlevel02name','mserp_inventlocationid','mserp_prodweav','mserp_purchfifo','mserp_purchpricesec','mserp_prodfifo','mserp_prodlifo','mserp_vesselassignmentid','mserp_etgproductlevel01name','mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname','mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name','mserp_inventbatchid','mserp_inventdimension2','versionnumber','mserp_inventlocationname','mserp_traderid','mserp_maintraderid','mserp_tradername','mserp_maintradername']),[]);
+
+  // ─── Satış Tahmini (fcst) ──────────────────────────────────
+  const [fcstTrader,setFcstTrader]=useState('');
+  const [fcstHorizon,setFcstHorizon]=useState(12);
+  const [fcstMetric,setFcstMetric]=useState('qty');
+  const [fcstActiveModel,setFcstActiveModel]=useState(null);
+  const [fcstResult,setFcstResult]=useState(null);
+  const [fcstLoading,setFcstLoading]=useState(false);
+  const [fcstStatus,setFcstStatus]=useState('');
+  const [fcstError,setFcstError]=useState('');
+  const [fcstTraderList,setFcstTraderList]=useState([]);
+  const [fcstTraderListLoading,setFcstTraderListLoading]=useState(false);
+
+  const loadFcstTraderList=useCallback(async()=>{
+    if(!msalAccount||fcstTraderList.length>0||fcstTraderListLoading)return;
+    try{
+      const cached=localStorage.getItem('tyrowms_fcst_traders');
+      if(cached){
+        const p=JSON.parse(cached);
+        if(p&&p.fetchedAt&&Date.now()-p.fetchedAt<86400000&&Array.isArray(p.list)){
+          setFcstTraderList(p.list);return;
+        }
+      }
+    }catch(_){}
+    setFcstTraderListLoading(true);
+    try{
+      const token=await getDataverseToken(msalAccount);
+      const map=await fetchTraderNames(token);
+      const list=[...map.entries()].map(([code,name])=>({code,name,label:name?`${code} — ${name}`:code})).sort((a,b)=>a.label.localeCompare(b.label,'tr'));
+      setFcstTraderList(list);
+      try{localStorage.setItem('tyrowms_fcst_traders',JSON.stringify({fetchedAt:Date.now(),list}));}catch(_){}
+    }catch(e){console.warn('Trader list yüklenemedi:',e);}
+    finally{setFcstTraderListLoading(false);}
+  },[msalAccount,fcstTraderList.length,fcstTraderListLoading]);
+
+  useEffect(()=>{if(pg==='fcst')loadFcstTraderList();},[pg,loadFcstTraderList]);
+
+  const runForecast=useCallback(async()=>{
+    if(!fcstTrader||!msalAccount||fcstLoading)return;
+    setFcstLoading(true);setFcstError('');setFcstStatus('Veri çekiliyor...');
+    try{
+      const cacheKey=`tyrowms_fcst_${fcstTrader}`;
+      let aggMap=null,profile=null,valueAvailable=false;
+      try{
+        const cached=localStorage.getItem(cacheKey);
+        if(cached){
+          const p=JSON.parse(cached);
+          if(p&&p.fetchedAt&&Date.now()-p.fetchedAt<86400000){
+            setFcstStatus('Cache\'den yükleniyor...');
+            aggMap=p.aggMap;profile=p.profile;valueAvailable=p.valueAvailable;
+          }
+        }
+      }catch(_){}
+      if(!aggMap){
+        const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fcstTrader,{
+          onProgress:(loaded,total)=>setFcstStatus(`Veri çekiliyor... ${loaded}${total?' / '+total:''} kayıt`),
+        });
+        setFcstStatus('Aylık aggregate hesaplanıyor...');
+        aggMap=aggregateMonthly(fetchRes.records,{valueField:fetchRes.valueField});
+        profile=buildTraderProfile(fetchRes.records,gGrp,aggMap);
+        valueAvailable=!!fetchRes.valueField;
+        try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable}));}catch(_){}
+      }
+      setFcstStatus('Tahmin modelleri çalıştırılıyor...');
+      const seriesQty=mapToSeries(aggMap);
+      const fitQty=selectBestFit(seriesQty.qty,fcstHorizon);
+      let fitValue=null;
+      if(seriesQty.valueAvailable&&seriesQty.value){
+        fitValue=selectBestFit(seriesQty.value,fcstHorizon);
+      }
+      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:fcstTrader,horizon:fcstHorizon,fetchedAt:Date.now()});
+      setFcstActiveModel(null);
+      setFcstStatus('Tamamlandı');
+      setTimeout(()=>setFcstStatus(''),2500);
+    }catch(e){
+      setFcstError(e.message||'Tahmin hesaplanamadı');
+      setFcstStatus('');
+    }finally{setFcstLoading(false);}
+  },[fcstTrader,fcstHorizon,msalAccount,fcstLoading]);
 
   // ─── MSAL Init ───
   useEffect(()=>{
@@ -962,6 +1043,13 @@ export default function App(){
               {sbExpanded&&p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
               {sbExpanded&&p.id==='erp'&&erpRaw.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.ac,color:'#fff',minWidth:18,textAlign:'center'}}>{erpRaw.length}</span>}
             </div>);})}
+          {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Tahminleme'}</div>}
+          {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
+          {[{id:'fcst',icon:TrendingUp,label:'Satış Tahmini'}].map(p=>{const isA=pg===p.id;return(
+            <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
+              {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
+              <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
+            </div>);})}
           {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Sistem'}</div>}
           {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
           {(()=>{const isA=pg==='set';return(
@@ -1077,8 +1165,8 @@ export default function App(){
             {/* Desktop: original single-row layout */}
             <div style={{display:'flex',alignItems:'center',gap:9,minWidth:0}}>
               <div style={{minWidth:0}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Risk Radarı','yon':'AI | İçgörüler','raw':'ERP Veriler','rep':'Kırılım Raporu','sto':'Stok Raporu','erp':'Ham Veriler','set':'Ayarlar'}[pg]}</div>
-                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'AI Destekli Stok Yaşlandırma İçgörüleri','raw':'ERP İşlem Kayıtları','rep':'Stok Yaşlandırma Kırılım Analizleri','sto':'Şirket / Tesis / Ambar Bazlı Stok Dökümü','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
+                <div style={{fontSize:16,fontWeight:700,color:'#1a1a1a',lineHeight:1.2,letterSpacing:'-0.02em'}}>{{'dash':'Dashboard','ana':'Risk Radarı','yon':'AI | İçgörüler','raw':'ERP Veriler','rep':'Kırılım Raporu','sto':'Stok Raporu','fcst':'Satış Tahmini','erp':'Ham Veriler','set':'Ayarlar'}[pg]}</div>
+                <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'AI Destekli Stok Yaşlandırma İçgörüleri','raw':'ERP İşlem Kayıtları','rep':'Stok Yaşlandırma Kırılım Analizleri','sto':'Şirket / Tesis / Ambar Bazlı Stok Dökümü','fcst':'Trader Bazlı Aylık Satış Tahminleme','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6,flex:1,maxWidth:400,margin:'0 auto',position:'relative'}}>
@@ -2592,6 +2680,398 @@ export default function App(){
               );
             })()}
 
+            {/* ===== SATIŞ TAHMİNİ (fcst) ===== */}
+            {pg==='fcst'&&(()=>{
+              // Aktif modelin forecast sonucu (best fit veya kullanıcı seçimi)
+              const fit=fcstMetric==='value'?fcstResult?.fitValue:fcstResult?.fitQty;
+              const activeModelId=fcstActiveModel||fit?.bestId||null;
+              const activeResult=fit?.results?.find(r=>r.id===activeModelId);
+              const series=fcstResult?.series;
+              const histArr=series?(fcstMetric==='value'?series.value:series.qty):null;
+              const histKeys=series?series.keys:[];
+              const horizon=fcstResult?.horizon||fcstHorizon;
+              // Tahmin aylarının anahtarlarını üret (son tarih + 1, +2, ...)
+              const forecastKeys=[];
+              if(histKeys.length>0){
+                let cur=histKeys[histKeys.length-1];
+                for(let i=0;i<horizon;i++){
+                  const d=new Date(Date.UTC(+cur.split('-')[0],+cur.split('-')[1]-1,1));
+                  d.setUTCMonth(d.getUTCMonth()+1);
+                  cur=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+                  forecastKeys.push(cur);
+                }
+              }
+              const forecastPts=activeResult?.forecast?.point||[];
+              const forecastLow=activeResult?.forecast?.lower||[];
+              const forecastUp=activeResult?.forecast?.upper||[];
+              // Format helpers
+              const fmtMetric=v=>fcstMetric==='value'?`$${fmt(v)}`:fmtTon(v);
+              const fmtMetricShort=v=>fcstMetric==='value'?`$${fmt(v)}`:fN(Math.round(v))+' kg';
+              const monthLabel=key=>{const[y,m]=key.split('-');return MONTHS_TR[+m-1].slice(0,3)+' '+y.slice(2);};
+              // Geçen yıl aynı ay (YoY) için lookup
+              const yoyOf=(targetKey,allKeys,allVals)=>{
+                const[y,m]=targetKey.split('-');
+                const lastY=`${+y-1}-${m}`;
+                const idx=allKeys.indexOf(lastY);
+                return idx>=0?allVals[idx]:null;
+              };
+              const allValsCombined=[...(histArr||[]),...forecastPts];
+              const allKeysCombined=[...histKeys,...forecastKeys];
+              // Excel export
+              const exportXLSX=()=>{
+                if(!fcstResult||!fit)return;
+                const doIt=()=>{
+                  const X=window.XLSX;
+                  const tName=fcstTraderList.find(t=>t.code===fcstResult.traderCode)?.name||fcstResult.traderCode;
+                  const metricLbl=fcstMetric==='value'?'Tutar (USD)':'Miktar (kg)';
+                  // Sheet 1 — Özet
+                  const summary=[
+                    ['Satış Tahmini Raporu'],
+                    ['Trader',`${fcstResult.traderCode} — ${tName}`],
+                    ['Grup Şirketi',fcstResult.profile?.mainGroup||'-'],
+                    ['Karakter',fcstResult.profile?.character||'-'],
+                    ['Metrik',metricLbl],
+                    ['Horizon',`${horizon} ay`],
+                    ['Hesaplanma',new Date(fcstResult.fetchedAt).toLocaleString('tr-TR')],
+                    ['Aktif Model',FORECAST_MODELS.find(m=>m.id===activeModelId)?.label||activeModelId||'-'],
+                    [],
+                    ['Model Karşılaştırma (Backtest MAPE)'],
+                    ['Model','MAPE %','Durum'],
+                    ...fit.results.map(r=>[FORECAST_MODELS.find(m=>m.id===r.id)?.label||r.id,r.mape!=null?+r.mape.toFixed(2):null,r.skipped?(r.reason||'Atlandı'):(r.id===fit.bestId?'⭐ Best Fit':'OK')]),
+                  ];
+                  const ws1=X.utils.aoa_to_sheet(summary);
+                  ws1['!cols']=[{wch:28},{wch:32},{wch:18}];
+                  // Sheet 2 — Aylık Detay
+                  const det=[['Ay','Geçmiş Gerçek',`Tahmin (${metricLbl})`,'Alt Sınır','Üst Sınır','Geçen Yıl','YoY %','Tip']];
+                  histKeys.forEach((k,i)=>{
+                    const v=histArr[i];
+                    const ly=yoyOf(k,histKeys,histArr);
+                    const yoy=ly!=null&&ly>0?((v-ly)/ly*100):null;
+                    det.push([k,Math.round(v),null,null,null,ly!=null?Math.round(ly):null,yoy!=null?+yoy.toFixed(2):null,'Geçmiş']);
+                  });
+                  forecastKeys.forEach((k,i)=>{
+                    const v=forecastPts[i];
+                    const ly=yoyOf(k,allKeysCombined,allValsCombined);
+                    const yoy=ly!=null&&ly>0?((v-ly)/ly*100):null;
+                    det.push([k,null,Math.round(v),Math.round(forecastLow[i]||0),Math.round(forecastUp[i]||0),ly!=null?Math.round(ly):null,yoy!=null?+yoy.toFixed(2):null,'Tahmin']);
+                  });
+                  const ws2=X.utils.aoa_to_sheet(det);
+                  ws2['!cols']=[{wch:10},{wch:14},{wch:18},{wch:14},{wch:14},{wch:14},{wch:10},{wch:10}];
+                  ws2['!freeze']={ySplit:1};
+                  for(let r=1;r<det.length;r++){for(let c=1;c<=6;c++){const ref=X.utils.encode_cell({r,c});if(ws2[ref]&&typeof ws2[ref].v==='number'){ws2[ref].t='n';ws2[ref].z=c===6?'0.00"%"':'#,##0';}}}
+                  const wb=X.utils.book_new();
+                  X.utils.book_append_sheet(wb,ws1,'Özet');
+                  X.utils.book_append_sheet(wb,ws2,'Aylık Detay');
+                  X.writeFile(wb,`TYRO_SatisTahmini_${fcstResult.traderCode}_${new Date().toISOString().slice(0,10)}.xlsx`);
+                };
+                if(window.XLSX)doIt();
+                else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
+              };
+              return(
+                <div>
+                  {/* ─── Filtre Paneli ─── */}
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14}}>
+                    <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                      <div style={{width:28,height:28,borderRadius:8,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={15}/></div>
+                      <span style={{fontSize:13.5,fontWeight:700}}>Satış Tahmini Hesaplama</span>
+                      {fcstStatus&&<span style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{fcstStatus}</span>}
+                      {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:500,padding:'3px 9px',borderRadius:6,background:$.redB,cursor:'pointer'}} onClick={()=>setFcstError('')}>{fcstError} ✕</span>}
+                    </div>
+                    <div style={{padding:'14px 18px',display:'flex',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
+                      {/* Trader dropdown */}
+                      <div style={{minWidth:280,flex:'1 1 280px'}}>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Trader (zorunlu)</div>
+                        <select value={fcstTrader} onChange={e=>setFcstTrader(e.target.value)} className="fi" style={{width:'100%',fontSize:12.5}} disabled={fcstTraderListLoading}>
+                          <option value="">{fcstTraderListLoading?'Yükleniyor...':'Trader seçin...'}</option>
+                          {fcstTraderList.map(t=><option key={t.code} value={t.code}>{t.label}</option>)}
+                        </select>
+                      </div>
+                      {/* Horizon */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Horizon</div>
+                        <div style={{display:'flex',gap:0,background:$.bg,borderRadius:8,padding:3,border:'1px solid '+$.bdL}}>
+                          {[3,6,12].map(h=>(
+                            <div key={h} onClick={()=>setFcstHorizon(h)} style={{padding:'6px 14px',borderRadius:6,fontSize:12,fontWeight:fcstHorizon===h?700:500,cursor:'pointer',background:fcstHorizon===h?'#fff':'transparent',color:fcstHorizon===h?$.t1:$.t3,boxShadow:fcstHorizon===h?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .15s',userSelect:'none'}}>{h} ay</div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Metrik toggle */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Metrik</div>
+                        <div style={{display:'flex',gap:0,background:$.bg,borderRadius:8,padding:3,border:'1px solid '+$.bdL}}>
+                          {[{id:'qty',l:'Miktar'},{id:'value',l:'Tutar'}].map(m=>{
+                            const disabled=m.id==='value'&&fcstResult&&!fcstResult.valueAvailable;
+                            return(
+                              <div key={m.id} onClick={()=>{if(!disabled)setFcstMetric(m.id);}} title={disabled?'Tutar alanı bu trader için bulunamadı':undefined} style={{padding:'6px 14px',borderRadius:6,fontSize:12,fontWeight:fcstMetric===m.id?700:500,cursor:disabled?'not-allowed':'pointer',background:fcstMetric===m.id?'#fff':'transparent',color:disabled?$.bdL:fcstMetric===m.id?$.t1:$.t3,boxShadow:fcstMetric===m.id?'0 1px 3px rgba(0,0,0,.08)':'none',opacity:disabled?.5:1,transition:'all .15s',userSelect:'none'}}>{m.l}</div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div style={{flex:'0 0 auto',display:'flex',gap:8}}>
+                        <button className="tb-b pr" onClick={runForecast} disabled={!fcstTrader||fcstLoading} style={{padding:'9px 18px',fontSize:12,opacity:!fcstTrader||fcstLoading?.5:1}}>
+                          {fcstLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<TrendingUp size={13}/>}
+                          {fcstLoading?'Hesaplanıyor...':'Hesapla'}
+                        </button>
+                        {fcstResult&&<button className="tb-b" onClick={exportXLSX} style={{padding:'9px 16px',fontSize:12}}><Download size={13}/>Excel</button>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ─── Empty state ─── */}
+                  {!fcstResult&&!fcstLoading&&(
+                    <div style={{background:$.bg2,border:'1px dashed '+$.bdL,borderRadius:$.rL,padding:'50px 20px',textAlign:'center'}}>
+                      <div style={{width:60,height:60,borderRadius:16,background:'linear-gradient(135deg,rgba(45,212,160,.1),rgba(59,130,246,.1))',display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:14}}>
+                        <TrendingUp size={28} color={$.ac}/>
+                      </div>
+                      <div style={{fontSize:15,fontWeight:700,color:$.t1,marginBottom:6}}>Bir trader seçip Hesapla'ya tıklayın</div>
+                      <div style={{fontSize:12,color:$.t3,lineHeight:1.6,maxWidth:560,margin:'0 auto'}}>
+                        Tarayıcıda 5 farklı tahmin modeli (Holt-Winters, STL+ETS, Seasonal Naive, Croston, Moving Avg) paralel çalıştırılır.<br/>
+                        En düşük MAPE'li model otomatik <strong>Best Fit</strong> olarak işaretlenir, sekmelerle diğerlerini kıyaslayabilirsiniz.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─── Result ─── */}
+                  {fcstResult&&(()=>{
+                    const profile=fcstResult.profile;
+                    const traderInfo=fcstTraderList.find(t=>t.code===fcstResult.traderCode);
+                    return(<>
+                      {/* ─── Trader Profili ─── */}
+                      <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
+                        <div style={{padding:'14px 18px',background:'linear-gradient(135deg,rgba(13,110,79,.04),rgba(59,130,246,.04))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                          <div style={{width:42,height:42,borderRadius:11,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:14,letterSpacing:.5,boxShadow:'0 3px 8px rgba(13,110,79,.2)'}}>{(traderInfo?.name||fcstResult.traderCode).split(' ').map(s=>s[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.2}}>{traderInfo?.name||fcstResult.traderCode}</div>
+                            <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1}}>{fcstResult.traderCode} · {profile.mainGroup}</div>
+                          </div>
+                          <div style={{padding:'5px 11px',borderRadius:8,background:profile.intermittenceIndex>=.85?$.grnB:profile.intermittenceIndex>=.6?$.orgB:$.redB,fontSize:11,fontWeight:700,color:profile.intermittenceIndex>=.85?'#0d6e4f':profile.intermittenceIndex>=.6?'#92400e':$.red}}>
+                            {profile.character}
+                          </div>
+                        </div>
+                        <div style={{padding:'14px 18px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14}}>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Son 12 Ay Toplam</div>
+                            <div style={{fontSize:18,fontWeight:800,color:$.t1,fontFamily:$.mo}}>{fmtTon(profile.lastYearTotals.qty)}</div>
+                            {profile.lastYearTotals.value>0&&<div style={{fontSize:11,color:'#0d6e4f',fontWeight:700,fontFamily:$.mo,marginTop:2}}>${fmt(profile.lastYearTotals.value)}</div>}
+                          </div>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>YoY Değişim</div>
+                            <div style={{fontSize:18,fontWeight:800,color:profile.yoy==null?$.t3:profile.yoy>=0?'#0d6e4f':$.red,fontFamily:$.mo}}>{profile.yoy==null?'—':(profile.yoy>=0?'+':'')+profile.yoy.toFixed(1)+'%'}</div>
+                            <div style={{fontSize:10,color:$.t3,fontWeight:600,marginTop:2}}>Önceki 12 ay vs son 12 ay</div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Aktivite</div>
+                            <div style={{fontSize:18,fontWeight:800,color:$.t1,fontFamily:$.mo}}>{(profile.intermittenceIndex*100).toFixed(0)}%</div>
+                            <div style={{fontSize:10,color:$.t3,fontWeight:600,marginTop:2}}>aylarda satış var</div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Top Şirketler</div>
+                            <div style={{fontSize:11,color:$.t2,fontWeight:600,lineHeight:1.5}}>
+                              {profile.topCompanies.slice(0,3).map(c=>`${c.name} (${c.pct.toFixed(0)}%)`).join(' · ')||'—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Top Ürünler</div>
+                            <div style={{fontSize:11,color:$.t2,fontWeight:600,lineHeight:1.5}}>
+                              {profile.topProducts.slice(0,3).map(p=>`${p.name} (${p.pct.toFixed(0)}%)`).join(' · ')||'—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Top Müşteriler</div>
+                            <div style={{fontSize:11,color:$.t2,fontWeight:600,lineHeight:1.5}}>
+                              {profile.topDestinations.slice(0,3).map(d=>`${d.name} (${d.pct.toFixed(0)}%)`).join(' · ')||'—'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ─── Model Sekmeleri ─── */}
+                      <div style={{display:'flex',gap:0,marginBottom:14,padding:4,background:'#f0f1f3',borderRadius:11,overflowX:'auto',flexWrap:'nowrap'}}>
+                        {FORECAST_MODELS.map(m=>{
+                          const r=fit?.results?.find(x=>x.id===m.id);
+                          const isBest=fit?.bestId===m.id;
+                          const isActive=activeModelId===m.id;
+                          const skipped=r?.skipped;
+                          return(
+                            <div key={m.id} onClick={()=>{if(!skipped)setFcstActiveModel(m.id);}} title={r?.reason||m.description} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:isActive?700:500,cursor:skipped?'not-allowed':'pointer',background:isActive?'#fff':'transparent',color:isActive?$.t1:skipped?$.bdL:$.t3,boxShadow:isActive?'0 1px 3px rgba(0,0,0,.08)':'none',opacity:skipped?.5:1,transition:'all .15s',userSelect:'none',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6}}>
+                              {isBest&&<span style={{fontSize:11}}>⭐</span>}
+                              {m.label}
+                              {r&&!skipped&&r.mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,color:isActive?$.blu:$.t3,fontWeight:600}}>{r.mape.toFixed(1)}%</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* ─── Aktif Model Sonuç Paneli ─── */}
+                      {activeResult&&!activeResult.skipped&&activeResult.forecast&&(()=>{
+                        const fcPts=activeResult.forecast.point;
+                        const fcLow=activeResult.forecast.lower;
+                        const fcUp=activeResult.forecast.upper;
+                        const histTotal=histArr?sum(histArr.slice(-12)):0;
+                        const fcTotal=sum(fcPts);
+                        const monthlyAvg=fcTotal/horizon;
+                        const trendPct=histTotal>0?((fcTotal-histTotal*horizon/12)/(histTotal*horizon/12)*100):null;
+                        return(<>
+                          {/* Özet kartlar */}
+                          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginBottom:14}}>
+                            {[
+                              {l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),c:$.blu,bg:$.bluB},
+                              {l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),c:'#0d6e4f',bg:$.grnB},
+                              {l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bdL:trendPct>=0?$.grnB:$.redB},
+                              {l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bdL:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB},
+                            ].map((k,i)=>(
+                              <div key={i} style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'14px 16px',boxShadow:$.sh}}>
+                                <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>{k.l}</div>
+                                <div style={{fontSize:18,fontWeight:800,color:k.c,fontFamily:$.mo}}>{k.v}</div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Çizgi grafik */}
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,padding:'15px 18px'}}>
+                            <div style={{fontSize:13,fontWeight:700,color:$.t1,marginBottom:12,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                              <BarChart3 size={15} color={$.ac}/>
+                              <span>Tahmin Grafiği — {FORECAST_MODELS.find(m=>m.id===activeModelId)?.label}</span>
+                              <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:11,color:$.t3,fontWeight:500}}>
+                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2,background:$.blu,display:'inline-block'}}/>Geçmiş</span>
+                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2,background:'#0d6e4f',borderTop:'2px dashed #0d6e4f',display:'inline-block'}}/>Tahmin</span>
+                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(13,110,79,.15)',display:'inline-block'}}/>Güven Bandı</span>
+                              </div>
+                            </div>
+                            {(()=>{
+                              const allKeys=[...histKeys,...forecastKeys];
+                              const allHistVals=[...histArr,...new Array(horizon).fill(null)];
+                              const allFcVals=[...new Array(histKeys.length).fill(null),...fcPts];
+                              const allFcLow=[...new Array(histKeys.length).fill(null),...fcLow];
+                              const allFcUp=[...new Array(histKeys.length).fill(null),...fcUp];
+                              const allValues=allHistVals.map((v,i)=>[v,allFcUp[i]].filter(x=>x!=null)).flat();
+                              const maxV=Math.max(...allValues,1);
+                              const minV=0;
+                              const W=1100,H=320,padL=60,padR=20,padT=20,padB=40;
+                              const innerW=W-padL-padR,innerH=H-padT-padB;
+                              const x=i=>padL+(allKeys.length>1?i*innerW/(allKeys.length-1):innerW/2);
+                              const y=v=>padT+innerH-((v-minV)/(maxV-minV))*innerH;
+                              // Hist polyline path
+                              const histPath=allHistVals.map((v,i)=>v==null?null:`${i===0||allHistVals[i-1]==null?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+                              const fcPath=allFcVals.map((v,i)=>v==null?null:`${allFcVals[i-1]==null?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+                              // CI band: upper sonra lower (geri)
+                              let bandPath='';
+                              const ciIdxs=allFcUp.map((v,i)=>v!=null?i:null).filter(i=>i!=null);
+                              if(ciIdxs.length>0){
+                                bandPath='M '+ciIdxs.map(i=>`${x(i).toFixed(1)},${y(allFcUp[i]).toFixed(1)}`).join(' L ')+' L '+ciIdxs.slice().reverse().map(i=>`${x(i).toFixed(1)},${y(allFcLow[i]).toFixed(1)}`).join(' L ')+' Z';
+                              }
+                              // Y axis ticks
+                              const yTicks=5;
+                              const ticks=Array.from({length:yTicks+1},(_,i)=>minV+(maxV-minV)*i/yTicks);
+                              // X labels: göster her N ay
+                              const xLabelStep=Math.max(1,Math.ceil(allKeys.length/12));
+                              return(
+                                <div style={{width:'100%',overflowX:'auto'}}>
+                                  <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',minWidth:600,height:H,display:'block'}}>
+                                    {/* Y grid */}
+                                    {ticks.map((t,i)=>(
+                                      <g key={i}>
+                                        <line x1={padL} y1={y(t)} x2={W-padR} y2={y(t)} stroke="#eef1f6" strokeWidth="1"/>
+                                        <text x={padL-8} y={y(t)+4} fontSize="10" fill="#8e9bb3" textAnchor="end" fontFamily="monospace">{t>=1000?(t/1000).toFixed(0)+'k':t.toFixed(0)}</text>
+                                      </g>
+                                    ))}
+                                    {/* CI band */}
+                                    {bandPath&&<path d={bandPath} fill="rgba(13,110,79,.13)" stroke="none"/>}
+                                    {/* History line */}
+                                    {histPath&&<path d={histPath} fill="none" stroke="#3b82f6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    {/* Forecast line (dashed) */}
+                                    {fcPath&&<path d={fcPath} fill="none" stroke="#0d6e4f" strokeWidth="2.2" strokeDasharray="6 4" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    {/* History noktaları */}
+                                    {allHistVals.map((v,i)=>v!=null&&<circle key={'h'+i} cx={x(i)} cy={y(v)} r="2.5" fill="#3b82f6"/>)}
+                                    {/* Forecast noktaları */}
+                                    {allFcVals.map((v,i)=>v!=null&&<circle key={'f'+i} cx={x(i)} cy={y(v)} r="3" fill="#0d6e4f"/>)}
+                                    {/* Vertical separator (history → forecast) */}
+                                    {histKeys.length>0&&<line x1={x(histKeys.length-1)} y1={padT} x2={x(histKeys.length-1)} y2={H-padB} stroke="#e2e7ee" strokeWidth="1.5" strokeDasharray="4 3"/>}
+                                    {/* X labels */}
+                                    {allKeys.map((k,i)=>(i%xLabelStep===0||i===allKeys.length-1)&&(
+                                      <text key={'xl'+i} x={x(i)} y={H-padB+18} fontSize="10" fill="#8e9bb3" textAnchor="middle" fontFamily="monospace">{monthLabel(k)}</text>
+                                    ))}
+                                  </svg>
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Aylık tahmin tablosu */}
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
+                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:8}}>
+                              <Layers size={14} color={$.ac}/>Aylık Tahmin Detayı ({horizon} ay)
+                            </div>
+                            <div style={{overflowX:'auto'}}>
+                              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                                <thead>
+                                  <tr style={{background:$.bg}}>
+                                    <th style={{padding:'10px 14px',textAlign:'left',fontWeight:700,fontSize:10,color:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd}}>Ay</th>
+                                    <th style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd}}>Tahmin</th>
+                                    <th style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd}}>Alt - Üst</th>
+                                    <th style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd}}>Geçen Yıl</th>
+                                    <th style={{padding:'10px 14px',textAlign:'right',fontWeight:700,fontSize:10,color:$.t3,textTransform:'uppercase',letterSpacing:.5,borderBottom:'2px solid '+$.bd}}>YoY %</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {forecastKeys.map((k,i)=>{
+                                    const v=fcPts[i];
+                                    const ly=yoyOf(k,allKeysCombined,allValsCombined);
+                                    const yoy=ly!=null&&ly>0?((v-ly)/ly*100):null;
+                                    return(
+                                      <tr key={k} style={{borderBottom:'1px solid '+$.bdL,background:i%2?$.bg:$.bg2}}>
+                                        <td style={{padding:'9px 14px',fontWeight:600,color:$.t1,fontFamily:$.mo}}>{monthLabel(k)}</td>
+                                        <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:'#0d6e4f'}}>{fmtMetricShort(v)}</td>
+                                        <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3}}>{fmtMetricShort(fcLow[i])} – {fmtMetricShort(fcUp[i])}</td>
+                                        <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t2}}>{ly!=null?fmtMetricShort(ly):'—'}</td>
+                                        <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,color:yoy==null?$.t3:yoy>=0?'#0d6e4f':$.red}}>{yoy==null?'—':(yoy>=0?'+':'')+yoy.toFixed(1)+'%'}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                  {/* Alt toplam */}
+                                  <tr style={{background:$.acL,borderTop:'2px solid '+$.ac}}>
+                                    <td style={{padding:'11px 14px',fontWeight:800,color:$.ac}}>TOPLAM</td>
+                                    <td style={{padding:'11px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:800,color:'#0d6e4f'}}>{fmtMetric(sum(fcPts))}</td>
+                                    <td colSpan={3}/>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          {/* Model karşılaştırma */}
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden'}}>
+                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:8}}>
+                              <ShieldAlert size={14} color={$.org}/>Model Karşılaştırma (Backtest)
+                            </div>
+                            <div style={{padding:'10px 18px 14px'}}>
+                              {fit.results.map(r=>{
+                                const m=FORECAST_MODELS.find(mm=>mm.id===r.id);
+                                const isBest=fit.bestId===r.id;
+                                return(
+                                  <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,padding:'9px 0',borderBottom:'1px dashed '+$.bdL,fontSize:12.5}}>
+                                    <div style={{width:18,textAlign:'center'}}>{isBest?<span style={{fontSize:14}}>⭐</span>:''}</div>
+                                    <div style={{flex:'0 0 160px',fontWeight:isBest?700:500,color:r.skipped?$.bdL:$.t1}}>{m?.label||r.id}</div>
+                                    <div style={{flex:1,fontSize:11,color:$.t3,fontWeight:500}}>{r.skipped?(r.reason||'—'):m?.description}</div>
+                                    <div style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:r.skipped?$.bdL:r.mape==null?$.t3:r.mape<10?'#0d6e4f':r.mape<20?$.org:$.red,minWidth:80,textAlign:'right'}}>
+                                      {r.skipped?'—':r.mape!=null?'MAPE '+r.mape.toFixed(1)+'%':'MAPE —'}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <div style={{fontSize:10,color:$.t3,marginTop:10,lineHeight:1.5}}>
+                                MAPE = Mean Absolute Percentage Error · Son {Math.min(6,Math.floor(histKeys.length/6))} ay holdout ile backtest. Düşük MAPE daha iyi tahmin.
+                              </div>
+                            </div>
+                          </div>
+                        </>);
+                      })()}
+                    </>);
+                  })()}
+                </div>
+              );
+            })()}
+
             {/* ===== ERP VERİLERİ ===== */}
             {pg==='erp'&&(
               <div>
@@ -3213,12 +3693,12 @@ export default function App(){
             </button>);})}
           {/* Three-dot menu */}
           <div style={{position:'relative'}}>
-            <button className={'bnav-btn'+(['rep','sto','raw','erp','set'].includes(pg)?' active':'')} onClick={()=>setMobMenu(m=>!m)}>
-              <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:mobMenu||['rep','sto','raw','erp','set'].includes(pg)?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><MoreHorizontal size={20} strokeWidth={['rep','sto','raw','erp','set'].includes(pg)?2.2:1.6}/></div>
+            <button className={'bnav-btn'+(['rep','sto','fcst','raw','erp','set'].includes(pg)?' active':'')} onClick={()=>setMobMenu(m=>!m)}>
+              <div style={{width:36,height:36,borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',background:mobMenu||['rep','sto','fcst','raw','erp','set'].includes(pg)?'rgba(13,110,79,.1)':'transparent',transition:'all .2s'}}><MoreHorizontal size={20} strokeWidth={['rep','sto','fcst','raw','erp','set'].includes(pg)?2.2:1.6}/></div>
               <span>Diğer</span>
             </button>
             {mobMenu&&<div style={{position:'absolute',bottom:'100%',right:-8,marginBottom:12,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderRadius:16,boxShadow:'0 8px 32px rgba(0,0,0,.12), 0 0 0 1px rgba(226,231,238,.4)',padding:'6px',minWidth:180,animation:'mobMenuUp .2s ease'}}>
-              {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'sto',icon:Package,label:'Stok Raporu'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Database,label:'Ham Veriler'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
+              {[{id:'rep',icon:FileBarChart,label:'Kırılım Raporu'},{id:'sto',icon:Package,label:'Stok Raporu'},{id:'fcst',icon:TrendingUp,label:'Satış Tahmini'},{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Database,label:'Ham Veriler'},{id:'set',icon:Settings,label:'Ayarlar'}].map(p=>{const isA=pg===p.id;return(
                 <div key={p.id} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setMobMenu(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,cursor:'pointer',background:isA?'rgba(13,110,79,.07)':'transparent',color:isA?$.ac:$.t1,fontWeight:isA?600:500,fontSize:13,transition:'all .15s'}} className="rh">
                   <p.icon size={17} strokeWidth={isA?2.2:1.6}/>{p.label}
                   {p.id==='raw'&&rows.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff'}}>{rows.length}</span>}

@@ -153,6 +153,9 @@ const PROJECT_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${PROJECT_ENTITY_NAME}`
 // Trader master entity — traderid → description (isim) eşlemesi
 const TRADER_ENTITY_NAME = 'mserp_etgtradertableentities';
 const TRADER_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${TRADER_ENTITY_NAME}`;
+// Historical sales demand entity — geçmiş sipariş satırları (forecasting kaynağı)
+const HISTORICAL_SALES_ENTITY = 'mserp_tryhistoricalsalesdemandentities';
+const HISTORICAL_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${HISTORICAL_SALES_ENTITY}`;
 
 // Rapor tarihi geçici olarak 2026-05-02'ye sabitlendi
 // Normale dönmek için aşağıdaki bloğu yorum satırı yapıp orijinal $orderby/$top sorgusunu aç
@@ -199,6 +202,80 @@ export async function fetchTraderNames(token, onProgress) {
     map.set(tid, trTitleCase(r.mserp_description || ''));
   }
   return map;
+}
+
+// Historical sales demand entity'sinden tek bir trader'ın geçmiş satış satırlarını çek
+// `fromDate` / `toDate` opsiyonel (YYYY-MM-DD); verilmezse son 36 ay default
+// Tutar (amount) alanları runtime'da keşfedilir — entity'de yoksa graceful fallback
+export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {}) {
+  const token = await getDataverseToken(account);
+  const onProgress = opts.onProgress;
+  // Default: son 36 ay (3 yıl)
+  const today = new Date();
+  const defaultFrom = new Date(today); defaultFrom.setUTCMonth(defaultFrom.getUTCMonth() - 36);
+  const fromDate = opts.fromDate || defaultFrom.toISOString().slice(0, 10);
+  const toDate = opts.toDate || today.toISOString().slice(0, 10);
+
+  // Tutar adayı alanlar — Dataverse'de yoksa fetch 400 ile dönebilir, fallback yapacağız
+  const baseFields = [
+    'mserp_trader','mserp_maintrader','mserp_productid','mserp_productvariantid',
+    'mserp_quantity','mserp_inventoryquantity','mserp_unit','mserp_inventoryunitsymbol',
+    'mserp_shipdate','mserp_toaccountid','mserp_accountname','mserp_accountid',
+    'mserp_inventsiteid','mserp_warehouseid','mserp_locationid',
+    'mserp_salesdataareaid','mserp_etgordertype','mserp_ordertype','mserp_documentid',
+    'mserp_orderid','mserp_channel',
+  ];
+  const valueCandidates = ['mserp_amount','mserp_amountmst','mserp_amountsec','mserp_lineamount'];
+
+  const buildUrl = (fields) => {
+    const select = fields.join(',');
+    const filter = `mserp_trader eq '${odataStr(traderCode)}' and mserp_shipdate ge ${fromDate}T00:00:00Z and mserp_shipdate le ${toDate}T23:59:59Z`;
+    return `${HISTORICAL_API_BASE}?$select=${select}&$filter=${encodeURIComponent(filter)}&$count=true`;
+  };
+
+  // İlk denemede tutar adaylarını da iste; başarısızsa kaldırıp tekrar dene
+  let usedFields = [...baseFields, ...valueCandidates];
+  let availableValueFields = [];
+  let firstUrl = buildUrl(usedFields);
+  let allRecords = [];
+  let firstAttempt = true;
+
+  let nextUrl = firstUrl;
+  while (nextUrl) {
+    try {
+      const data = await dvFetch(nextUrl, token, 'odata.include-annotations="*",odata.maxpagesize=5000');
+      allRecords = allRecords.concat(data.value || []);
+      if (onProgress) onProgress(allRecords.length, data['@odata.count']);
+      nextUrl = data['@odata.nextLink'] || null;
+      // İlk başarılı response'tan tutar alanı varlığını tespit et
+      if (firstAttempt && data.value && data.value.length > 0) {
+        for (const c of valueCandidates) {
+          if (data.value[0][c] != null) availableValueFields.push(c);
+        }
+        firstAttempt = false;
+      }
+    } catch (e) {
+      // 400 → bilinmeyen alan; tutar adaylarını çıkar ve tekrar dene
+      if (firstAttempt && /400|not.*found|invalid.*field/i.test(e.message)) {
+        usedFields = [...baseFields];
+        nextUrl = buildUrl(usedFields);
+        availableValueFields = [];
+        allRecords = [];
+        firstAttempt = false;
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  return {
+    records: allRecords,
+    valueFieldsAvailable: availableValueFields,
+    valueField: availableValueFields[0] || null,  // ilk bulunan tutar alanı
+    fromDate,
+    toDate,
+    traderCode,
+  };
 }
 
 // Proje entity'sinden tüm projid → {trader, mainTrader} eşlemesini çek
