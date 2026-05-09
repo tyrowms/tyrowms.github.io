@@ -262,6 +262,8 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCode, opt
     if (!HISTORICAL_RESOLVED_ENTITY) throw new Error('Historical sales entity bulunamadı');
   }
   const entity = HISTORICAL_RESOLVED_ENTITY;
+  // FetchXML logical name (singular) — Dataverse pluralization rule: ies→y, s→ø
+  const entityLogical = entity.endsWith('ies') ? entity.slice(0, -3) + 'y' : entity.endsWith('s') ? entity.slice(0, -1) : entity;
 
   // Yılları belirle: fromDate yılından toDate yılına kadar
   const fromY = +fromDate.slice(0, 4);
@@ -278,23 +280,23 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCode, opt
       <condition attribute="mserp_shipdate" operator="on-or-after" value="${yFrom}" />
       <condition attribute="mserp_shipdate" operator="on-or-before" value="${yTo}" />
     </filter>`;
-    const monthlyXml = `<entity name="${entity}">
+    const monthlyXml = `<entity name="${entityLogical}">
       <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
       <attribute name="mserp_shipdate" alias="ym" groupby="true" dategrouping="month" />
       <attribute name="mserp_shipdate" alias="yy" groupby="true" dategrouping="year" />
       ${yFilter}
     </entity>`;
-    const productXml = `<entity name="${entity}">
+    const productXml = `<entity name="${entityLogical}">
       <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
       <attribute name="mserp_productid" alias="pid" groupby="true" />
       ${yFilter}
     </entity>`;
-    const accountXml = `<entity name="${entity}">
+    const accountXml = `<entity name="${entityLogical}">
       <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
       <attribute name="mserp_toaccountid" alias="aid" groupby="true" />
       ${yFilter}
     </entity>`;
-    const companyXml = `<entity name="${entity}">
+    const companyXml = `<entity name="${entityLogical}">
       <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
       <attribute name="mserp_salesdataareaid" alias="co" groupby="true" />
       ${yFilter}
