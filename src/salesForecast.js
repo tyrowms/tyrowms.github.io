@@ -77,15 +77,50 @@ export function aggregateMonthly(rows, opts = {}) {
 }
 
 // Server-side FetchXML aggregate response → aggMap formatı
-// monthly: [{ym: 1-12, yy: 2024, qty: number}, ...]
+// monthly: [{ym: 1-12, yy: 2024, qty: number}, ...] beklenen şema
+// Dataverse bazen alias'ları farklı isimle veya FormattedValue'lu döndürebilir — esnek parse
 export function aggregateFromServer(monthly) {
   const map = {};
-  for (const r of monthly || []) {
-    const y = String(r.yy).padStart(4, '0');
-    const m = String(r.ym).padStart(2, '0');
-    if (!y || !m || y === 'undefined' || m === 'undefined') continue;
+  if (!Array.isArray(monthly) || monthly.length === 0) return map;
+
+  // Diagnostic: ilk satırın anahtarlarını logla (tek seferlik debug)
+  if (typeof window !== 'undefined' && !window.__aggSchemaLogged) {
+    console.log('[aggregateFromServer] First row schema:', JSON.stringify(monthly[0]));
+    console.log('[aggregateFromServer] Total rows:', monthly.length);
+    window.__aggSchemaLogged = true;
+  }
+
+  for (const r of monthly) {
+    if (!r || typeof r !== 'object') continue;
+    // Esnek alan okuma — Dataverse alias'ı bazen '@FormattedValue' suffix'iyle döner
+    const yyRaw = r.yy ?? r['yy@OData.Community.Display.V1.FormattedValue'];
+    const ymRaw = r.ym ?? r['ym@OData.Community.Display.V1.FormattedValue'];
+    const qtyRaw = r.qty ?? r['qty@OData.Community.Display.V1.FormattedValue'];
+    let y = null, m = null;
+    // Önce sayısal yyRaw + ymRaw kombinasyonu (beklenen şema: yy=2024, ym=5)
+    if (yyRaw != null && ymRaw != null) {
+      const yNum = Number(yyRaw);
+      const mNum = Number(ymRaw);
+      if (Number.isFinite(yNum) && Number.isFinite(mNum) && mNum >= 1 && mNum <= 12 && yNum >= 1900 && yNum <= 2200) {
+        y = String(Math.floor(yNum)).padStart(4, '0');
+        m = String(Math.floor(mNum)).padStart(2, '0');
+      }
+    }
+    // Alternatif: ymRaw bir tarih string'i ise (örn. "2024-05-01" veya "2024-05")
+    if (!y && typeof ymRaw === 'string') {
+      const dt = ymRaw.match(/^(\d{4})-(\d{2})/);
+      if (dt) { y = dt[1]; m = dt[2]; }
+    }
+    // Alternatif: yyRaw'da tarih + ymRaw boş senaryosu
+    if (!y && typeof yyRaw === 'string') {
+      const dt = yyRaw.match(/^(\d{4})-(\d{2})/);
+      if (dt) { y = dt[1]; m = dt[2]; }
+    }
+    if (!y || !m) continue;
     const key = `${y}-${m}`;
-    map[key] = { qty: Number(r.qty) || 0, value: 0, count: 0, hasValue: false };
+    const qty = Number(qtyRaw) || 0;
+    if (!map[key]) map[key] = { qty: 0, value: 0, count: 0, hasValue: false };
+    map[key].qty += qty;  // toplam (paranoia: birden fazla satır olursa)
   }
   return map;
 }

@@ -669,7 +669,8 @@ export default function App(){
     try{
       // Cache key: filtre alanı (trader/maintrader) + sıralı kodlar
       const filterField=useAnaTrader?'main':'trd';
-      const cacheKey=`tyrowms_fcst_v4_${filterField}_${[...fetchCodes].sort().join('+')}`;
+      // v5: aggregate response parsing fix + cache invalidation
+      const cacheKey=`tyrowms_fcst_v5_${filterField}_${[...fetchCodes].sort().join('+')}`;
       let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0,fetchMode='aggregate';
       try{
         const cached=localStorage.getItem(cacheKey);

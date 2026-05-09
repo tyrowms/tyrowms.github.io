@@ -309,10 +309,11 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
       <condition attribute="mserp_shipdate" operator="on-or-after" value="${yFrom}" />
       <condition attribute="mserp_shipdate" operator="on-or-before" value="${yTo}" />
     </filter>`;
+    // Sadece "month" dategrouping; yıl filter'dan zaten biliniyor (her query bir yıla filtreli)
+    // İki groupby aynı tarih alanında bazı Dataverse sürümlerinde per-day grouping'e düşüyor → 935 satır gibi anormal sonuç
     const monthlyXml = `<entity name="${entityLogical}">
       <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
       <attribute name="mserp_shipdate" alias="ym" groupby="true" dategrouping="month" />
-      <attribute name="mserp_shipdate" alias="yy" groupby="true" dategrouping="year" />
       ${yFilter}
     </entity>`;
     const productXml = `<entity name="${entityLogical}">
@@ -355,8 +356,8 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
 
   const results = await Promise.all(allPromises);
 
-  // Merge: monthly (zaten yıl-ay grouped, doğrudan birleşir)
-  const monthly = results.filter(r => r.kind === 'monthly').flatMap(r => r.rows);
+  // Merge: monthly — her satıra partition yılını inject et (query yıl-bazlı filter'lı)
+  const monthly = results.filter(r => r.kind === 'monthly').flatMap(r => r.rows.map(row => ({ ...row, yy: r.y })));
   // Products/accounts/companies: yıllar arası aynı id varsa qty toplanır
   const mergeBy = (kind, idField) => {
     const m = new Map();
