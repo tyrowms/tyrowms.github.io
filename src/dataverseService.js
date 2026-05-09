@@ -239,8 +239,9 @@ async function fetchHistoricalAggregateXml(token, entity, fetchXmlInner) {
   return data.value || [];
 }
 
-// Aylık aggregate, top ürün, top müşteri — 3 paralel server-side query
-// 77K satır yerine ~50-100 kayıt iner, browser tarafında atomik aggregate yok
+// Aylık aggregate, top ürün, top müşteri — yıl-bazlı partitioned server-side queries
+// Dataverse aggregate 50K satır limit'i nedeniyle her yıl için ayrı query atılır;
+// 80K+ satırlı Hasata gibi trader'lar için bu kritik. Sonuçlar client'ta merge edilir.
 export async function fetchHistoricalAggregatesByTrader(account, traderCode, opts = {}) {
   const token = await getDataverseTokenFor(account, HISTORICAL_DATAVERSE_URL);
   const today = new Date();
@@ -262,54 +263,86 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCode, opt
   }
   const entity = HISTORICAL_RESOLVED_ENTITY;
 
-  const baseFilter = `<filter type="and">
-    <condition attribute="mserp_trader" operator="eq" value="${traderEsc}" />
-    <condition attribute="mserp_shipdate" operator="on-or-after" value="${fromDate}" />
-    <condition attribute="mserp_shipdate" operator="on-or-before" value="${toDate}" />
-  </filter>`;
+  // Yılları belirle: fromDate yılından toDate yılına kadar
+  const fromY = +fromDate.slice(0, 4);
+  const toY = +toDate.slice(0, 4);
+  const years = [];
+  for (let y = fromY; y <= toY; y++) years.push(y);
 
-  // 1) Aylık seri: groupby mserp_shipdate dategrouping=month + sum quantity
-  const monthlyXml = `<entity name="${entity}">
-    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
-    <attribute name="mserp_shipdate" alias="ym" groupby="true" dategrouping="month" />
-    <attribute name="mserp_shipdate" alias="yy" groupby="true" dategrouping="year" />
-    ${baseFilter}
-  </entity>`;
-  // 2) Top ürünler: groupby productid + sum quantity
-  const productXml = `<entity name="${entity}">
-    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
-    <attribute name="mserp_productid" alias="pid" groupby="true" />
-    ${baseFilter}
-  </entity>`;
-  // 3) Top müşteriler: groupby toaccountid + sum quantity
-  const accountXml = `<entity name="${entity}">
-    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
-    <attribute name="mserp_toaccountid" alias="aid" groupby="true" />
-    ${baseFilter}
-  </entity>`;
-  // 4) Şirket dağılımı: groupby salesdataareaid
-  const companyXml = `<entity name="${entity}">
-    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
-    <attribute name="mserp_salesdataareaid" alias="co" groupby="true" />
-    ${baseFilter}
-  </entity>`;
-
-  if (opts.onProgress) opts.onProgress(0, 4);
-  const [monthly, products, accounts, companies] = await Promise.all([
-    fetchHistoricalAggregateXml(token, entity, monthlyXml),
-    fetchHistoricalAggregateXml(token, entity, productXml),
-    fetchHistoricalAggregateXml(token, entity, accountXml),
-    fetchHistoricalAggregateXml(token, entity, companyXml),
-  ]);
-  if (opts.onProgress) opts.onProgress(4, 4);
-
-  return {
-    monthly,    // [{ym: '...', yy: '...', qty: number}, ...]
-    products,   // [{pid: '...', qty: number}, ...]
-    accounts,   // [{aid: '...', qty: number}, ...]
-    companies,  // [{co: '...', qty: number}, ...]
-    fromDate, toDate, traderCode,
+  // Her yıl için 4 paralel aggregate query (4 yıl × 4 query = 16 query, hepsi paralel)
+  const buildYearQueries = (y) => {
+    const yFrom = y === fromY ? fromDate : `${y}-01-01`;
+    const yTo = y === toY ? toDate : `${y}-12-31`;
+    const yFilter = `<filter type="and">
+      <condition attribute="mserp_trader" operator="eq" value="${traderEsc}" />
+      <condition attribute="mserp_shipdate" operator="on-or-after" value="${yFrom}" />
+      <condition attribute="mserp_shipdate" operator="on-or-before" value="${yTo}" />
+    </filter>`;
+    const monthlyXml = `<entity name="${entity}">
+      <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+      <attribute name="mserp_shipdate" alias="ym" groupby="true" dategrouping="month" />
+      <attribute name="mserp_shipdate" alias="yy" groupby="true" dategrouping="year" />
+      ${yFilter}
+    </entity>`;
+    const productXml = `<entity name="${entity}">
+      <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+      <attribute name="mserp_productid" alias="pid" groupby="true" />
+      ${yFilter}
+    </entity>`;
+    const accountXml = `<entity name="${entity}">
+      <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+      <attribute name="mserp_toaccountid" alias="aid" groupby="true" />
+      ${yFilter}
+    </entity>`;
+    const companyXml = `<entity name="${entity}">
+      <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+      <attribute name="mserp_salesdataareaid" alias="co" groupby="true" />
+      ${yFilter}
+    </entity>`;
+    return [monthlyXml, productXml, accountXml, companyXml];
   };
+
+  const totalQueries = years.length * 4;
+  let completedQueries = 0;
+  if (opts.onProgress) opts.onProgress(0, totalQueries);
+
+  const tickProgress = () => {
+    completedQueries++;
+    if (opts.onProgress) opts.onProgress(completedQueries, totalQueries);
+  };
+
+  // Her yıl için 4 query — tümünü paralel başlat
+  const allPromises = years.flatMap(y => {
+    const [monthlyXml, productXml, accountXml, companyXml] = buildYearQueries(y);
+    return [
+      fetchHistoricalAggregateXml(token, entity, monthlyXml).then(r => { tickProgress(); return { kind: 'monthly', y, rows: r }; }),
+      fetchHistoricalAggregateXml(token, entity, productXml).then(r => { tickProgress(); return { kind: 'products', y, rows: r }; }),
+      fetchHistoricalAggregateXml(token, entity, accountXml).then(r => { tickProgress(); return { kind: 'accounts', y, rows: r }; }),
+      fetchHistoricalAggregateXml(token, entity, companyXml).then(r => { tickProgress(); return { kind: 'companies', y, rows: r }; }),
+    ];
+  });
+
+  const results = await Promise.all(allPromises);
+
+  // Merge: monthly (zaten yıl-ay grouped, doğrudan birleşir)
+  const monthly = results.filter(r => r.kind === 'monthly').flatMap(r => r.rows);
+  // Products/accounts/companies: yıllar arası aynı id varsa qty toplanır
+  const mergeBy = (kind, idField) => {
+    const m = new Map();
+    for (const r of results.filter(x => x.kind === kind)) {
+      for (const row of r.rows) {
+        const id = row[idField];
+        if (!m.has(id)) m.set(id, { [idField]: id, qty: 0 });
+        m.get(id).qty += Number(row.qty) || 0;
+      }
+    }
+    return [...m.values()];
+  };
+  const products = mergeBy('products', 'pid');
+  const accounts = mergeBy('accounts', 'aid');
+  const companies = mergeBy('companies', 'co');
+
+  return { monthly, products, accounts, companies, fromDate, toDate, traderCode, queryCount: totalQueries };
 }
 
 export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {}) {

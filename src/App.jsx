@@ -644,9 +644,9 @@ export default function App(){
           fetchMode='aggregate';
           valueAvailable=false;  // aggregate path tutar getirmez (v1)
         }catch(aggErr){
-          console.warn('[Forecast] Aggregate fetch failed, raw fallback:',aggErr.message);
+          console.warn('[Forecast] Aggregate fetch failed, raw fallback:',aggErr);
           fetchMode='raw';
-          setFcstStepData(d=>({...d,fetched:{loaded:0,total:null,fromCache:false,mode:'raw'}}));
+          setFcstStepData(d=>({...d,fetched:{loaded:0,total:null,fromCache:false,mode:'raw',aggError:aggErr.message||String(aggErr)}}));
           // Fallback: raw fetch (mevcut akış, tutar discovery dahil)
           const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fcstTrader,{
             onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'raw'}})),
@@ -2970,7 +2970,7 @@ export default function App(){
                     const traderInfo=fcstTraderList.find(t=>t.code===fcstTrader);
                     const fetchModeLabel=sd.fetched?.mode==='aggregate'?'Aggregate':sd.fetched?.mode==='raw'?'Raw fallback':'';
                     const steps=[
-                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi (${fetchModeLabel.toLowerCase()||'agg'})`:sd.fetched.mode==='aggregate'?`UAT aggregate: ${sd.fetched.loaded||0} / ${sd.fetched.total||4} query`:`UAT raw: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
+                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi (${fetchModeLabel.toLowerCase()||'agg'})`:sd.fetched.mode==='aggregate'?`UAT aggregate (yıl-bazlı): ${sd.fetched.loaded||0} / ${sd.fetched.total||16} query`:`UAT raw fallback${sd.fetched.aggError?' ('+sd.fetched.aggError.slice(0,40)+'...)':''}: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
                       {n:2,l:'Aylık Aggregate',d:sd.aggregate?`${sd.aggregate.records?.toLocaleString('tr-TR')||0} satır → ${sd.aggregate.months} aylık seriye dönüştürüldü`:'Satırlar yıl-ay bazında toplanıyor'},
                       {n:3,l:'Tahmin Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'8 model paralel hazırlanıyor (HW, Theta, Holt\'s Linear, STL+ETS, Outlier STL+ETS, Seasonal Naive, Croston, MA-3)'},
                       {n:4,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
