@@ -3,9 +3,9 @@ import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Lay
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 const WorldMap3D = lazy(() => import('./WorldMap3D'));
 const LoginGlobe = lazy(() => import('./LoginGlobe'));
-import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend, fetchHistoricalSalesByTrader, fetchTraderNames, getDataverseToken } from './dataverseService';
+import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend, fetchHistoricalSalesByTrader, fetchHistoricalAggregatesByTrader, fetchTraderNames, getDataverseToken } from './dataverseService';
 import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
-import { aggregateMonthly, mapToSeries, selectBestFit, buildTraderProfile, FORECAST_MODELS, sum as sumArr } from './salesForecast';
+import { aggregateMonthly, aggregateFromServer, mapToSeries, selectBestFit, buildTraderProfile, buildTraderProfileFromAggregates, FORECAST_MODELS, sum as sumArr } from './salesForecast';
 
 const INIT=[];
 const DEMO=INIT;
@@ -589,28 +589,46 @@ export default function App(){
     setFcstResult(null);  // önceki sonucu temizle ki yeni hesaplama belli olsun
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     try{
-      const cacheKey=`tyrowms_fcst_${fcstTrader}`;
-      let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0;
+      // Cache key v2: aggregate path eski cache shape'iyle uyumlu değil, version bump
+      const cacheKey=`tyrowms_fcst_v2_${fcstTrader}`;
+      let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0,fetchMode='aggregate';
       try{
         const cached=localStorage.getItem(cacheKey);
         if(cached){
           const p=JSON.parse(cached);
           if(p&&p.fetchedAt&&Date.now()-p.fetchedAt<86400000){
-            aggMap=p.aggMap;profile=p.profile;valueAvailable=p.valueAvailable;recordCount=p.recordCount||0;fromCache=true;
-            setFcstStepData(d=>({...d,fetched:{count:recordCount,fromCache:true}}));
+            aggMap=p.aggMap;profile=p.profile;valueAvailable=p.valueAvailable;recordCount=p.recordCount||0;fromCache=true;fetchMode=p.fetchMode||'aggregate';
+            setFcstStepData(d=>({...d,fetched:{count:recordCount,fromCache:true,mode:fetchMode}}));
           }
         }
       }catch(_){}
       if(!aggMap){
-        const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fcstTrader,{
-          onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false}})),
-        });
-        recordCount=fetchRes.records.length;
+        // Önce aggregate path dene — Hasata gibi 80K+ satırlı trader'lar için 25-30sn → 3-5sn
+        try{
+          const agg=await fetchHistoricalAggregatesByTrader(msalAccount,fcstTrader,{
+            onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'aggregate'}})),
+          });
+          aggMap=aggregateFromServer(agg.monthly);
+          profile=buildTraderProfileFromAggregates(aggMap,agg.products,agg.accounts,agg.companies,gGrp);
+          recordCount=agg.monthly.length;
+          fetchMode='aggregate';
+          valueAvailable=false;  // aggregate path tutar getirmez (v1)
+        }catch(aggErr){
+          console.warn('[Forecast] Aggregate fetch failed, raw fallback:',aggErr.message);
+          fetchMode='raw';
+          setFcstStepData(d=>({...d,fetched:{loaded:0,total:null,fromCache:false,mode:'raw'}}));
+          // Fallback: raw fetch (mevcut akış, tutar discovery dahil)
+          const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fcstTrader,{
+            onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'raw'}})),
+          });
+          recordCount=fetchRes.records.length;
+          setFcstStep(2);await wait(120);
+          aggMap=aggregateMonthly(fetchRes.records,{valueField:fetchRes.valueField});
+          profile=buildTraderProfile(fetchRes.records,gGrp,aggMap);
+          valueAvailable=!!fetchRes.valueField;
+        }
         setFcstStep(2);await wait(120);
-        aggMap=aggregateMonthly(fetchRes.records,{valueField:fetchRes.valueField});
-        profile=buildTraderProfile(fetchRes.records,gGrp,aggMap);
-        valueAvailable=!!fetchRes.valueField;
-        try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable,recordCount}));}catch(_){}
+        try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable,recordCount,fetchMode}));}catch(_){}
       } else {
         setFcstStep(2);await wait(120);
       }
@@ -618,11 +636,14 @@ export default function App(){
       setFcstStep(3);await wait(160);
       const seriesQty=mapToSeries(aggMap);
       // Modelleri tek tek koşturup UI'da progressively göster
-      setFcstStepData(d=>({...d,modelsRunning:'Holt-Winters'}));await wait(60);
-      setFcstStepData(d=>({...d,modelsRunning:'STL+ETS'}));await wait(60);
-      setFcstStepData(d=>({...d,modelsRunning:'Seasonal Naive'}));await wait(60);
-      setFcstStepData(d=>({...d,modelsRunning:'Croston'}));await wait(60);
-      setFcstStepData(d=>({...d,modelsRunning:'Moving Avg'}));await wait(60);
+      setFcstStepData(d=>({...d,modelsRunning:'Holt-Winters'}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:'Outlier STL+ETS'}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:'Theta'}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:"Holt's Linear"}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:'STL+ETS'}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:'Seasonal Naive'}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:'Croston'}));await wait(50);
+      setFcstStepData(d=>({...d,modelsRunning:'Moving Avg'}));await wait(50);
       setFcstStep(4);await wait(140);
       const fitQty=selectBestFit(seriesQty.qty,fcstHorizon);
       let fitValue=null;
@@ -2917,10 +2938,11 @@ export default function App(){
                   {fcstLoading&&(()=>{
                     const sd=fcstStepData;
                     const traderInfo=fcstTraderList.find(t=>t.code===fcstTrader);
+                    const fetchModeLabel=sd.fetched?.mode==='aggregate'?'Aggregate':sd.fetched?.mode==='raw'?'Raw fallback':'';
                     const steps=[
-                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi`:`UAT'tan ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
+                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi (${fetchModeLabel.toLowerCase()||'agg'})`:sd.fetched.mode==='aggregate'?`UAT aggregate: ${sd.fetched.loaded||0} / ${sd.fetched.total||4} query`:`UAT raw: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
                       {n:2,l:'Aylık Aggregate',d:sd.aggregate?`${sd.aggregate.records?.toLocaleString('tr-TR')||0} satır → ${sd.aggregate.months} aylık seriye dönüştürüldü`:'Satırlar yıl-ay bazında toplanıyor'},
-                      {n:3,l:'Tahmin Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'5 model paralel hazırlanıyor'},
+                      {n:3,l:'Tahmin Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'8 model paralel hazırlanıyor (HW, Theta, Holt\'s Linear, STL+ETS, Outlier STL+ETS, Seasonal Naive, Croston, MA-3)'},
                       {n:4,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
                       {n:5,l:'Best Fit Seçimi',d:sd.bestFit?`${FORECAST_MODELS.find(m=>m.id===sd.bestFit.id)?.label} kazandı (MAPE ${sd.bestFit.mape?.toFixed(1)}%)`:'En düşük hata oranlı model seçiliyor'},
                     ];
@@ -3038,19 +3060,18 @@ export default function App(){
                         </div>
                       </div>
 
-                      {/* ─── Model Sekmeleri (hover tooltip ile) ─── */}
+                      {/* ─── Model Sekmeleri (skipped olanlar gizli, hover tooltip ile) ─── */}
                       <div style={{position:'relative',marginBottom:14}}>
                         <div style={{display:'flex',gap:0,padding:4,background:'#f0f1f3',borderRadius:11,overflowX:'auto',flexWrap:'nowrap'}}>
-                          {FORECAST_MODELS.map(m=>{
+                          {FORECAST_MODELS.filter(m=>{const r=fit?.results?.find(x=>x.id===m.id);return !r||!r.skipped;}).map(m=>{
                             const r=fit?.results?.find(x=>x.id===m.id);
                             const isBest=fit?.bestId===m.id;
                             const isActive=activeModelId===m.id;
-                            const skipped=r?.skipped;
                             return(
-                              <div key={m.id} onClick={()=>{if(!skipped)setFcstActiveModel(m.id);}} onMouseEnter={()=>setFcstHoverModel(m.id)} onMouseLeave={()=>setFcstHoverModel(null)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:isActive?700:500,cursor:skipped?'not-allowed':'pointer',background:isActive?'#fff':'transparent',color:isActive?$.t1:skipped?$.bdL:$.t3,boxShadow:isActive?'0 1px 3px rgba(0,0,0,.08)':'none',opacity:skipped?.5:1,transition:'all .15s',userSelect:'none',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6,position:'relative'}}>
+                              <div key={m.id} onClick={()=>setFcstActiveModel(m.id)} onMouseEnter={()=>setFcstHoverModel(m.id)} onMouseLeave={()=>setFcstHoverModel(null)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:isActive?700:500,cursor:'pointer',background:isActive?'#fff':'transparent',color:isActive?$.t1:$.t3,boxShadow:isActive?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .15s',userSelect:'none',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6,position:'relative'}}>
                                 {isBest&&<span style={{fontSize:11}}>⭐</span>}
                                 {m.label}
-                                {r&&!skipped&&r.mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,color:isActive?$.blu:$.t3,fontWeight:600}}>{r.mape.toFixed(1)}%</span>}
+                                {r&&r.mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,color:isActive?$.blu:$.t3,fontWeight:600}}>{r.mape.toFixed(1)}%</span>}
                                 <Info size={11} style={{opacity:.4,marginLeft:2}}/>
                               </div>
                             );
@@ -3100,7 +3121,17 @@ export default function App(){
                         const fcTotal=sumArr(fcPts);
                         const monthlyAvg=fcTotal/horizon;
                         const trendPct=histTotal>0?((fcTotal-histTotal*horizon/12)/(histTotal*horizon/12)*100):null;
+                        const isSeasonalNaive=activeModelId==='snaive';
                         return(<>
+                          {/* Seasonal Naive uyarı banner — neden hep YoY %0 */}
+                          {isSeasonalNaive&&fit?.bestId==='snaive'&&(
+                            <div style={{display:'flex',alignItems:'flex-start',gap:10,padding:'12px 14px',marginBottom:14,borderRadius:10,background:'linear-gradient(135deg,rgba(245,166,35,.08),rgba(245,166,35,.03))',border:'1px solid rgba(245,166,35,.25)'}}>
+                              <Info size={16} color="#b45309" style={{flexShrink:0,marginTop:1}}/>
+                              <div style={{flex:1,fontSize:11.5,color:'#92400e',lineHeight:1.55}}>
+                                <strong>Seasonal Naive Best Fit olarak seçildi.</strong> Bu model gelecekteki her ayı doğrudan <strong>geçen yılın aynı ayındaki değer</strong> olarak verir → tanım gereği <strong>YoY %0</strong>. Trend veya değişim yansıtmaz. Bu, tahmin "düz" göründüğü için değil, bu trader'ın verisinde belirgin bir trend/anomali olmadığı için diğer modellerin (Holt-Winters, Theta vb.) bu yöntemin daha iyisini yapamadığı anlamına gelir. Trend görmek için sekmelerden <strong>Theta</strong> veya <strong>Holt's Linear</strong>'a tıklayıp inceleyebilirsiniz.
+                              </div>
+                            </div>
+                          )}
                           {/* Özet kartlar */}
                           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginBottom:14}}>
                             {[

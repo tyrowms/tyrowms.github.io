@@ -76,6 +76,67 @@ export function aggregateMonthly(rows, opts = {}) {
   return m;
 }
 
+// Server-side FetchXML aggregate response → aggMap formatı
+// monthly: [{ym: 1-12, yy: 2024, qty: number}, ...]
+export function aggregateFromServer(monthly) {
+  const map = {};
+  for (const r of monthly || []) {
+    const y = String(r.yy).padStart(4, '0');
+    const m = String(r.ym).padStart(2, '0');
+    if (!y || !m || y === 'undefined' || m === 'undefined') continue;
+    const key = `${y}-${m}`;
+    map[key] = { qty: Number(r.qty) || 0, value: 0, count: 0, hasValue: false };
+  }
+  return map;
+}
+
+// Server-side aggregate'lerden trader profili kur (raw rows iterate etmek yok)
+// products/accounts/companies: [{pid|aid|co: '...', qty: number}, ...]
+export function buildTraderProfileFromAggregates(monthlyMap, products, accounts, companies, gGrpFn) {
+  const grpCounts = {};
+  let totalQty = 0;
+  for (const c of companies || []) {
+    const co = String(c.co || '').toUpperCase().trim();
+    const q = Number(c.qty) || 0;
+    const grp = gGrpFn ? gGrpFn(co) : 'Diğer';
+    grpCounts[grp] = (grpCounts[grp] || 0) + q;
+    totalQty += q;
+  }
+  const mainGroup = Object.entries(grpCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Diğer';
+  const sortedCompanies = [...(companies || [])].sort((a, b) => (Number(b.qty) || 0) - (Number(a.qty) || 0));
+  const sortedProducts = [...(products || [])].sort((a, b) => (Number(b.qty) || 0) - (Number(a.qty) || 0));
+  const sortedAccounts = [...(accounts || [])].sort((a, b) => (Number(b.qty) || 0) - (Number(a.qty) || 0));
+  const topCompanies = sortedCompanies.slice(0, 3).map(c => ({
+    name: c.co, qty: Number(c.qty) || 0,
+    pct: totalQty > 0 ? (Number(c.qty) / totalQty * 100) : 0,
+  }));
+  const topProducts = sortedProducts.slice(0, 5).map(p => ({
+    name: p.pid, qty: Number(p.qty) || 0,
+    pct: totalQty > 0 ? (Number(p.qty) / totalQty * 100) : 0,
+  }));
+  const topDestinations = sortedAccounts.slice(0, 5).map(a => ({
+    name: a.aid, qty: Number(a.qty) || 0,
+    pct: totalQty > 0 ? (Number(a.qty) / totalQty * 100) : 0,
+  }));
+  const keys = Object.keys(monthlyMap).sort();
+  const last12Keys = keys.slice(-12);
+  const prev12Keys = keys.slice(-24, -12);
+  const last12Qty = last12Keys.reduce((s, k) => s + (monthlyMap[k]?.qty || 0), 0);
+  const prev12Qty = prev12Keys.reduce((s, k) => s + (monthlyMap[k]?.qty || 0), 0);
+  const yoy = prev12Qty > 0 ? ((last12Qty - prev12Qty) / prev12Qty * 100) : null;
+  const monthsWithSales = keys.filter(k => (monthlyMap[k]?.qty || 0) > 0).length;
+  const intermittenceIndex = keys.length > 0 ? (monthsWithSales / keys.length) : 0;
+  const character = intermittenceIndex >= 0.85 ? 'Stabil aylık akış'
+    : intermittenceIndex >= 0.6 ? 'Düzensiz akış'
+    : 'Lumpy / opportunistic';
+  return {
+    mainGroup, topCompanies, topProducts, topDestinations,
+    totals: { qty: totalQty, value: 0, count: 0 },
+    lastYearTotals: { qty: last12Qty, value: 0 },
+    yoy, intermittenceIndex, character,
+  };
+}
+
 // Aggregate map'i sıralı seri'ye çevir (ay arasındaki boşlukları sıfırla doldurur)
 // Returns: { keys: ['2022-01',...], qty: [n,n,...], value: [n,n,...] | null, valueAvailable: bool }
 export function mapToSeries(aggMap) {
@@ -373,6 +434,146 @@ function applyCroston(series, alpha) {
   return { Z, P, lastForecast: P > 0 ? Z / P : 0, fitted, sse, alpha };
 }
 
+// ──────────────── Theta Method ────────────────────────────────
+
+// Klasik Theta — y'yi iki "theta line"a ayırır:
+//   theta=0 → tarihsel lineer regresyon doğrusu (trend yakalar)
+//   theta=2 → 2y - theta0 (varyasyonu güçlendirir)
+// Tahmin: theta0 (uzatılmış lineer) + theta2 (SES ile düzeltilmiş) ortalaması
+// Küçük serilerde Seasonal Naive'i sık yener, M3/M4 yarışmalarında üst sıralarda.
+export function forecastTheta(series, h) {
+  const n = series.length;
+  if (n < 4) return forecastSeasonalNaive(series, h);
+
+  // Lineer regresyon: y = a + b*t
+  const xMean = (n - 1) / 2;
+  const yMean = mean(series);
+  let num = 0, denom = 0;
+  for (let i = 0; i < n; i++) {
+    num += (i - xMean) * (series[i] - yMean);
+    denom += (i - xMean) ** 2;
+  }
+  const slope = denom !== 0 ? num / denom : 0;
+  const intercept = yMean - slope * xMean;
+  const theta0 = i => intercept + slope * i;
+
+  // Theta=2 line: 2y - theta0
+  const theta2Series = series.map((y, i) => 2 * y - theta0(i));
+
+  // SES (Simple Exponential Smoothing) on theta2 — alpha grid search
+  const alphaGrid = [0.05, 0.1, 0.2, 0.3, 0.5, 0.7];
+  let bestAlpha = 0.2, bestSSE = Infinity, bestLevel = theta2Series[0];
+  for (const a of alphaGrid) {
+    let lvl = theta2Series[0];
+    let sse = 0;
+    for (let t = 1; t < n; t++) {
+      const yhat = lvl;
+      sse += (theta2Series[t] - yhat) ** 2;
+      lvl = a * theta2Series[t] + (1 - a) * lvl;
+    }
+    if (sse < bestSSE) { bestSSE = sse; bestAlpha = a; bestLevel = lvl; }
+  }
+
+  // Fitted values: ortalama (theta0(t) + SES of theta2 up to t)
+  const fitted = new Array(n);
+  let lvl = theta2Series[0];
+  for (let t = 0; t < n; t++) {
+    fitted[t] = (theta0(t) + lvl) / 2;
+    lvl = bestAlpha * theta2Series[t] + (1 - bestAlpha) * lvl;
+  }
+
+  // h-step forecast
+  const point = [];
+  for (let hi = 1; hi <= h; hi++) {
+    const t0F = intercept + slope * (n + hi - 1);
+    const t2F = bestLevel;
+    point.push(Math.max(0, (t0F + t2F) / 2));
+  }
+  const residuals = series.map((y, i) => y - fitted[i]);
+  const sd = std(residuals);
+  const ci = point.map((_, i) => 1.96 * sd * Math.sqrt(i + 1));
+  return {
+    point,
+    lower: point.map((p, i) => Math.max(0, p - ci[i])),
+    upper: point.map((p, i) => p + ci[i]),
+    fitted,
+    params: { slope, alpha: bestAlpha },
+  };
+}
+
+// ──────────────── Holt's Linear Trend (damped) ────────────────
+
+// Mevsimsiz, sadece seviye + trend (damping ile). Trendli ama mevsim deseni
+// olmayan seriler (B2C marka satışları, yeni başlayan trader'lar) için ideal.
+export function forecastHoltLinear(series, h) {
+  const n = series.length;
+  if (n < 3) return forecastSeasonalNaive(series, h);
+
+  const initLevel = series[0];
+  const initTrend = series[1] - series[0];
+  const grid = [0.05, 0.1, 0.2, 0.3, 0.5];
+  const phiGrid = [0.85, 0.92, 0.96, 1.0];
+  let best = null;
+  for (const alpha of grid) for (const beta of grid) for (const phi of phiGrid) {
+    let L = initLevel, T = initTrend;
+    const fitted = new Array(n);
+    let sse = 0;
+    for (let t = 0; t < n; t++) {
+      const yhat = L + phi * T;
+      fitted[t] = yhat;
+      sse += (series[t] - yhat) ** 2;
+      const newL = alpha * series[t] + (1 - alpha) * (L + phi * T);
+      const newT = beta * (newL - L) + (1 - beta) * phi * T;
+      L = newL; T = newT;
+    }
+    if (!best || sse < best.sse) best = { L, T, alpha, beta, phi, fitted, sse };
+  }
+  const point = [];
+  for (let i = 1; i <= h; i++) {
+    const trendSum = best.phi >= 1 ? i * best.T : best.T * best.phi * (1 - Math.pow(best.phi, i)) / (1 - best.phi);
+    point.push(Math.max(0, best.L + trendSum));
+  }
+  const residuals = series.map((y, i) => y - best.fitted[i]);
+  const sd = std(residuals);
+  const ci = point.map((_, i) => 1.96 * sd * Math.sqrt(i + 1));
+  return {
+    point,
+    lower: point.map((p, i) => Math.max(0, p - ci[i])),
+    upper: point.map((p, i) => p + ci[i]),
+    fitted: best.fitted,
+    params: { alpha: best.alpha, beta: best.beta, phi: best.phi },
+  };
+}
+
+// ──────────────── Outlier STL+ETS ─────────────────────────────
+
+// STL+ETS'in outlier'a dayanıklı versiyonu — IQR (interquartile range)
+// kullanarak aşırı değerleri tespit eder, medyan ile değiştirir, sonra
+// klasik dekompozisyon uygular. Tek vessel sevkiyatları gibi büyük
+// noktasal anomaliler tahminleri bozmasın.
+export function forecastSTLETSOutlier(series, h) {
+  const n = series.length;
+  if (n < 24) return forecastSTLETS(series, h);
+
+  // Outlier tespiti: rolling 12-aylık medyan + IQR-bazlı eşik
+  const cleaned = [...series];
+  const win = 12;
+  for (let t = 0; t < n; t++) {
+    const start = Math.max(0, t - win), end = Math.min(n, t + win + 1);
+    const w = series.slice(start, end).filter(v => v != null).sort((a, b) => a - b);
+    if (w.length < 4) continue;
+    const q1 = w[Math.floor(w.length * 0.25)];
+    const q3 = w[Math.floor(w.length * 0.75)];
+    const median = w[Math.floor(w.length / 2)];
+    const iqr = q3 - q1;
+    const lo = q1 - 2.5 * iqr, hi = q3 + 2.5 * iqr;
+    if (series[t] < lo || series[t] > hi) {
+      cleaned[t] = median;  // outlier replaced with local median
+    }
+  }
+  return forecastSTLETS(cleaned, h);
+}
+
 // ──────────────── Moving Average ──────────────────────────────
 
 export function forecastMovingAverage(series, h, window = 3) {
@@ -427,11 +628,14 @@ export function selectBestFit(series, h) {
   const isIntermittent = intermittence < 0.6;
 
   const models = [
-    { id: 'hw', label: 'Holt-Winters', fn: (s, hh) => forecastHoltWinters(s, hh) },
-    { id: 'stl', label: 'STL+ETS', fn: (s, hh) => forecastSTLETS(s, hh) },
-    { id: 'snaive', label: 'Seasonal Naive', fn: (s, hh) => forecastSeasonalNaive(s, hh) },
-    { id: 'croston', label: 'Croston', fn: (s, hh) => forecastCroston(s, hh), onlyIfIntermittent: true },
-    { id: 'ma3', label: 'Moving Avg (3)', fn: (s, hh) => forecastMovingAverage(s, hh, 3) },
+    { id: 'hw',      label: 'Holt-Winters',    fn: (s, hh) => forecastHoltWinters(s, hh) },
+    { id: 'stlOut',  label: 'Outlier STL+ETS', fn: (s, hh) => forecastSTLETSOutlier(s, hh) },
+    { id: 'theta',   label: 'Theta',           fn: (s, hh) => forecastTheta(s, hh) },
+    { id: 'holtLin', label: "Holt's Linear",   fn: (s, hh) => forecastHoltLinear(s, hh) },
+    { id: 'stl',     label: 'STL+ETS',         fn: (s, hh) => forecastSTLETS(s, hh) },
+    { id: 'snaive',  label: 'Seasonal Naive',  fn: (s, hh) => forecastSeasonalNaive(s, hh) },
+    { id: 'croston', label: 'Croston',         fn: (s, hh) => forecastCroston(s, hh), onlyIfIntermittent: true },
+    { id: 'ma3',     label: 'Moving Avg (3)',  fn: (s, hh) => forecastMovingAverage(s, hh, 3) },
   ];
 
   const results = [];
@@ -547,21 +751,51 @@ export const FORECAST_MODELS = [
     id: 'hw',
     label: 'Holt-Winters',
     short: 'Trend + yıllık mevsim',
-    description: 'Üçlü üstel düzleme (Triple Exponential Smoothing) — seviye, trend ve yıllık mevsimselliği multiplicative olarak birlikte modelliyor. α/β/γ parametreleri grid search ile minimum hata noktasına optimize ediliyor.',
+    description: 'Üçlü üstel düzleme (Triple Exponential Smoothing) — seviye, trend ve yıllık mevsimselliği additive ve multiplicative variantlarda paralel deniyor, daha düşük hatalı seçiliyor. Damped trend (φ) uzun horizon\'da şişmeyi engelliyor.',
     strength: 'Yıllık mevsimsel desen + büyüme trendi olan stabil seriler için en güçlüsü. Ramazan-bayram gibi yıllık tekrar eden pikleri yakalar.',
     weakness: 'Yapısal kırılmalara (acquisition, kapanma) ve düzensiz/sıçramalı seriler için zayıf. En az 24 ay tarihçe gerekir.',
     whenToUse: 'Düzenli aylık satış akışı olan B2B trader\'lar (Sunrise, Tiryaki Anadolu domestic, Hasata B2C).',
-    formula: 'L_t = α(y_t/S_{t-m}) + (1-α)(L_{t-1} + T_{t-1})',
+    formula: 'L_t = α(y_t/S_{t-m}) + (1-α)(L_{t-1} + φ·T_{t-1})',
+  },
+  {
+    id: 'stlOut',
+    label: 'Outlier STL+ETS',
+    short: 'Outlier toleranslı dekompozisyon',
+    description: 'STL+ETS\'in outlier-dayanıklı versiyonu. Önce IQR (interquartile range) bazlı tespitle aşırı değerleri yerel medyan ile değiştirir, sonra klasik dekompozisyon uygular. Tek vessel sevkiyatı gibi büyük noktasal anomalileri filtreler.',
+    strength: 'Düzensiz büyük sıçramalar (vessel sevkiyatları, tek seferlik kontratlar) modeli bozmuyor. Trend + mevsim hâlâ yakalanır.',
+    weakness: 'Eğer aslında bütün satışlar büyükse (örn. her ay 5K+ Ton), her şeyi outlier sayıp aşırı sönükleştirebilir.',
+    whenToUse: 'Vessel-bazlı uluslararası trader\'lar (Mesopotamia, Sunrise) — anomaliler genellikle gerçek tek seferlik olaylardır.',
+    formula: 'y_t = clip(y_t, Q1-2.5·IQR, Q3+2.5·IQR) → STL',
+  },
+  {
+    id: 'theta',
+    label: 'Theta',
+    short: 'Lineer trend + SES kombinasyonu',
+    description: 'M3/M4 forecasting yarışmalarında üst sıralarda yer alan klasik Theta yöntemi. Seriyi iki "theta line"a ayırır: theta=0 (lineer regresyon doğrusu) ve theta=2 (ham veri × 2 - regresyon). İkisini ayrı ayrı uzatıp ortalamayla birleştirir.',
+    strength: 'Küçük örneklemde (24-36 ay) Seasonal Naive\'i sık yenen az sayıda yöntemden biri. Trend yakalama gücü iyi, mevsimsiz serilerde de çalışır.',
+    weakness: 'Yıllık mevsimi açıkça modellemiyor — eğer mevsimsel pik çok belirginse HW\'den geri kalabilir.',
+    whenToUse: 'Trend var ama mevsim deseni belirsiz/zayıf seriler. Yeni başlayan trader\'lar (kısa tarihçe) için iyi default.',
+    formula: 'ŷ = (theta0_extrap + SES(theta2)) / 2',
+  },
+  {
+    id: 'holtLin',
+    label: "Holt's Linear",
+    short: 'Trend, mevsimsiz (damped)',
+    description: 'Çift üstel düzleme: seviye ve trend modellenir, mevsim modellenmez. Damped variant (φ < 1) trendin uzun vadede sönmesini sağlar.',
+    strength: 'Trendli ama yıllık tekrarlayan deseni olmayan seriler için temiz. Damping uzun tahminlerde aşırı projeksiyonu engeller.',
+    weakness: 'Mevsimsel pik varsa onu yakalayamaz — bakliyat hasadı, Ramazan gibi etkileri kaçırır.',
+    whenToUse: 'B2C ürünler (FMCG, marka satışı) ve genel olarak mevsim deseni zayıf trader\'lar.',
+    formula: 'ŷ_{t+h} = L_t + Σ φ^i · T_t',
   },
   {
     id: 'stl',
-    label: 'STL+ETS',
-    short: 'Dekompozisyon + extrapolasyon',
-    description: 'Klasik dekompozisyon — seriyi trend (12-aylık merkezli MA), mevsimsel indeks ve residual\'a ayırır. Trend lineer regresyonla geleceğe taşınır, mevsim deseni tekrarlanır.',
-    strength: 'Outlier\'lara (tek vessel sevkiyatı gibi anomaliler) HW\'den daha dayanıklı. Trend ve mevsimi görsel olarak ayrıştırabilirsin.',
-    weakness: 'Lineer trend varsayımı — hızlı büyüyen/küçülen seriler için yanlı sonuç verebilir.',
-    whenToUse: 'Outlier\'lı vessel-bazlı uluslararası trader\'lar (Mesopotamia, bazı Sunrise akışları).',
-    formula: 'y_t = T_t + S_t + R_t  (additive decomposition)',
+    label: 'STL+ETS (basit)',
+    short: 'Klasik dekompozisyon',
+    description: 'Seriyi trend (12-aylık merkezli MA), mevsimsel indeks ve residual\'a ayırır. Trend lineer regresyonla geleceğe taşınır, mevsim deseni tekrarlanır.',
+    strength: 'Trend ve mevsimi görsel olarak ayrıştırabilirsin. Stabil seriler için iyi.',
+    weakness: 'Outlier\'a dayanıksız — anomaliler dekompozisyonu boza. Outlier STL+ETS varyantı tercih edilir.',
+    whenToUse: 'Sadece referans için bırakıldı. Genelde Outlier STL+ETS daha iyi.',
+    formula: 'y_t = T_t + S_t + R_t  (additive)',
   },
   {
     id: 'snaive',
@@ -569,7 +803,7 @@ export const FORECAST_MODELS = [
     short: 'Geçen yıl aynı ay',
     description: '"Önümüzdeki Mayıs, geçen Mayıs gibi olur" varsayımı. m=12 ile her ay için bir önceki yılın aynı ayı tekrar edilir.',
     strength: 'Çok basit, zorla anlamlı bir baseline. Eğer diğer modeller bundan daha iyi çıkamıyorsa, modelimiz aslında bilgi katmıyor demektir.',
-    weakness: 'Trend yok — büyüme veya küçülme trendi varsa düşük tahmin verir. Yapısal değişimi hiç yakalayamaz.',
+    weakness: 'Trend yok — büyüme veya küçülme trendi varsa düşük tahmin verir. **Tahmin = geçen yıl olduğu için YoY her zaman %0**.',
     whenToUse: 'Stabil mevsimsel ürünler — bakliyat, organik feed gibi yıldan yıla benzer akışlar. Her zaman karşılaştırma için referans.',
     formula: 'ŷ_{t+h} = y_{t+h-12}',
   },

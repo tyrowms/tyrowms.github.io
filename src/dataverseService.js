@@ -231,6 +231,87 @@ export async function fetchTraderNames(token, onProgress) {
 // Historical sales demand entity'sinden tek bir trader'ın geçmiş satış satırlarını çek
 // `fromDate` / `toDate` opsiyonel (YYYY-MM-DD); verilmezse son 36 ay default
 // Tutar (amount) alanları runtime'da keşfedilir — entity'de yoksa graceful fallback
+// FetchXML aggregate sorgusu yardımcısı (UAT URL'inde)
+async function fetchHistoricalAggregateXml(token, entity, fetchXmlInner) {
+  const wrapper = `<fetch aggregate="true">${fetchXmlInner}</fetch>`;
+  const url = `${HISTORICAL_DATAVERSE_URL}/api/data/v9.2/${entity}?fetchXml=${encodeURIComponent(wrapper)}`;
+  const data = await dvFetch(url, token, 'odata.include-annotations="*"');
+  return data.value || [];
+}
+
+// Aylık aggregate, top ürün, top müşteri — 3 paralel server-side query
+// 77K satır yerine ~50-100 kayıt iner, browser tarafında atomik aggregate yok
+export async function fetchHistoricalAggregatesByTrader(account, traderCode, opts = {}) {
+  const token = await getDataverseTokenFor(account, HISTORICAL_DATAVERSE_URL);
+  const today = new Date();
+  const defaultFrom = new Date(today); defaultFrom.setUTCMonth(defaultFrom.getUTCMonth() - 36);
+  const fromDate = opts.fromDate || defaultFrom.toISOString().slice(0, 10);
+  const toDate = opts.toDate || today.toISOString().slice(0, 10);
+  const traderEsc = xmlEsc(traderCode);
+
+  // Entity discovery (raw fetch ile aynı liste, paylaş)
+  if (!HISTORICAL_RESOLVED_ENTITY) {
+    for (const entityName of HISTORICAL_SALES_VARIANTS) {
+      try {
+        const probeUrl = `${HISTORICAL_DATAVERSE_URL}/api/data/v9.2/${entityName}?$select=mserp_trader&$top=1`;
+        const r = await fetch(probeUrl, { headers: DV_HEADERS(token) });
+        if (r.ok) { HISTORICAL_RESOLVED_ENTITY = entityName; break; }
+      } catch (_) {}
+    }
+    if (!HISTORICAL_RESOLVED_ENTITY) throw new Error('Historical sales entity bulunamadı');
+  }
+  const entity = HISTORICAL_RESOLVED_ENTITY;
+
+  const baseFilter = `<filter type="and">
+    <condition attribute="mserp_trader" operator="eq" value="${traderEsc}" />
+    <condition attribute="mserp_shipdate" operator="on-or-after" value="${fromDate}" />
+    <condition attribute="mserp_shipdate" operator="on-or-before" value="${toDate}" />
+  </filter>`;
+
+  // 1) Aylık seri: groupby mserp_shipdate dategrouping=month + sum quantity
+  const monthlyXml = `<entity name="${entity}">
+    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+    <attribute name="mserp_shipdate" alias="ym" groupby="true" dategrouping="month" />
+    <attribute name="mserp_shipdate" alias="yy" groupby="true" dategrouping="year" />
+    ${baseFilter}
+  </entity>`;
+  // 2) Top ürünler: groupby productid + sum quantity
+  const productXml = `<entity name="${entity}">
+    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+    <attribute name="mserp_productid" alias="pid" groupby="true" />
+    ${baseFilter}
+  </entity>`;
+  // 3) Top müşteriler: groupby toaccountid + sum quantity
+  const accountXml = `<entity name="${entity}">
+    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+    <attribute name="mserp_toaccountid" alias="aid" groupby="true" />
+    ${baseFilter}
+  </entity>`;
+  // 4) Şirket dağılımı: groupby salesdataareaid
+  const companyXml = `<entity name="${entity}">
+    <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+    <attribute name="mserp_salesdataareaid" alias="co" groupby="true" />
+    ${baseFilter}
+  </entity>`;
+
+  if (opts.onProgress) opts.onProgress(0, 4);
+  const [monthly, products, accounts, companies] = await Promise.all([
+    fetchHistoricalAggregateXml(token, entity, monthlyXml),
+    fetchHistoricalAggregateXml(token, entity, productXml),
+    fetchHistoricalAggregateXml(token, entity, accountXml),
+    fetchHistoricalAggregateXml(token, entity, companyXml),
+  ]);
+  if (opts.onProgress) opts.onProgress(4, 4);
+
+  return {
+    monthly,    // [{ym: '...', yy: '...', qty: number}, ...]
+    products,   // [{pid: '...', qty: number}, ...]
+    accounts,   // [{aid: '...', qty: number}, ...]
+    companies,  // [{co: '...', qty: number}, ...]
+    fromDate, toDate, traderCode,
+  };
+}
+
 export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {}) {
   // UAT URL'i için ayrı bir token al (PROD scope'unda olmaz)
   const token = await getDataverseTokenFor(account, HISTORICAL_DATAVERSE_URL);
