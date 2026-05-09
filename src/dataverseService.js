@@ -91,6 +91,21 @@ export async function getDataverseToken(account) {
   }
 }
 
+// Belirli bir Dataverse URL'i için token al (örn. UAT environment)
+export async function getDataverseTokenFor(account, baseUrl) {
+  const scopes = { scopes: [`${baseUrl}/.default`] };
+  try {
+    const r = await msalInstance.acquireTokenSilent({ ...scopes, account });
+    return r.accessToken;
+  } catch (e) {
+    if (e instanceof InteractionRequiredAuthError) {
+      const r = await msalInstance.acquireTokenPopup(scopes);
+      return r.accessToken;
+    }
+    throw e;
+  }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GRAPH API — User Profile
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -154,8 +169,17 @@ const PROJECT_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${PROJECT_ENTITY_NAME}`
 const TRADER_ENTITY_NAME = 'mserp_etgtradertableentities';
 const TRADER_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${TRADER_ENTITY_NAME}`;
 // Historical sales demand entity — geçmiş sipariş satırları (forecasting kaynağı)
-const HISTORICAL_SALES_ENTITY = 'mserp_tryhistoricalsalesdemandentities';
-const HISTORICAL_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${HISTORICAL_SALES_ENTITY}`;
+// UAT environment'tan çekilir (PROD'dan farklı bir URL)
+const HISTORICAL_DATAVERSE_URL = import.meta.env.VITE_HISTORICAL_DATAVERSE_URL || 'https://operations-trykuat1.crm4.dynamics.com';
+// Env'lere göre entity adı farklı olabilir → birkaç varyant denenir, çalışanı runtime'da bulunur
+const HISTORICAL_SALES_VARIANTS = [
+  import.meta.env.VITE_HISTORICAL_SALES_ENTITY,  // env override (varsa öncelikli)
+  'mserp_tryhistoricalsalesdemandentities',
+  'mserp_etgtryhistoricalsalesdemandentities',
+  'mserp_tryhistoricalsalesdemands',
+  'mserp_etgtryhistoricalsalesdemands',
+].filter(Boolean);
+let HISTORICAL_RESOLVED_ENTITY = null;  // ilk başarılı fetch'te kilitlenir
 
 // Rapor tarihi geçici olarak 2026-05-02'ye sabitlendi
 // Normale dönmek için aşağıdaki bloğu yorum satırı yapıp orijinal $orderby/$top sorgusunu aç
@@ -208,7 +232,8 @@ export async function fetchTraderNames(token, onProgress) {
 // `fromDate` / `toDate` opsiyonel (YYYY-MM-DD); verilmezse son 36 ay default
 // Tutar (amount) alanları runtime'da keşfedilir — entity'de yoksa graceful fallback
 export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {}) {
-  const token = await getDataverseToken(account);
+  // UAT URL'i için ayrı bir token al (PROD scope'unda olmaz)
+  const token = await getDataverseTokenFor(account, HISTORICAL_DATAVERSE_URL);
   const onProgress = opts.onProgress;
   // Default: son 36 ay (3 yıl)
   const today = new Date();
@@ -227,16 +252,36 @@ export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {
   ];
   const valueCandidates = ['mserp_amount','mserp_amountmst','mserp_amountsec','mserp_lineamount'];
 
-  const buildUrl = (fields) => {
+  console.log('[HistoricalSales] Filter trader code:', JSON.stringify(traderCode));
+  const buildUrl = (entity, fields) => {
     const select = fields.join(',');
     const filter = `mserp_trader eq '${odataStr(traderCode)}' and mserp_shipdate ge ${fromDate}T00:00:00Z and mserp_shipdate le ${toDate}T23:59:59Z`;
-    return `${HISTORICAL_API_BASE}?$select=${select}&$filter=${encodeURIComponent(filter)}&$count=true`;
+    return `${HISTORICAL_DATAVERSE_URL}/api/data/v9.2/${entity}?$select=${select}&$filter=${encodeURIComponent(filter)}&$count=true`;
   };
+
+  // Entity adı discovery — daha önce çözülmemişse her varyantı dene
+  if (!HISTORICAL_RESOLVED_ENTITY) {
+    for (const entityName of HISTORICAL_SALES_VARIANTS) {
+      try {
+        // Tek bir kayıt çekerek varlığı doğrula
+        const probeUrl = `${HISTORICAL_DATAVERSE_URL}/api/data/v9.2/${entityName}?$select=mserp_trader&$top=1`;
+        const r = await fetch(probeUrl, { headers: DV_HEADERS(token) });
+        if (r.ok) {
+          HISTORICAL_RESOLVED_ENTITY = entityName;
+          console.log('[HistoricalSales] Resolved entity:', entityName, 'on', HISTORICAL_DATAVERSE_URL);
+          break;
+        }
+      } catch (_) { /* dene bir sonraki */ }
+    }
+    if (!HISTORICAL_RESOLVED_ENTITY) {
+      throw new Error(`Historical sales entity bulunamadı (${HISTORICAL_DATAVERSE_URL}). Denenenler: ${HISTORICAL_SALES_VARIANTS.join(', ')}. .env'e VITE_HISTORICAL_SALES_ENTITY=<doğru_ad> ve gerekirse VITE_HISTORICAL_DATAVERSE_URL=<url> ekleyin.`);
+    }
+  }
 
   // İlk denemede tutar adaylarını da iste; başarısızsa kaldırıp tekrar dene
   let usedFields = [...baseFields, ...valueCandidates];
   let availableValueFields = [];
-  let firstUrl = buildUrl(usedFields);
+  let firstUrl = buildUrl(HISTORICAL_RESOLVED_ENTITY, usedFields);
   let allRecords = [];
   let firstAttempt = true;
 
@@ -258,7 +303,7 @@ export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {
       // 400 → bilinmeyen alan; tutar adaylarını çıkar ve tekrar dene
       if (firstAttempt && /400|not.*found|invalid.*field/i.test(e.message)) {
         usedFields = [...baseFields];
-        nextUrl = buildUrl(usedFields);
+        nextUrl = buildUrl(HISTORICAL_RESOLVED_ENTITY, usedFields);
         availableValueFields = [];
         allRecords = [];
         firstAttempt = false;
