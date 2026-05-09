@@ -8,7 +8,7 @@ import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
 
 const INIT=[];
 const DEMO=INIT;
-const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün","Proje ID","Trader","Ana Trader"];
+const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün","Proje ID","Trader","Ana Trader","Trader Adı","Ana Trader Adı"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IST":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TKR":"Tekirdağ","KOC":"Kocaeli","TRB":"Trabzon","SILAM":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-DTS":"İstanbul","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","TRY-SDN":"İstanbul","YLD-KON":"Konya","YLD-MUS":"Muş","YLD-TKD":"Tekirdağ"};
 const CLL={"Adana":[37,35.33],"Adapazarı":[40.68,30.4],"Bandırma":[40.35,27.97],"Bursa":[40.19,29.06],"Çorum":[40.55,34.96],"Edirne":[41.68,26.56],"Gaziantep":[37.07,37.38],"Giresun":[40.91,38.39],"Hatay":[36.2,36.16],"İskenderun":[36.59,36.17],"İstanbul":[41.01,28.98],"İzmir":[38.42,27.14],"Karaman":[37.18,33.23],"Konya":[37.87,32.48],"Mersin":[36.81,34.64],"Muş":[38.74,41.49],"Ordu":[40.99,37.88],"Samsun":[41.29,36.33],"Tekirdağ":[41.0,27.52],"Kocaeli":[40.76,29.92],"Trabzon":[41.0,39.72]};
@@ -279,7 +279,7 @@ export default function App(){
   useEffect(()=>{try{if(rows.length>0)localStorage.setItem('tyrowms_rows',JSON.stringify(rows));else localStorage.removeItem('tyrowms_rows');}catch(e){}},[rows]);
   const [gSearch,setGSearch]=useState('');
   const [gSearchFocus,setGSearchFocus]=useState(false);
-  const GS_IDX=[1,3,4,10,12,15,17,19,21,23,33,34,35]; // searchable text column indices (33=Proje ID, 34=Trader, 35=Ana Trader)
+  const GS_IDX=[1,3,4,10,12,15,17,19,21,23,33,34,35,36,37]; // searchable text column indices (33=Proje ID, 34=Trader, 35=Ana Trader, 36=Trader Adı, 37=Ana Trader Adı)
   // ── Global Gelişmiş Filtre (gRows'dan önce tanımlanmalı) ──
   const GF_INIT={grp:'',comp:'',urun:'',mense:'',tesis:'',l2:'',l3:'',mtrader:'',trader:''};
   const [gFilter,setGFilter]=useState(()=>{try{const s=localStorage.getItem('tyrowms_gfilter');if(s){const p=JSON.parse(s);if(p&&typeof p==='object')return{...GF_INIT,...p};}}catch(e){}return GF_INIT;});
@@ -302,8 +302,10 @@ export default function App(){
     if(!incFark&&wh.includes('fark'))return false;
     return true;
   }),[rows,incTransit,incFark]);
-  const gFilterOpts=useMemo(()=>({grps:[...new Set(calcRows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),comps:[...new Set(calcRows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),uruns:[...new Set(calcRows.map(r=>r[3]||''))].filter(Boolean).sort(),menses:[...new Set(calcRows.map(r=>r[4]||''))].filter(v=>v).sort(),tesisler:[...new Set(calcRows.map(r=>r[10]||''))].filter(v=>v).sort(),l2s:[...new Set(calcRows.map(r=>r[17]||''))].filter(v=>v).sort(),l3s:[...new Set(calcRows.map(r=>r[19]||''))].filter(v=>v).sort(),traders:[...new Set(calcRows.map(r=>r[34]||''))].filter(v=>v).sort(),mtraders:[...new Set(calcRows.map(r=>r[35]||''))].filter(v=>v).sort()}),[calcRows]);
-  const applyGF=(r,gf)=>{if(gf.grp&&gGrp(r[0])!==gf.grp)return false;if(gf.comp&&(r[1]||r[0])!==gf.comp)return false;if(gf.urun&&(r[3]||'')!==gf.urun)return false;if(gf.mense&&(r[4]||'')!==gf.mense)return false;if(gf.tesis&&(r[10]||'')!==gf.tesis)return false;if(gf.l2&&(r[17]||'')!==gf.l2)return false;if(gf.l3&&(r[19]||'')!==gf.l3)return false;if(gf.trader&&(r[34]||'')!==gf.trader)return false;if(gf.mtrader&&(r[35]||'')!==gf.mtrader)return false;return true;};
+  // Trader & Ana Trader için "kod — isim" birleşik display formatı (filtre, dropdown ve grouplama)
+  const traderLabel=(code,name)=>{const c=String(code||'').trim();const n=String(name||'').trim();if(!c&&!n)return'';return n?(c?`${c} — ${n}`:n):c;};
+  const gFilterOpts=useMemo(()=>({grps:[...new Set(calcRows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),comps:[...new Set(calcRows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),uruns:[...new Set(calcRows.map(r=>r[3]||''))].filter(Boolean).sort(),menses:[...new Set(calcRows.map(r=>r[4]||''))].filter(v=>v).sort(),tesisler:[...new Set(calcRows.map(r=>r[10]||''))].filter(v=>v).sort(),l2s:[...new Set(calcRows.map(r=>r[17]||''))].filter(v=>v).sort(),l3s:[...new Set(calcRows.map(r=>r[19]||''))].filter(v=>v).sort(),traders:[...new Set(calcRows.map(r=>traderLabel(r[34],r[36])))].filter(v=>v).sort(),mtraders:[...new Set(calcRows.map(r=>traderLabel(r[35],r[37])))].filter(v=>v).sort()}),[calcRows]);
+  const applyGF=(r,gf)=>{if(gf.grp&&gGrp(r[0])!==gf.grp)return false;if(gf.comp&&(r[1]||r[0])!==gf.comp)return false;if(gf.urun&&(r[3]||'')!==gf.urun)return false;if(gf.mense&&(r[4]||'')!==gf.mense)return false;if(gf.tesis&&(r[10]||'')!==gf.tesis)return false;if(gf.l2&&(r[17]||'')!==gf.l2)return false;if(gf.l3&&(r[19]||'')!==gf.l3)return false;if(gf.trader&&traderLabel(r[34],r[36])!==gf.trader)return false;if(gf.mtrader&&traderLabel(r[35],r[37])!==gf.mtrader)return false;return true;};
   const gRows=useMemo(()=>{let r=calcRows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[calcRows,gSearch,gFilter,gFilterCount]);
   // rawRows: all rows (unfiltered by madde kodu) for Rapor Satırları only
   const rawRows=useMemo(()=>{let r=rows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[rows,gSearch,gFilter,gFilterCount]);
@@ -314,8 +316,8 @@ export default function App(){
     if(!gSearch.trim()||calcRows.length===0)return[];
     const t=gSearch.toLowerCase();
     const cats=[
-      {id:'mtrader',l:'Ana Trader',icon:'users',vals:[...new Set(calcRows.map(r=>r[35]||''))]},
-      {id:'trader',l:'Trader',icon:'user',vals:[...new Set(calcRows.map(r=>r[34]||''))]},
+      {id:'mtrader',l:'Ana Trader',icon:'users',vals:[...new Set(calcRows.map(r=>traderLabel(r[35],r[37])))]},
+      {id:'trader',l:'Trader',icon:'user',vals:[...new Set(calcRows.map(r=>traderLabel(r[34],r[36])))]},
       {id:'grp',l:'Grup',icon:'layers',vals:[...new Set(calcRows.map(r=>gGrp(r[0])))]},
       {id:'comp',l:'Şirket',icon:'building',vals:[...new Set(calcRows.map(r=>r[1]||r[0]||''))]},
       {id:'prod',l:'Ürün',icon:'package',vals:[...new Set(calcRows.map(r=>r[3]||''))]},
@@ -482,7 +484,7 @@ export default function App(){
   const [rawFilter,setRawFilter]=useState(RAWF_INIT);
   const [showRawFilter,setShowRawFilter]=useState(false);
   const [pageSize,setPageSize]=useState(100);
-  const ERP_KEEP=useMemo(()=>new Set(['mserp_inventcolorid','mserp_closingpricemst','mserp_purchlifo','mserp_purchpricemst','mserp_amountmst','mserp_qty','mserp_itemname','mserp_headerreportdate','mserp_companyid','mserp_etgproductlevel03name','mserp_sfilotid','mserp_purchweav','mserp_amountsec','mserp_itemid','mserp_inventsizeid','mserp_inventdimension1','mserp_etgproductlevel02name','mserp_inventlocationid','mserp_prodweav','mserp_purchfifo','mserp_purchpricesec','mserp_prodfifo','mserp_prodlifo','mserp_vesselassignmentid','mserp_etgproductlevel01name','mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname','mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name','mserp_inventbatchid','mserp_inventdimension2','versionnumber','mserp_inventlocationname','mserp_traderid','mserp_maintraderid']),[]);
+  const ERP_KEEP=useMemo(()=>new Set(['mserp_inventcolorid','mserp_closingpricemst','mserp_purchlifo','mserp_purchpricemst','mserp_amountmst','mserp_qty','mserp_itemname','mserp_headerreportdate','mserp_companyid','mserp_etgproductlevel03name','mserp_sfilotid','mserp_purchweav','mserp_amountsec','mserp_itemid','mserp_inventsizeid','mserp_inventdimension1','mserp_etgproductlevel02name','mserp_inventlocationid','mserp_prodweav','mserp_purchfifo','mserp_purchpricesec','mserp_prodfifo','mserp_prodlifo','mserp_vesselassignmentid','mserp_etgproductlevel01name','mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname','mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name','mserp_inventbatchid','mserp_inventdimension2','versionnumber','mserp_inventlocationname','mserp_traderid','mserp_maintraderid','mserp_tradername','mserp_maintradername']),[]);
 
   // ─── MSAL Init ───
   useEffect(()=>{
@@ -617,8 +619,8 @@ export default function App(){
     tesisler:[...new Set(rows.map(r=>r[10]||''))].filter(v=>v).sort(),
     l2s:[...new Set(rows.map(r=>r[17]||''))].filter(v=>v).sort(),
     l3s:[...new Set(rows.map(r=>r[19]||''))].filter(v=>v).sort(),
-    traders:[...new Set(rows.map(r=>r[34]||''))].filter(v=>v).sort(),
-    mtraders:[...new Set(rows.map(r=>r[35]||''))].filter(v=>v).sort(),
+    traders:[...new Set(rows.map(r=>traderLabel(r[34],r[36])))].filter(v=>v).sort(),
+    mtraders:[...new Set(rows.map(r=>traderLabel(r[35],r[37])))].filter(v=>v).sort(),
   }),[rows]);
   const activeFilterCount=useMemo(()=>Object.values(rawFilter).filter(v=>v!=='').length,[rawFilter]);
   const filtered=useMemo(()=>{
@@ -632,8 +634,8 @@ export default function App(){
     if(rawFilter.tesis)r=r.filter(row=>row[10]===rawFilter.tesis);
     if(rawFilter.l2)r=r.filter(row=>row[17]===rawFilter.l2);
     if(rawFilter.l3)r=r.filter(row=>row[19]===rawFilter.l3);
-    if(rawFilter.trader)r=r.filter(row=>(row[34]||'')===rawFilter.trader);
-    if(rawFilter.mtrader)r=r.filter(row=>(row[35]||'')===rawFilter.mtrader);
+    if(rawFilter.trader)r=r.filter(row=>traderLabel(row[34],row[36])===rawFilter.trader);
+    if(rawFilter.mtrader)r=r.filter(row=>traderLabel(row[35],row[37])===rawFilter.mtrader);
     if(rawFilter.miktarMin!=='')r=r.filter(row=>row[8]>=Number(rawFilter.miktarMin));
     if(rawFilter.miktarMax!=='')r=r.filter(row=>row[8]<=Number(rawFilter.miktarMax));
     if(rawFilter.gunMin!=='')r=r.filter(row=>row[27]>=Number(rawFilter.gunMin));
@@ -2237,7 +2239,13 @@ export default function App(){
             {pg==='rep'&&(()=>{
               const tabs=[{id:'grp',l:'Grup',idx:-1,lbl:-1},{id:'mtra',l:'Ana Trader',idx:35,lbl:35},{id:'tra',l:'Trader',idx:34,lbl:34},{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4},{id:'prod',l:'Ürünler',idx:3,lbl:3}];
               const cur=tabs.find(t=>t.id===repTab)||tabs[0];
-              const pv=(cur.id==='grp'?buildGroupPivot(gRows,r=>gGrp(r[0])):buildPivot(gRows,cur.idx,cur.lbl)).sort((a,b)=>{
+              const pivotForTab=()=>{
+                if(cur.id==='grp')return buildGroupPivot(gRows,r=>gGrp(r[0]));
+                if(cur.id==='tra')return buildGroupPivot(gRows,r=>traderLabel(r[34],r[36])||'Diğer');
+                if(cur.id==='mtra')return buildGroupPivot(gRows,r=>traderLabel(r[35],r[37])||'Diğer');
+                return buildPivot(gRows,cur.idx,cur.lbl);
+              };
+              const pv=pivotForTab().sort((a,b)=>{
                 let va,vb;
                 if(repSC==='n'){va=a.n;vb=b.n;return va.localeCompare(vb)*repSD;}
                 else if(repSC==='total'){va=a.total;vb=b.total;}
@@ -2318,8 +2326,8 @@ export default function App(){
                           const avgColor=D.s.avgAge<60?'#0d6e4f':D.s.avgAge<180?'#f5a623':'#e5484d';
                           // Sidebar'la birebir aynı logo (tyro-sg yeşil + tyro-au mavi/mor gradient'lı, mor & laci aksanlar)
                           const tyroLogoSvg='<svg width="44" height="44" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="pdf-tyro-sg" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2dd4a0"/><stop offset="1" stop-color="#0d6e4f"/></linearGradient><linearGradient id="pdf-tyro-au" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#pdf-tyro-sg)"/><path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/><path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#pdf-tyro-au)"/><path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/></svg>';
-                          // Sidebar'la birebir "tyrowms" wordmark — "tyro" koyu, "wms" gradient (SVG ile garantili print)
-                          const tyroWordmark='<svg width="118" height="30" viewBox="0 0 118 30" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pdf-wms-grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2dd4a0"/><stop offset=".5" stop-color="#3b82f6"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><text x="0" y="23" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="26" font-weight="800" letter-spacing=".3" fill="#1a2332">tyro</text><text x="60" y="23" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="26" font-weight="800" letter-spacing=".3" fill="url(#pdf-wms-grad)">wms</text></svg>';
+                          // Sidebar'la birebir "tyrowms" wordmark — "tyro" koyu, "wms" gradient, birleşik (tek <text>+<tspan>)
+                          const tyroWordmark='<svg width="148" height="32" viewBox="0 0 148 32" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><defs><linearGradient id="pdf-wms-grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2dd4a0"/><stop offset=".5" stop-color="#3b82f6"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><text y="24" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="26" font-weight="800" letter-spacing=".3"><tspan x="0" fill="#1a2332">tyro</tspan><tspan fill="url(#pdf-wms-grad)">wms</tspan></text></svg>';
                           w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>TYRO WMS — '+cur.l+' Yaşlandırma Raporu</title><style>@page{size:A4 landscape;margin:14mm}*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Arial,sans-serif;margin:0;padding:20px;color:#1a2332;font-size:12.5px}table{width:100%;border-collapse:collapse;table-layout:auto}thead th{text-align:left;padding:11px 11px;font-size:11px;color:#334155;text-transform:uppercase;letter-spacing:.6px;border-bottom:2.5px solid #0d6e4f;background:#f4f9f7;font-weight:800}td{font-size:12px}.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:16px;border-bottom:3px solid #0d6e4f}.brand{display:flex;align-items:center;gap:12px}.brand-text{display:flex;flex-direction:column;gap:4px}.meta{text-align:right;font-size:12px;color:#475569;line-height:1.5}.sub{font-size:10.5px;color:#64748b;font-weight:600;letter-spacing:.3px}.kpis{display:flex;gap:12px;margin-bottom:18px}.kpi{flex:1;background:#f4f9f7;border:1px solid #d4e8df;border-radius:10px;padding:12px 14px}.kpi-l{font-size:10.5px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.kpi-v{font-size:18px;font-weight:800;color:#0d6e4f;font-family:Consolas,monospace}.ftr{margin-top:24px;padding-top:14px;border-top:2px solid #0d6e4f;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}.ftr-l{display:flex;flex-direction:column;gap:3px}.ftr-r{text-align:right;display:flex;flex-direction:column;gap:3px}.ftr-brand{font-size:12px;font-weight:800;color:#0d6e4f;letter-spacing:.4px}.ftr-sub{font-size:10px;color:#64748b;font-weight:600;letter-spacing:.2px}.ftr-ts{font-size:10.5px;font-weight:700;color:#475569;font-family:Consolas,monospace}.ftr-cr{font-size:9.5px;color:#94a3b8;font-weight:500}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>');
                           w.document.write('<div class="hdr"><div class="brand">'+tyroLogoSvg+'<div class="brand-text">'+tyroWordmark+'<div class="sub">TTECH Business Solutions · Stok Yaşlandırma Raporu</div></div></div><div class="meta"><div style="font-size:14.5px;font-weight:700;color:#1a2332">'+cur.l+' Bazlı Yaşlandırma</div><div>'+new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})+'</div></div></div>');
                           w.document.write('<div class="kpis"><div class="kpi"><div class="kpi-l">Kayıt</div><div class="kpi-v">'+pv.length+'</div></div><div class="kpi"><div class="kpi-l">Toplam Miktar</div><div class="kpi-v">'+Math.round(gt).toLocaleString('tr-TR')+' kg</div></div><div class="kpi"><div class="kpi-l">Toplam Değer</div><div class="kpi-v" style="color:#3b82f6">$'+Math.round(gtVal).toLocaleString('tr-TR')+'</div></div><div class="kpi"><div class="kpi-l">Ortalama Yaş</div><div class="kpi-v" style="color:'+avgColor+'">'+D.s.avgAge+' gün</div></div></div>');

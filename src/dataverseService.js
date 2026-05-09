@@ -150,6 +150,9 @@ const SELECT_FIELDS = [
 // Tiryaki proje master entity — projid → trader / ana trader eşlemesi
 const PROJECT_ENTITY_NAME = 'mserp_etgtryprojecttableentities';
 const PROJECT_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${PROJECT_ENTITY_NAME}`;
+// Trader master entity — traderid → description (isim) eşlemesi
+const TRADER_ENTITY_NAME = 'mserp_etgtradertableentities';
+const TRADER_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${TRADER_ENTITY_NAME}`;
 
 // Rapor tarihi geçici olarak 2026-05-02'ye sabitlendi
 // Normale dönmek için aşağıdaki bloğu yorum satırı yapıp orijinal $orderby/$top sorgusunu aç
@@ -169,6 +172,27 @@ function toISODate(raw) {
   const d = new Date(s);
   if (!isNaN(d)) return d.toISOString().split('T')[0];
   return s;
+}
+
+// Trader master'dan traderid → description (isim) eşlemesini çek
+export async function fetchTraderNames(token, onProgress) {
+  const select = ['mserp_traderid','mserp_description'].join(',');
+  const url = `${TRADER_API_BASE}?$select=${select}`;
+  let all = [];
+  let nextUrl = url;
+  while (nextUrl) {
+    const data = await dvFetch(nextUrl, token, 'odata.maxpagesize=5000');
+    all = all.concat(data.value || []);
+    if (onProgress) onProgress(all.length);
+    nextUrl = data['@odata.nextLink'] || null;
+  }
+  const map = new Map();
+  for (const r of all) {
+    const tid = String(r.mserp_traderid || '').trim();
+    if (!tid) continue;
+    map.set(tid, String(r.mserp_description || ''));
+  }
+  return map;
 }
 
 // Proje entity'sinden tüm projid → {trader, mainTrader} eşlemesini çek
@@ -265,15 +289,21 @@ function castValue(raw, type) {
   }
 }
 
-export function mapToRows(records, traderMap = null) {
+export function mapToRows(records, traderMap = null, traderNameMap = null) {
   return records.map(rec => {
     const row = FIELD_MAP.map(f => castValue(rec[f.key], f.type));
     // Proje no: mserp_inventdimension2 (stok satırında); proje master entity'sinde aynı değer mserp_projid alanında
     const projid = String(rec['mserp_inventdimension2'] || '').trim();
     const tr = (traderMap && projid) ? (traderMap.get(projid) || null) : null;
-    row.push(projid);                       // 33 Proje ID
-    row.push(tr ? tr.trader : '');          // 34 Trader
-    row.push(tr ? tr.mainTrader : '');      // 35 Ana Trader
+    const traderCode = tr ? tr.trader : '';
+    const mainTraderCode = tr ? tr.mainTrader : '';
+    const traderName = (traderNameMap && traderCode) ? (traderNameMap.get(traderCode) || '') : '';
+    const mainTraderName = (traderNameMap && mainTraderCode) ? (traderNameMap.get(mainTraderCode) || '') : '';
+    row.push(projid);          // 33 Proje ID
+    row.push(traderCode);      // 34 Trader
+    row.push(mainTraderCode);  // 35 Ana Trader
+    row.push(traderName);      // 36 Trader Adı
+    row.push(mainTraderName);  // 37 Ana Trader Adı
     return row;
   });
 }
@@ -296,29 +326,44 @@ export async function fetchErpData(account, onStatus) {
   // Proje master'dan trader bilgilerini çek (projid → trader, ana trader)
   let traderMap = null;
   try {
-    onStatus?.('Trader bilgileri yükleniyor...');
-    traderMap = await fetchProjectTraders(token, n => onStatus?.(`Trader: ${n} kayıt...`));
-    onStatus?.(`Trader: ${traderMap.size} proje eşlendi`);
+    onStatus?.('Proje-trader eşlemesi yükleniyor...');
+    traderMap = await fetchProjectTraders(token, n => onStatus?.(`Proje-trader: ${n} kayıt...`));
+    onStatus?.(`Proje-trader: ${traderMap.size} proje eşlendi`);
   } catch (e) {
     console.warn('Project trader fetch failed:', e);
-    onStatus?.('Trader bilgisi alınamadı (devam ediliyor)');
+    onStatus?.('Proje-trader bilgisi alınamadı (devam ediliyor)');
+  }
+
+  // Trader master'dan trader id → isim (description) eşlemesi
+  let traderNameMap = null;
+  try {
+    onStatus?.('Trader isimleri yükleniyor...');
+    traderNameMap = await fetchTraderNames(token, n => onStatus?.(`Trader isim: ${n} kayıt...`));
+    onStatus?.(`Trader: ${traderNameMap.size} isim eşlendi`);
+  } catch (e) {
+    console.warn('Trader names fetch failed:', e);
+    onStatus?.('Trader isimleri alınamadı (devam ediliyor)');
   }
 
   // Ham (raw) records'u trader bilgisiyle zenginleştir — Ham Veriler sayfası bu fields'ı görsün
-  if (traderMap) {
+  if (traderMap || traderNameMap) {
     for (const rec of records) {
       const pid = String(rec.mserp_inventdimension2 || '').trim();
-      const tr = pid ? traderMap.get(pid) : null;
-      rec.mserp_traderid = tr ? tr.trader : '';
-      rec.mserp_maintraderid = tr ? tr.mainTrader : '';
+      const tr = (traderMap && pid) ? traderMap.get(pid) : null;
+      const traderCode = tr ? tr.trader : '';
+      const mainTraderCode = tr ? tr.mainTrader : '';
+      rec.mserp_traderid = traderCode;
+      rec.mserp_maintraderid = mainTraderCode;
+      rec.mserp_tradername = (traderNameMap && traderCode) ? (traderNameMap.get(traderCode) || '') : '';
+      rec.mserp_maintradername = (traderNameMap && mainTraderCode) ? (traderNameMap.get(mainTraderCode) || '') : '';
     }
   }
 
   onStatus?.('Veri dönüştürülüyor...');
-  const rows = mapToRows(records, traderMap);
+  const rows = mapToRows(records, traderMap, traderNameMap);
 
   onStatus?.(`${rows.length} satır yüklendi`);
-  return { rows, reportDate, recordCount: records.length, rawRecords: records, traderMapSize: traderMap?.size || 0 };
+  return { rows, reportDate, recordCount: records.length, rawRecords: records, traderMapSize: traderMap?.size || 0, traderNameMapSize: traderNameMap?.size || 0 };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
