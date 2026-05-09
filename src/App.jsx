@@ -2241,8 +2241,24 @@ export default function App(){
               const cur=tabs.find(t=>t.id===repTab)||tabs[0];
               const pivotForTab=()=>{
                 if(cur.id==='grp')return buildGroupPivot(gRows,r=>gGrp(r[0]));
-                if(cur.id==='tra')return buildGroupPivot(gRows,r=>traderLabel(r[34],r[36])||'Diğer');
-                if(cur.id==='mtra')return buildGroupPivot(gRows,r=>traderLabel(r[35],r[37])||'Diğer');
+                if(cur.id==='tra'||cur.id==='mtra'){
+                  const codeIdx=cur.id==='tra'?34:35;
+                  const nameIdx=cur.id==='tra'?36:37;
+                  // Display = isim varsa isim, yoksa kod, hiçbiri yoksa "Atanmamış"
+                  const codeByDisplay={};
+                  gRows.forEach(r=>{
+                    const code=String(r[codeIdx]||'').trim();
+                    const name=String(r[nameIdx]||'').trim();
+                    const display=name||code||'(Atanmamış)';
+                    if(!(display in codeByDisplay))codeByDisplay[display]={code,name};
+                  });
+                  const pivot=buildGroupPivot(gRows,r=>{
+                    const code=String(r[codeIdx]||'').trim();
+                    const name=String(r[nameIdx]||'').trim();
+                    return name||code||'(Atanmamış)';
+                  });
+                  return pivot.map(row=>({...row,code:codeByDisplay[row.n]?.code||'',name:codeByDisplay[row.n]?.name||''}));
+                }
                 return buildPivot(gRows,cur.idx,cur.lbl);
               };
               const pv=pivotForTab().sort((a,b)=>{
@@ -2355,9 +2371,12 @@ export default function App(){
                           </tr>
                         </thead>
                         <tbody>
-                          {pv.map((r,ri)=>(
+                          {pv.map((r,ri)=>{
+                            const isTraderTab=cur.id==='tra'||cur.id==='mtra';
+                            const traderTip=isTraderTab&&r.code?(`Kod: ${r.code}`+(r.name?` · Ad: ${r.name}`:'')):undefined;
+                            return(
                             <tr key={r.n} className="rh" style={{borderBottom:'1px solid '+$.bdL,background:ri%2?'#fafbfc':'#fff'}}>
-                              <td style={{padding:'9px 14px',fontWeight:600,fontSize:12,color:$.t1}}>{r.n}</td>
+                              <td title={traderTip} style={{padding:'9px 14px',fontWeight:600,fontSize:12,color:$.t1,cursor:traderTip?'help':'default'}}>{r.n}</td>
                               <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,fontSize:12,color:$.t1}}>{fN(r.total)}</td>
                               <td style={{padding:'9px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:700,fontSize:11,color:$.blu}}>${fN(r.totalVal)}</td>
                               <td style={{padding:'9px 14px',textAlign:'right'}}>
@@ -2372,8 +2391,8 @@ export default function App(){
                                   <span style={{fontSize:10,fontFamily:$.mo,color:$.t3,fontWeight:600,minWidth:35,textAlign:'right'}}>{gt>0?((r.total/gt)*100).toFixed(0)+'%':'0%'}</span>
                                 </div>
                               </td>
-                            </tr>
-                          ))}
+                            </tr>);
+                          })}
                           {/* Grand total row */}
                           <tr style={{background:$.acL,borderTop:'2px solid '+$.bd}}>
                             <td style={{padding:'10px 14px',fontWeight:800,fontSize:12,color:$.ac}}>TOPLAM</td>
