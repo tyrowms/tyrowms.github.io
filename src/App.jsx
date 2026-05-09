@@ -3128,11 +3128,26 @@ export default function App(){
                               </div>
                             </div>
                             {(()=>{
-                              const allKeys=[...histKeys,...forecastKeys];
-                              const allHistVals=[...histArr,...new Array(horizon).fill(null)];
-                              const allFcVals=[...new Array(histKeys.length).fill(null),...fcPts];
-                              const allFcLow=[...new Array(histKeys.length).fill(null),...fcLow];
-                              const allFcUp=[...new Array(histKeys.length).fill(null),...fcUp];
+                              // Geçmişi çeyreklik aggregate'e indir (görsel temizlik için), tahmin aylık kalır
+                              const qKeys=[],qVals=[];
+                              {
+                                const map=new Map();
+                                for(let i=0;i<histKeys.length;i++){
+                                  const [yy,mm]=histKeys[i].split('-').map(Number);
+                                  const q=Math.ceil(mm/3);
+                                  const qKey=`${yy}-Q${q}`;
+                                  if(!map.has(qKey))map.set(qKey,{sum:0,count:0});
+                                  const r=map.get(qKey);
+                                  if(histArr[i]!=null){r.sum+=histArr[i];r.count++;}
+                                }
+                                for(const [k,v] of map){qKeys.push(k);qVals.push(v.count>0?v.sum/v.count:0);}
+                              }
+                              const allKeys=[...qKeys,...forecastKeys];
+                              const allHistVals=[...qVals,...new Array(horizon).fill(null)];
+                              const allFcVals=[...new Array(qKeys.length).fill(null),...fcPts];
+                              const allFcLow=[...new Array(qKeys.length).fill(null),...fcLow];
+                              const allFcUp=[...new Array(qKeys.length).fill(null),...fcUp];
+                              const histLen=qKeys.length;
                               const allValues=allHistVals.map((v,i)=>[v,allFcUp[i]].filter(x=>x!=null)).flat();
                               const maxV=Math.max(...allValues,1);
                               const minV=0;
@@ -3173,13 +3188,34 @@ export default function App(){
                               }
                               const yTicks=6;
                               const ticks=Array.from({length:yTicks+1},(_,i)=>minV+(maxV-minV)*i/yTicks);
+                              // Çeyreklik veya aylık key'i okunabilir label'a çevir
+                              const chartLabel=k=>{
+                                if(k.includes('-Q')){const [yy,q]=k.split('-Q');return `Q${q} '${yy.slice(2)}`;}
+                                return monthLabel(k);
+                              };
+                              const isHistQuarter=k=>k&&k.includes('-Q');
                               const hi=fcstHoverIdx;
-                              const hoverHist=hi!=null&&hi<histKeys.length?allHistVals[hi]:null;
-                              const hoverFc=hi!=null&&hi>=histKeys.length?allFcVals[hi]:null;
-                              const hoverLow=hi!=null&&hi>=histKeys.length?allFcLow[hi]:null;
-                              const hoverUp=hi!=null&&hi>=histKeys.length?allFcUp[hi]:null;
+                              const hoverHist=hi!=null&&hi<histLen?allHistVals[hi]:null;
+                              const hoverFc=hi!=null&&hi>=histLen?allFcVals[hi]:null;
+                              const hoverLow=hi!=null&&hi>=histLen?allFcLow[hi]:null;
+                              const hoverUp=hi!=null&&hi>=histLen?allFcUp[hi]:null;
                               const hoverKey=hi!=null?allKeys[hi]:null;
-                              const hoverYoy=hi!=null&&allKeys[hi]?(()=>{const ly=yoyOf(allKeys[hi],allKeys,[...allHistVals].map((v,i)=>v??allFcVals[i]));const cur=hoverHist??hoverFc;return ly!=null&&ly>0&&cur!=null?((cur-ly)/ly*100):null;})():null;
+                              // YoY: çeyrekse geçen yıl aynı çeyrek, ayyysa geçen yıl aynı ay
+                              const hoverYoy=hi!=null&&allKeys[hi]?(()=>{
+                                const k=allKeys[hi];
+                                const cur=hoverHist??hoverFc;
+                                if(cur==null)return null;
+                                if(isHistQuarter(k)){
+                                  const [yy,q]=k.split('-Q');
+                                  const prevK=`${+yy-1}-Q${q}`;
+                                  const idx=allKeys.indexOf(prevK);
+                                  const ly=idx>=0?allHistVals[idx]:null;
+                                  return ly!=null&&ly>0?((cur-ly)/ly*100):null;
+                                }
+                                // ay → geçen yıl aynı ay (önce hist quarterly, sonra forecast aylık olabilir)
+                                const ly=yoyOf(k,allKeysCombined,allValsCombined);
+                                return ly!=null&&ly>0?((cur-ly)/ly*100):null;
+                              })():null;
                               return(
                                 <div style={{position:'relative',width:'100%',padding:'10px 0 6px'}}>
                                   <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:380,display:'block'}} onMouseMove={e=>{
@@ -3215,30 +3251,31 @@ export default function App(){
                                     {/* Forecast line (dashed) */}
                                     {fcPath&&<path d={fcPath} fill="none" stroke="#0d6e4f" strokeWidth="2.6" strokeDasharray="7 4" strokeLinecap="round" strokeLinejoin="round"/>}
                                     {/* Vertical separator */}
-                                    {histKeys.length>0&&<line x1={x(histKeys.length-1)} y1={padT} x2={x(histKeys.length-1)} y2={H-padB} stroke="#94a3b8" strokeWidth="1.4" strokeDasharray="3 4" opacity=".7"/>}
-                                    {histKeys.length>0&&<text x={x(histKeys.length-1)+5} y={padT+12} fontSize="10" fill="#64748b" fontWeight="700" fontFamily="-apple-system,Segoe UI,sans-serif">▶ TAHMİN</text>}
+                                    {histLen>0&&<line x1={x(histLen-1)} y1={padT} x2={x(histLen-1)} y2={H-padB} stroke="#94a3b8" strokeWidth="1.4" strokeDasharray="3 4" opacity=".7"/>}
+                                    {histLen>0&&<text x={x(histLen-1)+5} y={padT+12} fontSize="10" fill="#64748b" fontWeight="700" fontFamily="-apple-system,Segoe UI,sans-serif">▶ TAHMİN</text>}
                                     {/* History noktaları */}
-                                    {allHistVals.map((v,i)=>v!=null&&<circle key={'h'+i} cx={x(i)} cy={y(v)} r={hi===i?5:2.8} fill="#3b82f6" stroke="#fff" strokeWidth={hi===i?2.5:1.2}/>)}
+                                    {allHistVals.map((v,i)=>v!=null&&<circle key={'h'+i} cx={x(i)} cy={y(v)} r={hi===i?5.5:3.2} fill="#3b82f6" stroke="#fff" strokeWidth={hi===i?2.5:1.4}/>)}
                                     {/* Forecast noktaları */}
                                     {allFcVals.map((v,i)=>v!=null&&<circle key={'f'+i} cx={x(i)} cy={y(v)} r={hi===i?5.5:3.5} fill="#0d6e4f" stroke="#fff" strokeWidth={hi===i?2.5:1.5}/>)}
                                     {/* Hover guide line */}
                                     {hi!=null&&<line x1={x(hi)} y1={padT} x2={x(hi)} y2={H-padB} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 3" opacity=".6"/>}
-                                    {/* X labels — her ay (rotated 35°) */}
+                                    {/* X labels */}
                                     {allKeys.map((k,i)=>{
-                                      const isFc=i>=histKeys.length;
-                                      const fontSize=allKeys.length>30?9:10;
+                                      const isFc=i>=histLen;
+                                      const fontSize=allKeys.length>20?10:11;
                                       return(
-                                        <text key={'xl'+i} x={x(i)} y={H-padB+12} fontSize={fontSize} fill={isFc?'#0d6e4f':'#64748b'} fontWeight={isFc?700:500} textAnchor="end" fontFamily="-apple-system,Segoe UI,sans-serif" transform={`rotate(-40,${x(i)},${H-padB+12})`}>{monthLabel(k)}</text>
+                                        <text key={'xl'+i} x={x(i)} y={H-padB+12} fontSize={fontSize} fill={isFc?'#0d6e4f':'#64748b'} fontWeight={isFc?700:600} textAnchor="end" fontFamily="-apple-system,Segoe UI,sans-serif" transform={`rotate(-35,${x(i)},${H-padB+12})`}>{chartLabel(k)}</text>
                                       );
                                     })}
                                   </svg>
                                   {/* Hover tooltip */}
                                   {hi!=null&&hoverKey&&(
                                     <div style={{position:'absolute',top:14,left:`calc(${(x(hi)/W*100).toFixed(2)}% + 0px)`,transform:`translateX(${hi<allKeys.length/2?'10px':'calc(-100% - 10px)'})`,pointerEvents:'none',background:'#1a2332',color:'#fff',borderRadius:10,padding:'10px 14px',boxShadow:'0 8px 24px rgba(0,0,0,.18)',fontSize:11.5,minWidth:200,zIndex:10}}>
-                                      <div style={{fontSize:10,color:'#94a3b8',fontWeight:700,letterSpacing:.5,textTransform:'uppercase',marginBottom:6}}>{hi>=histKeys.length?'Tahmin':'Geçmiş'} · {monthLabel(hoverKey)}</div>
-                                      {hoverHist!=null&&(
+                                      <div style={{fontSize:10,color:'#94a3b8',fontWeight:700,letterSpacing:.5,textTransform:'uppercase',marginBottom:6}}>{hi>=histLen?'Tahmin':isHistQuarter(hoverKey)?'Geçmiş (çeyrek)':'Geçmiş'} · {chartLabel(hoverKey)}</div>
+                                      {hoverHist!=null&&(<>
                                         <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:'#fff'}}>{fmtTooltip(hoverHist)}</div>
-                                      )}
+                                        {isHistQuarter(hoverKey)&&<div style={{fontSize:10.5,color:'#94a3b8',fontFamily:$.mo,marginTop:2}}>aylık ortalama</div>}
+                                      </>)}
                                       {hoverFc!=null&&(<>
                                         <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:'#2dd4a0'}}>{fmtTooltip(hoverFc)}</div>
                                         {hoverLow!=null&&hoverUp!=null&&<div style={{fontSize:10.5,color:'#94a3b8',fontFamily:$.mo,marginTop:2}}>Aralık: {fmtTooltip(hoverLow)} – {fmtTooltip(hoverUp)}</div>}
