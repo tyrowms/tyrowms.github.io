@@ -208,9 +208,24 @@ function trTitleCase(s) {
 }
 
 // Trader master'dan traderid → description (isim) eşlemesini çek
+// Geriye uyumluluk için Map<traderid, name> döner; detaylı bilgi için fetchTraderDirectory kullan
 export async function fetchTraderNames(token, onProgress) {
-  const select = ['mserp_traderid','mserp_description'].join(',');
-  const url = `${TRADER_API_BASE}?$select=${select}`;
+  const dir = await fetchTraderDirectory(token, onProgress);
+  const map = new Map();
+  for (const t of dir) map.set(t.traderid, t.name);
+  return map;
+}
+
+// Trader master'dan zengin trader directory (filtre & multi-combo için)
+// Her kayıtta: traderid, name (title-cased), maintraderid, ispassive (option set value), validityenddate
+// Otomatik filtre: $filter ile sadece aktif (ispassive=200000000) ve validity >= bugün
+export async function fetchTraderDirectory(token, onProgress) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const select = ['mserp_traderid','mserp_description','mserp_maintraderid','mserp_ispassive','mserp_validityenddate'].join(',');
+  // ispassive option set: 200000000 = No (aktif), 200000001 = Yes (pasif). Aktif olanı filtrele.
+  // validityenddate >= bugün (geçerlilik tarihi geçmemiş olanlar)
+  const filter = `mserp_ispassive eq 200000000 and mserp_validityenddate ge ${todayIso}T00:00:00Z`;
+  const url = `${TRADER_API_BASE}?$select=${select}&$filter=${encodeURIComponent(filter)}`;
   let all = [];
   let nextUrl = url;
   while (nextUrl) {
@@ -219,13 +234,19 @@ export async function fetchTraderNames(token, onProgress) {
     if (onProgress) onProgress(all.length);
     nextUrl = data['@odata.nextLink'] || null;
   }
-  const map = new Map();
+  const out = [];
   for (const r of all) {
     const tid = String(r.mserp_traderid || '').trim();
     if (!tid) continue;
-    map.set(tid, trTitleCase(r.mserp_description || ''));
+    out.push({
+      traderid: tid,
+      name: trTitleCase(r.mserp_description || ''),
+      maintraderid: String(r.mserp_maintraderid || '').trim(),
+      ispassive: r.mserp_ispassive,
+      validityenddate: r.mserp_validityenddate,
+    });
   }
-  return map;
+  return out;
 }
 
 // Historical sales demand entity'sinden tek bir trader'ın geçmiş satış satırlarını çek
@@ -251,6 +272,8 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
   const toDate = opts.toDate || today.toISOString().slice(0, 10);
   const codes = Array.isArray(traderCodes) ? traderCodes : [traderCodes];
   if (codes.length === 0) throw new Error('En az bir trader seçilmeli');
+  // filterField: 'mserp_trader' (default) veya 'mserp_maintrader' — ana trader bazlı sorgular için
+  const filterField = opts.filterField === 'mserp_maintrader' ? 'mserp_maintrader' : 'mserp_trader';
 
   // Entity discovery (raw fetch ile aynı liste, paylaş)
   if (!HISTORICAL_RESOLVED_ENTITY) {
@@ -277,10 +300,10 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
   const buildYearQueries = (y) => {
     const yFrom = y === fromY ? fromDate : `${y}-01-01`;
     const yTo = y === toY ? toDate : `${y}-12-31`;
-    // Trader multi-select: tek code → eq, çok code → in (FetchXML <value> child'ları)
+    // Trader / Ana Trader multi-select: tek code → eq, çok code → in (FetchXML <value> child'ları)
     const traderCondition = codes.length === 1
-      ? `<condition attribute="mserp_trader" operator="eq" value="${xmlEsc(codes[0])}" />`
-      : `<condition attribute="mserp_trader" operator="in">${codes.map(c => `<value>${xmlEsc(c)}</value>`).join('')}</condition>`;
+      ? `<condition attribute="${filterField}" operator="eq" value="${xmlEsc(codes[0])}" />`
+      : `<condition attribute="${filterField}" operator="in">${codes.map(c => `<value>${xmlEsc(c)}</value>`).join('')}</condition>`;
     const yFilter = `<filter type="and">
       ${traderCondition}
       <condition attribute="mserp_shipdate" operator="on-or-after" value="${yFrom}" />
@@ -359,6 +382,8 @@ export async function fetchHistoricalSalesByTrader(account, traderCodes, opts = 
   const onProgress = opts.onProgress;
   const codes = Array.isArray(traderCodes) ? traderCodes : [traderCodes];
   if (codes.length === 0) throw new Error('En az bir trader seçilmeli');
+  // filterField: 'mserp_trader' (default) veya 'mserp_maintrader' — ana trader bazlı sorgular için
+  const filterField = opts.filterField === 'mserp_maintrader' ? 'mserp_maintrader' : 'mserp_trader';
   // Default: son 36 ay (3 yıl)
   const today = new Date();
   const defaultFrom = new Date(today); defaultFrom.setUTCMonth(defaultFrom.getUTCMonth() - 36);
@@ -376,13 +401,13 @@ export async function fetchHistoricalSalesByTrader(account, traderCodes, opts = 
   ];
   const valueCandidates = ['mserp_amount','mserp_amountmst','mserp_amountsec','mserp_lineamount'];
 
-  console.log('[HistoricalSales] Filter trader codes:', JSON.stringify(codes));
+  console.log('[HistoricalSales] Filter', filterField, 'codes:', JSON.stringify(codes));
   const buildUrl = (entity, fields) => {
     const select = fields.join(',');
-    // OData multi-trader: code 1 → eq, çok code → OR chain
+    // OData multi-trader: code 1 → eq, çok code → OR chain (filterField'a göre)
     const traderExpr = codes.length === 1
-      ? `mserp_trader eq '${odataStr(codes[0])}'`
-      : '(' + codes.map(c => `mserp_trader eq '${odataStr(c)}'`).join(' or ') + ')';
+      ? `${filterField} eq '${odataStr(codes[0])}'`
+      : '(' + codes.map(c => `${filterField} eq '${odataStr(c)}'`).join(' or ') + ')';
     const filter = `${traderExpr} and mserp_shipdate ge ${fromDate}T00:00:00Z and mserp_shipdate le ${toDate}T23:59:59Z`;
     return `${HISTORICAL_DATAVERSE_URL}/api/data/v9.2/${entity}?$select=${select}&$filter=${encodeURIComponent(filter)}&$count=true`;
   };
