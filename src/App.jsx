@@ -253,6 +253,60 @@ const CustomSelect=({value,onChange,options,placeholder='Tümü'})=>{
     </div>
   );
 };
+// SearchableSelect — kod ve isim bazlı arama destekli combobox (trader dropdown için)
+// items: [{value, label, sub}] — value seçim, label arama+display, sub alt yazı (opsiyonel)
+const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,emptyText='Eşleşme yok'})=>{
+  const [open,setOpen]=useState(false);
+  const [query,setQuery]=useState('');
+  const ref=useRef(null);
+  const inputRef=useRef(null);
+  const selected=items.find(i=>i.value===value);
+  useEffect(()=>{
+    if(!open)return;
+    const close=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener('mousedown',close);return()=>document.removeEventListener('mousedown',close);
+  },[open]);
+  useEffect(()=>{if(open&&inputRef.current)setTimeout(()=>inputRef.current?.focus(),50);},[open]);
+  const norm=s=>String(s||'').toLocaleLowerCase('tr-TR');
+  const q=norm(query.trim());
+  const filtered=q?items.filter(i=>norm(i.label).includes(q)||norm(i.value).includes(q)||norm(i.sub).includes(q)):items;
+  return(
+    <div ref={ref} style={{position:'relative'}}>
+      <div onClick={()=>{if(!disabled)setOpen(v=>!v);}} style={{
+        padding:'9px 32px 9px 12px',borderRadius:10,fontSize:12.5,fontFamily:'inherit',cursor:disabled?'not-allowed':'pointer',
+        background:disabled?'rgba(0,0,0,.03)':open?'rgba(255,255,255,.95)':'rgba(255,255,255,.85)',
+        border:'1px solid '+(open?'rgba(13,110,79,.35)':'rgba(226,231,238,.6)'),
+        boxShadow:open?'0 0 0 3px rgba(13,110,79,.08),0 2px 6px rgba(0,0,0,.04)':'0 1px 3px rgba(0,0,0,.03)',
+        color:value?'#1a2332':'#8e9bb3',fontWeight:value?600:500,transition:'all .2s',
+        whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative',userSelect:'none'}}>
+        {selected?.label||placeholder}
+        <svg width="11" height="7" viewBox="0 0 11 7" style={{position:'absolute',right:11,top:'50%',transform:'translateY(-50%)'+(open?' rotate(180deg)':''),transition:'transform .2s'}}>
+          <path d="M1 1l4.5 4.5L10 1" stroke="#0d6e4f" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {open&&!disabled&&(
+        <div style={{position:'absolute',top:'calc(100% + 5px)',left:0,right:0,zIndex:300,background:'rgba(255,255,255,.98)',backdropFilter:'blur(20px) saturate(180%)',borderRadius:12,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.15)',overflow:'hidden'}}>
+          <div style={{padding:'8px 10px',borderBottom:'1px solid '+$.bdL,position:'relative'}}>
+            <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Kod veya isim ile ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 10px 7px 30px',borderRadius:8,border:'1px solid '+$.bdL,fontSize:12,fontFamily:'inherit',outline:'none',background:'#fafbfc'}}/>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e9bb3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:'absolute',left:18,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div style={{maxHeight:280,overflowY:'auto',padding:4}}>
+            {filtered.length===0?(
+              <div style={{padding:'14px 12px',fontSize:11,color:$.t3,textAlign:'center'}}>{emptyText}</div>
+            ):filtered.slice(0,200).map(i=>(
+              <div key={i.value} onClick={()=>{onChange(i.value);setOpen(false);setQuery('');}} style={{padding:'8px 12px',borderRadius:7,cursor:'pointer',fontSize:12,color:i.value===value?'#0d6e4f':'#1a2332',fontWeight:i.value===value?700:500,background:i.value===value?'rgba(13,110,79,.08)':'transparent',transition:'background .12s',display:'flex',alignItems:'center',gap:8}} className="rh">
+                <span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{i.label}</span>
+                {i.value===value&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d6e4f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </div>
+            ))}
+            {filtered.length>200&&<div style={{padding:'8px 12px',fontSize:10,color:$.t3,textAlign:'center',borderTop:'1px solid '+$.bdL}}>+{filtered.length-200} daha · aramayı daraltın</div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
 const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
 
@@ -499,6 +553,10 @@ export default function App(){
   const [fcstError,setFcstError]=useState('');
   const [fcstTraderList,setFcstTraderList]=useState([]);
   const [fcstTraderListLoading,setFcstTraderListLoading]=useState(false);
+  const [fcstStep,setFcstStep]=useState(0);  // 0=idle, 1=fetch, 2=aggregate, 3=models, 4=backtest, 5=bestFit, 6=done
+  const [fcstStepData,setFcstStepData]=useState({});  // her aşamadan veri (rows count, model results vs.)
+  const [fcstHoverIdx,setFcstHoverIdx]=useState(null);  // grafikte hover edilen ay indexi
+  const [fcstHoverModel,setFcstHoverModel]=useState(null);  // modeli üzerinde hover (id)
 
   const loadFcstTraderList=useCallback(async()=>{
     if(!msalAccount||fcstTraderList.length>0||fcstTraderListLoading)return;
@@ -526,44 +584,64 @@ export default function App(){
 
   const runForecast=useCallback(async()=>{
     if(!fcstTrader||!msalAccount||fcstLoading)return;
-    setFcstLoading(true);setFcstError('');setFcstStatus('Veri çekiliyor...');
+    setFcstLoading(true);setFcstError('');setFcstStatus('');
+    setFcstStep(1);setFcstStepData({});
+    setFcstResult(null);  // önceki sonucu temizle ki yeni hesaplama belli olsun
+    const wait=ms=>new Promise(r=>setTimeout(r,ms));
     try{
       const cacheKey=`tyrowms_fcst_${fcstTrader}`;
-      let aggMap=null,profile=null,valueAvailable=false;
+      let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0;
       try{
         const cached=localStorage.getItem(cacheKey);
         if(cached){
           const p=JSON.parse(cached);
           if(p&&p.fetchedAt&&Date.now()-p.fetchedAt<86400000){
-            setFcstStatus('Cache\'den yükleniyor...');
-            aggMap=p.aggMap;profile=p.profile;valueAvailable=p.valueAvailable;
+            aggMap=p.aggMap;profile=p.profile;valueAvailable=p.valueAvailable;recordCount=p.recordCount||0;fromCache=true;
+            setFcstStepData(d=>({...d,fetched:{count:recordCount,fromCache:true}}));
           }
         }
       }catch(_){}
       if(!aggMap){
         const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fcstTrader,{
-          onProgress:(loaded,total)=>setFcstStatus(`Veri çekiliyor... ${loaded}${total?' / '+total:''} kayıt`),
+          onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false}})),
         });
-        setFcstStatus('Aylık aggregate hesaplanıyor...');
+        recordCount=fetchRes.records.length;
+        setFcstStep(2);await wait(120);
         aggMap=aggregateMonthly(fetchRes.records,{valueField:fetchRes.valueField});
         profile=buildTraderProfile(fetchRes.records,gGrp,aggMap);
         valueAvailable=!!fetchRes.valueField;
-        try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable}));}catch(_){}
+        try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable,recordCount}));}catch(_){}
+      } else {
+        setFcstStep(2);await wait(120);
       }
-      setFcstStatus('Tahmin modelleri çalıştırılıyor...');
+      setFcstStepData(d=>({...d,aggregate:{months:Object.keys(aggMap).length,records:recordCount}}));
+      setFcstStep(3);await wait(160);
       const seriesQty=mapToSeries(aggMap);
+      // Modelleri tek tek koşturup UI'da progressively göster
+      setFcstStepData(d=>({...d,modelsRunning:'Holt-Winters'}));await wait(60);
+      setFcstStepData(d=>({...d,modelsRunning:'STL+ETS'}));await wait(60);
+      setFcstStepData(d=>({...d,modelsRunning:'Seasonal Naive'}));await wait(60);
+      setFcstStepData(d=>({...d,modelsRunning:'Croston'}));await wait(60);
+      setFcstStepData(d=>({...d,modelsRunning:'Moving Avg'}));await wait(60);
+      setFcstStep(4);await wait(140);
       const fitQty=selectBestFit(seriesQty.qty,fcstHorizon);
       let fitValue=null;
       if(seriesQty.valueAvailable&&seriesQty.value){
         fitValue=selectBestFit(seriesQty.value,fcstHorizon);
       }
-      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:fcstTrader,horizon:fcstHorizon,fetchedAt:Date.now()});
+      setFcstStepData(d=>({...d,backtest:{models:fitQty.results.filter(r=>!r.skipped).length}}));
+      setFcstStep(5);await wait(150);
+      setFcstStepData(d=>({...d,bestFit:{id:fitQty.bestId,mape:fitQty.results.find(r=>r.id===fitQty.bestId)?.mape}}));
+      await wait(200);
+      setFcstStep(6);
+      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:fcstTrader,horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
       setFcstActiveModel(null);
-      setFcstStatus('Tamamlandı');
-      setTimeout(()=>setFcstStatus(''),2500);
+      await wait(300);
+      setFcstStep(0);
     }catch(e){
       setFcstError(e.message||'Tahmin hesaplanamadı');
       setFcstStatus('');
+      setFcstStep(0);
     }finally{setFcstLoading(false);}
   },[fcstTrader,fcstHorizon,msalAccount,fcstLoading]);
 
@@ -2778,13 +2856,17 @@ export default function App(){
                       {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:500,padding:'3px 9px',borderRadius:6,background:$.redB,cursor:'pointer'}} onClick={()=>setFcstError('')}>{fcstError} ✕</span>}
                     </div>
                     <div style={{padding:'14px 18px',display:'flex',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
-                      {/* Trader dropdown */}
+                      {/* Trader dropdown — kod & isim bazlı arama */}
                       <div style={{minWidth:280,flex:'1 1 280px'}}>
                         <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Trader (zorunlu)</div>
-                        <select value={fcstTrader} onChange={e=>setFcstTrader(e.target.value)} className="fi" style={{width:'100%',fontSize:12.5}} disabled={fcstTraderListLoading}>
-                          <option value="">{fcstTraderListLoading?'Yükleniyor...':'Trader seçin...'}</option>
-                          {fcstTraderList.map(t=><option key={t.code} value={t.code}>{t.label}</option>)}
-                        </select>
+                        <SearchableSelect
+                          value={fcstTrader}
+                          onChange={setFcstTrader}
+                          items={fcstTraderList.map(t=>({value:t.code,label:t.label,sub:t.code}))}
+                          placeholder={fcstTraderListLoading?'Yükleniyor...':'Trader seçin (kod / isim ile ara)...'}
+                          disabled={fcstTraderListLoading}
+                          emptyText="Bu aramaya uyan trader yok"
+                        />
                       </div>
                       {/* Horizon */}
                       <div>
@@ -2830,6 +2912,77 @@ export default function App(){
                       </div>
                     </div>
                   )}
+
+                  {/* ─── AI Thinking Loader ─── */}
+                  {fcstLoading&&(()=>{
+                    const sd=fcstStepData;
+                    const traderInfo=fcstTraderList.find(t=>t.code===fcstTrader);
+                    const steps=[
+                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi`:`UAT'tan ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
+                      {n:2,l:'Aylık Aggregate',d:sd.aggregate?`${sd.aggregate.records?.toLocaleString('tr-TR')||0} satır → ${sd.aggregate.months} aylık seriye dönüştürüldü`:'Satırlar yıl-ay bazında toplanıyor'},
+                      {n:3,l:'Tahmin Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'5 model paralel hazırlanıyor'},
+                      {n:4,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
+                      {n:5,l:'Best Fit Seçimi',d:sd.bestFit?`${FORECAST_MODELS.find(m=>m.id===sd.bestFit.id)?.label} kazandı (MAPE ${sd.bestFit.mape?.toFixed(1)}%)`:'En düşük hata oranlı model seçiliyor'},
+                    ];
+                    return(
+                      <div style={{background:'linear-gradient(135deg,rgba(45,212,160,.04),rgba(59,130,246,.04),rgba(139,92,246,.04))',border:'1px solid '+$.bdL,borderRadius:$.rL,padding:'30px 28px',position:'relative',overflow:'hidden'}}>
+                        {/* Background pulse */}
+                        <div style={{position:'absolute',top:-100,right:-100,width:300,height:300,borderRadius:'50%',background:'radial-gradient(circle,rgba(45,212,160,.08),transparent 70%)',animation:'aiPulse 3s ease-in-out infinite'}}/>
+                        <div style={{position:'absolute',bottom:-100,left:-100,width:300,height:300,borderRadius:'50%',background:'radial-gradient(circle,rgba(59,130,246,.08),transparent 70%)',animation:'aiPulse 3s ease-in-out 1.5s infinite'}}/>
+                        <style>{`
+                          @keyframes aiPulse{0%,100%{transform:scale(.85);opacity:.4}50%{transform:scale(1.15);opacity:.8}}
+                          @keyframes aiBrain{0%,100%{transform:scale(1);filter:drop-shadow(0 0 8px rgba(45,212,160,.4))}50%{transform:scale(1.08);filter:drop-shadow(0 0 18px rgba(59,130,246,.6))}}
+                          @keyframes aiDot{0%,80%,100%{opacity:.2;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+                          @keyframes stepFade{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:translateX(0)}}
+                          .ai-step{animation:stepFade .3s ease-out both}
+                        `}</style>
+                        <div style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',marginBottom:20}}>
+                          <div style={{width:84,height:84,borderRadius:24,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(13,110,79,.25)',animation:'aiBrain 2s ease-in-out infinite',marginBottom:14}}>
+                            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
+                              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
+                            </svg>
+                          </div>
+                          <div style={{fontSize:17,fontWeight:800,color:$.t1,letterSpacing:-.3,marginBottom:4}}>
+                            TYRO AI Tahmin Motoru
+                            <span style={{display:'inline-block',marginLeft:5}}>
+                              <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',background:$.ac,margin:'0 1px',animation:'aiDot 1.4s ease-in-out infinite'}}/>
+                              <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',background:$.blu,margin:'0 1px',animation:'aiDot 1.4s ease-in-out .2s infinite'}}/>
+                              <span style={{display:'inline-block',width:5,height:5,borderRadius:'50%',background:$.pur,margin:'0 1px',animation:'aiDot 1.4s ease-in-out .4s infinite'}}/>
+                            </span>
+                          </div>
+                          <div style={{fontSize:12,color:$.t3,fontWeight:500}}>
+                            <strong style={{color:$.t2}}>{traderInfo?.name||fcstTrader}</strong> için <strong style={{color:$.t2}}>{fcstHorizon} ay</strong> ileri tahmin oluşturuluyor
+                          </div>
+                        </div>
+                        {/* Steps */}
+                        <div style={{position:'relative',maxWidth:600,margin:'0 auto',display:'flex',flexDirection:'column',gap:10}}>
+                          {steps.map((s,i)=>{
+                            const done=fcstStep>s.n;
+                            const active=fcstStep===s.n;
+                            const pending=fcstStep<s.n;
+                            return(
+                              <div key={s.n} className={!pending?'ai-step':''} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:10,background:active?'rgba(255,255,255,.85)':done?'rgba(45,212,160,.06)':'rgba(0,0,0,.02)',border:'1px solid '+(active?'rgba(13,110,79,.25)':done?'rgba(45,212,160,.15)':$.bdL),boxShadow:active?'0 2px 8px rgba(13,110,79,.08)':'none',transition:'all .3s',opacity:pending?.45:1}}>
+                                <div style={{width:28,height:28,borderRadius:'50%',background:done?'linear-gradient(135deg,#0d6e4f,#2dd4a0)':active?'linear-gradient(135deg,#3b82f6,#8b5cf6)':$.bdL,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:active?'0 0 0 4px rgba(59,130,246,.15)':'none',transition:'all .2s'}}>
+                                  {done?(
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                  ):active?(
+                                    <span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+                                  ):(
+                                    <span style={{fontSize:11,fontWeight:700,color:$.t3}}>{s.n}</span>
+                                  )}
+                                </div>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:13,fontWeight:active||done?700:600,color:active?$.t1:done?'#0d6e4f':$.t2}}>{s.l}</div>
+                                  <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.d}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* ─── Result ─── */}
                   {fcstResult&&(()=>{
@@ -2885,21 +3038,57 @@ export default function App(){
                         </div>
                       </div>
 
-                      {/* ─── Model Sekmeleri ─── */}
-                      <div style={{display:'flex',gap:0,marginBottom:14,padding:4,background:'#f0f1f3',borderRadius:11,overflowX:'auto',flexWrap:'nowrap'}}>
-                        {FORECAST_MODELS.map(m=>{
+                      {/* ─── Model Sekmeleri (hover tooltip ile) ─── */}
+                      <div style={{position:'relative',marginBottom:14}}>
+                        <div style={{display:'flex',gap:0,padding:4,background:'#f0f1f3',borderRadius:11,overflowX:'auto',flexWrap:'nowrap'}}>
+                          {FORECAST_MODELS.map(m=>{
+                            const r=fit?.results?.find(x=>x.id===m.id);
+                            const isBest=fit?.bestId===m.id;
+                            const isActive=activeModelId===m.id;
+                            const skipped=r?.skipped;
+                            return(
+                              <div key={m.id} onClick={()=>{if(!skipped)setFcstActiveModel(m.id);}} onMouseEnter={()=>setFcstHoverModel(m.id)} onMouseLeave={()=>setFcstHoverModel(null)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:isActive?700:500,cursor:skipped?'not-allowed':'pointer',background:isActive?'#fff':'transparent',color:isActive?$.t1:skipped?$.bdL:$.t3,boxShadow:isActive?'0 1px 3px rgba(0,0,0,.08)':'none',opacity:skipped?.5:1,transition:'all .15s',userSelect:'none',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6,position:'relative'}}>
+                                {isBest&&<span style={{fontSize:11}}>⭐</span>}
+                                {m.label}
+                                {r&&!skipped&&r.mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,color:isActive?$.blu:$.t3,fontWeight:600}}>{r.mape.toFixed(1)}%</span>}
+                                <Info size={11} style={{opacity:.4,marginLeft:2}}/>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        {/* Hover tooltip card */}
+                        {fcstHoverModel&&(()=>{
+                          const m=FORECAST_MODELS.find(mm=>mm.id===fcstHoverModel);
+                          if(!m)return null;
                           const r=fit?.results?.find(x=>x.id===m.id);
-                          const isBest=fit?.bestId===m.id;
-                          const isActive=activeModelId===m.id;
-                          const skipped=r?.skipped;
                           return(
-                            <div key={m.id} onClick={()=>{if(!skipped)setFcstActiveModel(m.id);}} title={r?.reason||m.description} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:isActive?700:500,cursor:skipped?'not-allowed':'pointer',background:isActive?'#fff':'transparent',color:isActive?$.t1:skipped?$.bdL:$.t3,boxShadow:isActive?'0 1px 3px rgba(0,0,0,.08)':'none',opacity:skipped?.5:1,transition:'all .15s',userSelect:'none',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6}}>
-                              {isBest&&<span style={{fontSize:11}}>⭐</span>}
-                              {m.label}
-                              {r&&!skipped&&r.mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,color:isActive?$.blu:$.t3,fontWeight:600}}>{r.mape.toFixed(1)}%</span>}
+                            <div style={{position:'absolute',top:'calc(100% + 8px)',left:0,right:0,zIndex:50,background:'#1a2332',color:'#fff',borderRadius:12,padding:'14px 18px',boxShadow:'0 12px 32px rgba(0,0,0,.25)',pointerEvents:'none',animation:'stepFade .15s ease-out'}}>
+                              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}>
+                                {fit?.bestId===m.id&&<span style={{fontSize:11,padding:'2px 8px',borderRadius:6,background:'linear-gradient(135deg,#fbbf24,#f59e0b)',color:'#fff',fontWeight:800,letterSpacing:.4}}>⭐ BEST FIT</span>}
+                                <span style={{fontSize:14,fontWeight:800,color:'#fff'}}>{m.label}</span>
+                                <span style={{fontSize:11,color:'#94a3b8',fontFamily:$.mo,fontWeight:600}}>{m.short}</span>
+                                {r&&!r.skipped&&r.mape!=null&&<span style={{marginLeft:'auto',fontSize:11.5,padding:'3px 9px',borderRadius:6,background:r.mape<10?'rgba(45,212,160,.18)':r.mape<20?'rgba(245,166,35,.18)':'rgba(229,72,77,.18)',color:r.mape<10?'#2dd4a0':r.mape<20?'#fbbf24':'#f87171',fontFamily:$.mo,fontWeight:800}}>MAPE {r.mape.toFixed(1)}%</span>}
+                              </div>
+                              <div style={{fontSize:11.5,color:'#cbd5e1',lineHeight:1.55,marginBottom:8}}>{m.description}</div>
+                              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginTop:8,paddingTop:10,borderTop:'1px solid rgba(255,255,255,.08)'}}>
+                                <div>
+                                  <div style={{fontSize:9.5,fontWeight:800,color:'#2dd4a0',textTransform:'uppercase',letterSpacing:.5,marginBottom:3}}>✓ Güçlü Yan</div>
+                                  <div style={{fontSize:10.5,color:'#cbd5e1',lineHeight:1.5}}>{m.strength}</div>
+                                </div>
+                                <div>
+                                  <div style={{fontSize:9.5,fontWeight:800,color:'#f87171',textTransform:'uppercase',letterSpacing:.5,marginBottom:3}}>✗ Zayıf Yan</div>
+                                  <div style={{fontSize:10.5,color:'#cbd5e1',lineHeight:1.5}}>{m.weakness}</div>
+                                </div>
+                                <div>
+                                  <div style={{fontSize:9.5,fontWeight:800,color:'#60a5fa',textTransform:'uppercase',letterSpacing:.5,marginBottom:3}}>⮕ Ne Zaman</div>
+                                  <div style={{fontSize:10.5,color:'#cbd5e1',lineHeight:1.5}}>{m.whenToUse}</div>
+                                </div>
+                              </div>
+                              {m.formula&&<div style={{fontSize:10.5,fontFamily:$.mo,color:'#94a3b8',marginTop:8,padding:'6px 10px',background:'rgba(255,255,255,.04)',borderRadius:6}}>{m.formula}</div>}
+                              {r?.skipped&&r.reason&&<div style={{fontSize:10.5,color:'#fbbf24',marginTop:6,fontStyle:'italic'}}>⚠ Bu seri için atlandı: {r.reason}</div>}
                             </div>
                           );
-                        })}
+                        })()}
                       </div>
 
                       {/* ─── Aktif Model Sonuç Paneli ─── */}
@@ -2928,14 +3117,14 @@ export default function App(){
                           </div>
 
                           {/* Çizgi grafik */}
-                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,padding:'15px 18px'}}>
-                            <div style={{fontSize:13,fontWeight:700,color:$.t1,marginBottom:12,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14}}>
+                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
                               <BarChart3 size={15} color={$.ac}/>
                               <span>Tahmin Grafiği — {FORECAST_MODELS.find(m=>m.id===activeModelId)?.label}</span>
                               <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:11,color:$.t3,fontWeight:500}}>
-                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2,background:$.blu,display:'inline-block'}}/>Geçmiş</span>
-                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2,background:'#0d6e4f',borderTop:'2px dashed #0d6e4f',display:'inline-block'}}/>Tahmin</span>
-                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(13,110,79,.15)',display:'inline-block'}}/>Güven Bandı</span>
+                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,background:$.blu,display:'inline-block',borderRadius:1}}/>Geçmiş</span>
+                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#0d6e4f 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Tahmin</span>
+                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(13,110,79,.18)',display:'inline-block',borderRadius:2}}/>Güven Bandı</span>
                               </div>
                             </div>
                             {(()=>{
@@ -2947,51 +3136,116 @@ export default function App(){
                               const allValues=allHistVals.map((v,i)=>[v,allFcUp[i]].filter(x=>x!=null)).flat();
                               const maxV=Math.max(...allValues,1);
                               const minV=0;
-                              const W=1100,H=320,padL=60,padR=20,padT=20,padB=40;
+                              const W=1200,H=380,padL=72,padR=24,padT=24,padB=70;
                               const innerW=W-padL-padR,innerH=H-padT-padB;
                               const x=i=>padL+(allKeys.length>1?i*innerW/(allKeys.length-1):innerW/2);
                               const y=v=>padT+innerH-((v-minV)/(maxV-minV))*innerH;
-                              // Hist polyline path
+                              // Akıllı sayı formatı: Bin Ton, Milyon Ton, kg
+                              const fmtAxis=v=>{
+                                if(fcstMetric==='value'){
+                                  if(v>=1e9)return '$'+(v/1e9).toFixed(1)+'B';
+                                  if(v>=1e6)return '$'+(v/1e6).toFixed(1)+'M';
+                                  if(v>=1e3)return '$'+(v/1e3).toFixed(0)+'K';
+                                  return '$'+Math.round(v);
+                                }
+                                // Miktar: kg → Ton bazında göster
+                                const t=v/1000;
+                                if(t>=1e6)return (t/1e6).toFixed(1)+'M Ton';
+                                if(t>=1e3)return (t/1e3).toFixed(1)+'K Ton';
+                                if(t>=1)return Math.round(t)+' Ton';
+                                return Math.round(v)+' kg';
+                              };
+                              const fmtTooltip=v=>fcstMetric==='value'?`$${fmt(v)}`:fmtTon(v);
                               const histPath=allHistVals.map((v,i)=>v==null?null:`${i===0||allHistVals[i-1]==null?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+                              // History altına gradient alan
+                              const histAreaPath=(()=>{
+                                const validIdx=allHistVals.map((v,i)=>v!=null?i:null).filter(i=>i!=null);
+                                if(validIdx.length<2)return '';
+                                const top=validIdx.map(i=>`${x(i).toFixed(1)},${y(allHistVals[i]).toFixed(1)}`).join(' L ');
+                                const baseY=y(minV);
+                                return `M ${x(validIdx[0]).toFixed(1)},${baseY.toFixed(1)} L ${top} L ${x(validIdx[validIdx.length-1]).toFixed(1)},${baseY.toFixed(1)} Z`;
+                              })();
                               const fcPath=allFcVals.map((v,i)=>v==null?null:`${allFcVals[i-1]==null?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
-                              // CI band: upper sonra lower (geri)
                               let bandPath='';
                               const ciIdxs=allFcUp.map((v,i)=>v!=null?i:null).filter(i=>i!=null);
                               if(ciIdxs.length>0){
                                 bandPath='M '+ciIdxs.map(i=>`${x(i).toFixed(1)},${y(allFcUp[i]).toFixed(1)}`).join(' L ')+' L '+ciIdxs.slice().reverse().map(i=>`${x(i).toFixed(1)},${y(allFcLow[i]).toFixed(1)}`).join(' L ')+' Z';
                               }
-                              // Y axis ticks
-                              const yTicks=5;
+                              const yTicks=6;
                               const ticks=Array.from({length:yTicks+1},(_,i)=>minV+(maxV-minV)*i/yTicks);
-                              // X labels: göster her N ay
-                              const xLabelStep=Math.max(1,Math.ceil(allKeys.length/12));
+                              const hi=fcstHoverIdx;
+                              const hoverHist=hi!=null&&hi<histKeys.length?allHistVals[hi]:null;
+                              const hoverFc=hi!=null&&hi>=histKeys.length?allFcVals[hi]:null;
+                              const hoverLow=hi!=null&&hi>=histKeys.length?allFcLow[hi]:null;
+                              const hoverUp=hi!=null&&hi>=histKeys.length?allFcUp[hi]:null;
+                              const hoverKey=hi!=null?allKeys[hi]:null;
+                              const hoverYoy=hi!=null&&allKeys[hi]?(()=>{const ly=yoyOf(allKeys[hi],allKeys,[...allHistVals].map((v,i)=>v??allFcVals[i]));const cur=hoverHist??hoverFc;return ly!=null&&ly>0&&cur!=null?((cur-ly)/ly*100):null;})():null;
                               return(
-                                <div style={{width:'100%',overflowX:'auto'}}>
-                                  <svg viewBox={`0 0 ${W} ${H}`} style={{width:'100%',minWidth:600,height:H,display:'block'}}>
-                                    {/* Y grid */}
+                                <div style={{position:'relative',width:'100%',padding:'10px 0 6px'}}>
+                                  <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:380,display:'block'}} onMouseMove={e=>{
+                                    const rect=e.currentTarget.getBoundingClientRect();
+                                    const relX=(e.clientX-rect.left)/rect.width*W;
+                                    if(relX<padL||relX>W-padR)return setFcstHoverIdx(null);
+                                    const idx=Math.round((relX-padL)/innerW*(allKeys.length-1));
+                                    if(idx>=0&&idx<allKeys.length)setFcstHoverIdx(idx);
+                                  }} onMouseLeave={()=>setFcstHoverIdx(null)}>
+                                    <defs>
+                                      <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity=".22"/>
+                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
+                                      </linearGradient>
+                                      <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#0d6e4f" stopOpacity=".22"/>
+                                        <stop offset="100%" stopColor="#0d6e4f" stopOpacity=".06"/>
+                                      </linearGradient>
+                                    </defs>
+                                    {/* Y grid + labels */}
                                     {ticks.map((t,i)=>(
                                       <g key={i}>
-                                        <line x1={padL} y1={y(t)} x2={W-padR} y2={y(t)} stroke="#eef1f6" strokeWidth="1"/>
-                                        <text x={padL-8} y={y(t)+4} fontSize="10" fill="#8e9bb3" textAnchor="end" fontFamily="monospace">{t>=1000?(t/1000).toFixed(0)+'k':t.toFixed(0)}</text>
+                                        <line x1={padL} y1={y(t)} x2={W-padR} y2={y(t)} stroke="#eef1f6" strokeWidth="1" strokeDasharray={i===0?'':'2 4'}/>
+                                        <text x={padL-10} y={y(t)+4} fontSize="11" fill="#64748b" textAnchor="end" fontWeight="600" fontFamily="-apple-system,Segoe UI,sans-serif">{fmtAxis(t)}</text>
                                       </g>
                                     ))}
+                                    {/* History area gradient */}
+                                    {histAreaPath&&<path d={histAreaPath} fill="url(#histGrad)" stroke="none"/>}
                                     {/* CI band */}
-                                    {bandPath&&<path d={bandPath} fill="rgba(13,110,79,.13)" stroke="none"/>}
+                                    {bandPath&&<path d={bandPath} fill="url(#ciGrad)" stroke="none"/>}
                                     {/* History line */}
-                                    {histPath&&<path d={histPath} fill="none" stroke="#3b82f6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    {histPath&&<path d={histPath} fill="none" stroke="#3b82f6" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>}
                                     {/* Forecast line (dashed) */}
-                                    {fcPath&&<path d={fcPath} fill="none" stroke="#0d6e4f" strokeWidth="2.2" strokeDasharray="6 4" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    {fcPath&&<path d={fcPath} fill="none" stroke="#0d6e4f" strokeWidth="2.6" strokeDasharray="7 4" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    {/* Vertical separator */}
+                                    {histKeys.length>0&&<line x1={x(histKeys.length-1)} y1={padT} x2={x(histKeys.length-1)} y2={H-padB} stroke="#94a3b8" strokeWidth="1.4" strokeDasharray="3 4" opacity=".7"/>}
+                                    {histKeys.length>0&&<text x={x(histKeys.length-1)+5} y={padT+12} fontSize="10" fill="#64748b" fontWeight="700" fontFamily="-apple-system,Segoe UI,sans-serif">▶ TAHMİN</text>}
                                     {/* History noktaları */}
-                                    {allHistVals.map((v,i)=>v!=null&&<circle key={'h'+i} cx={x(i)} cy={y(v)} r="2.5" fill="#3b82f6"/>)}
+                                    {allHistVals.map((v,i)=>v!=null&&<circle key={'h'+i} cx={x(i)} cy={y(v)} r={hi===i?5:2.8} fill="#3b82f6" stroke="#fff" strokeWidth={hi===i?2.5:1.2}/>)}
                                     {/* Forecast noktaları */}
-                                    {allFcVals.map((v,i)=>v!=null&&<circle key={'f'+i} cx={x(i)} cy={y(v)} r="3" fill="#0d6e4f"/>)}
-                                    {/* Vertical separator (history → forecast) */}
-                                    {histKeys.length>0&&<line x1={x(histKeys.length-1)} y1={padT} x2={x(histKeys.length-1)} y2={H-padB} stroke="#e2e7ee" strokeWidth="1.5" strokeDasharray="4 3"/>}
-                                    {/* X labels */}
-                                    {allKeys.map((k,i)=>(i%xLabelStep===0||i===allKeys.length-1)&&(
-                                      <text key={'xl'+i} x={x(i)} y={H-padB+18} fontSize="10" fill="#8e9bb3" textAnchor="middle" fontFamily="monospace">{monthLabel(k)}</text>
-                                    ))}
+                                    {allFcVals.map((v,i)=>v!=null&&<circle key={'f'+i} cx={x(i)} cy={y(v)} r={hi===i?5.5:3.5} fill="#0d6e4f" stroke="#fff" strokeWidth={hi===i?2.5:1.5}/>)}
+                                    {/* Hover guide line */}
+                                    {hi!=null&&<line x1={x(hi)} y1={padT} x2={x(hi)} y2={H-padB} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 3" opacity=".6"/>}
+                                    {/* X labels — her ay (rotated 35°) */}
+                                    {allKeys.map((k,i)=>{
+                                      const isFc=i>=histKeys.length;
+                                      const fontSize=allKeys.length>30?9:10;
+                                      return(
+                                        <text key={'xl'+i} x={x(i)} y={H-padB+12} fontSize={fontSize} fill={isFc?'#0d6e4f':'#64748b'} fontWeight={isFc?700:500} textAnchor="end" fontFamily="-apple-system,Segoe UI,sans-serif" transform={`rotate(-40,${x(i)},${H-padB+12})`}>{monthLabel(k)}</text>
+                                      );
+                                    })}
                                   </svg>
+                                  {/* Hover tooltip */}
+                                  {hi!=null&&hoverKey&&(
+                                    <div style={{position:'absolute',top:14,left:`calc(${(x(hi)/W*100).toFixed(2)}% + 0px)`,transform:`translateX(${hi<allKeys.length/2?'10px':'calc(-100% - 10px)'})`,pointerEvents:'none',background:'#1a2332',color:'#fff',borderRadius:10,padding:'10px 14px',boxShadow:'0 8px 24px rgba(0,0,0,.18)',fontSize:11.5,minWidth:200,zIndex:10}}>
+                                      <div style={{fontSize:10,color:'#94a3b8',fontWeight:700,letterSpacing:.5,textTransform:'uppercase',marginBottom:6}}>{hi>=histKeys.length?'Tahmin':'Geçmiş'} · {monthLabel(hoverKey)}</div>
+                                      {hoverHist!=null&&(
+                                        <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:'#fff'}}>{fmtTooltip(hoverHist)}</div>
+                                      )}
+                                      {hoverFc!=null&&(<>
+                                        <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:'#2dd4a0'}}>{fmtTooltip(hoverFc)}</div>
+                                        {hoverLow!=null&&hoverUp!=null&&<div style={{fontSize:10.5,color:'#94a3b8',fontFamily:$.mo,marginTop:2}}>Aralık: {fmtTooltip(hoverLow)} – {fmtTooltip(hoverUp)}</div>}
+                                      </>)}
+                                      {hoverYoy!=null&&<div style={{marginTop:5,paddingTop:5,borderTop:'1px solid rgba(255,255,255,.1)',fontSize:11,fontFamily:$.mo,fontWeight:700,color:hoverYoy>=0?'#2dd4a0':'#f87171'}}>YoY {hoverYoy>=0?'+':''}{hoverYoy.toFixed(1)}%</div>}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })()}
@@ -3039,29 +3293,41 @@ export default function App(){
                             </div>
                           </div>
 
-                          {/* Model karşılaştırma */}
+                          {/* Model karşılaştırma — genişletilmiş kart görünümü */}
                           <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden'}}>
                             <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:8}}>
-                              <ShieldAlert size={14} color={$.org}/>Model Karşılaştırma (Backtest)
+                              <ShieldAlert size={14} color={$.org}/>Model Karşılaştırma (Backtest MAPE)
+                              <span style={{marginLeft:'auto',fontSize:10,color:$.t3,fontWeight:500,fontFamily:$.mo}}>
+                                {Math.min(6,Math.floor(histKeys.length/6))} ay holdout · düşük MAPE = daha iyi
+                              </span>
                             </div>
-                            <div style={{padding:'10px 18px 14px'}}>
+                            <div style={{padding:'14px 18px 16px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:10}}>
                               {fit.results.map(r=>{
                                 const m=FORECAST_MODELS.find(mm=>mm.id===r.id);
                                 const isBest=fit.bestId===r.id;
+                                const mapeColor=r.mape==null?$.t3:r.mape<10?'#0d6e4f':r.mape<20?$.org:$.red;
+                                const mapeBg=r.mape==null?$.bdL:r.mape<10?$.grnB:r.mape<20?$.orgB:$.redB;
                                 return(
-                                  <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,padding:'9px 0',borderBottom:'1px dashed '+$.bdL,fontSize:12.5}}>
-                                    <div style={{width:18,textAlign:'center'}}>{isBest?<span style={{fontSize:14}}>⭐</span>:''}</div>
-                                    <div style={{flex:'0 0 160px',fontWeight:isBest?700:500,color:r.skipped?$.bdL:$.t1}}>{m?.label||r.id}</div>
-                                    <div style={{flex:1,fontSize:11,color:$.t3,fontWeight:500}}>{r.skipped?(r.reason||'—'):m?.description}</div>
-                                    <div style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:r.skipped?$.bdL:r.mape==null?$.t3:r.mape<10?'#0d6e4f':r.mape<20?$.org:$.red,minWidth:80,textAlign:'right'}}>
-                                      {r.skipped?'—':r.mape!=null?'MAPE '+r.mape.toFixed(1)+'%':'MAPE —'}
+                                  <div key={r.id} onClick={()=>{if(!r.skipped)setFcstActiveModel(r.id);}} style={{padding:'12px 14px',borderRadius:10,border:'1px solid '+(isBest?'rgba(13,110,79,.3)':$.bdL),background:isBest?'linear-gradient(135deg,rgba(45,212,160,.06),rgba(59,130,246,.04))':r.skipped?'rgba(0,0,0,.02)':$.bg,cursor:r.skipped?'not-allowed':'pointer',opacity:r.skipped?.55:1,boxShadow:isBest?'0 2px 8px rgba(13,110,79,.08)':'none',transition:'all .15s'}} className={r.skipped?'':'rh'}>
+                                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                                      {isBest&&<span style={{fontSize:11,padding:'2px 7px',borderRadius:5,background:'linear-gradient(135deg,#fbbf24,#f59e0b)',color:'#fff',fontWeight:800,letterSpacing:.4}}>⭐ BEST</span>}
+                                      <div style={{fontSize:13,fontWeight:isBest?800:700,color:r.skipped?$.bdL:$.t1,flex:1,minWidth:0}}>{m?.label||r.id}</div>
+                                      <div style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:mapeColor,padding:'3px 8px',borderRadius:5,background:mapeBg}}>
+                                        {r.skipped?'—':r.mape!=null?'MAPE '+r.mape.toFixed(1)+'%':'MAPE —'}
+                                      </div>
                                     </div>
+                                    <div style={{fontSize:11,color:$.t3,fontWeight:500,marginBottom:6}}>{m?.short}</div>
+                                    {r.skipped?(
+                                      <div style={{fontSize:10.5,color:$.org,fontStyle:'italic',background:$.orgB,padding:'5px 9px',borderRadius:5}}>⚠ {r.reason||'Atlandı'}</div>
+                                    ):(
+                                      <div style={{fontSize:10.5,color:$.t2,lineHeight:1.55}}>{m?.whenToUse}</div>
+                                    )}
                                   </div>
                                 );
                               })}
-                              <div style={{fontSize:10,color:$.t3,marginTop:10,lineHeight:1.5}}>
-                                MAPE = Mean Absolute Percentage Error · Son {Math.min(6,Math.floor(histKeys.length/6))} ay holdout ile backtest. Düşük MAPE daha iyi tahmin.
-                              </div>
+                            </div>
+                            <div style={{padding:'10px 18px 14px',borderTop:'1px solid '+$.bdL,fontSize:10.5,color:$.t3,lineHeight:1.5,background:'#fafbfc'}}>
+                              <strong>MAPE</strong> = Mean Absolute Percentage Error. Son {Math.min(6,Math.floor(histKeys.length/6))} ay tutulup geri kalan tarihçe ile model eğitildi, sonra saklanan aylar tahmin edildi ve gerçek değerle kıyaslandı. <strong>%0-10</strong> mükemmel · <strong>%10-20</strong> kabul edilebilir · <strong>%20+</strong> seri tahmin edilemez kadar gürültülü.
                             </div>
                           </div>
                         </>);

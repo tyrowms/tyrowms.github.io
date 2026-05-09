@@ -499,11 +499,56 @@ export function buildTraderProfile(rows, gGrpFn, monthlyAgg) {
 
 // ──────────────── Public model registry ───────────────────────
 
-// UI'da sekme listesi için
+// UI'da sekme listesi + hover detay panelleri için
 export const FORECAST_MODELS = [
-  { id: 'hw',      label: 'Holt-Winters',    description: 'Trend + yıllık mevsimsellik (multiplicative)' },
-  { id: 'stl',     label: 'STL+ETS',         description: 'Klasik dekompozisyon — trend + seasonal + residual' },
-  { id: 'snaive',  label: 'Seasonal Naive',  description: 'Geçen yılın aynı ayı' },
-  { id: 'croston', label: 'Croston',         description: 'Lumpy / intermittent demand için' },
-  { id: 'ma3',     label: 'Moving Avg (3)',  description: 'Son 3 ayın ortalaması' },
+  {
+    id: 'hw',
+    label: 'Holt-Winters',
+    short: 'Trend + yıllık mevsim',
+    description: 'Üçlü üstel düzleme (Triple Exponential Smoothing) — seviye, trend ve yıllık mevsimselliği multiplicative olarak birlikte modelliyor. α/β/γ parametreleri grid search ile minimum hata noktasına optimize ediliyor.',
+    strength: 'Yıllık mevsimsel desen + büyüme trendi olan stabil seriler için en güçlüsü. Ramazan-bayram gibi yıllık tekrar eden pikleri yakalar.',
+    weakness: 'Yapısal kırılmalara (acquisition, kapanma) ve düzensiz/sıçramalı seriler için zayıf. En az 24 ay tarihçe gerekir.',
+    whenToUse: 'Düzenli aylık satış akışı olan B2B trader\'lar (Sunrise, Tiryaki Anadolu domestic, Hasata B2C).',
+    formula: 'L_t = α(y_t/S_{t-m}) + (1-α)(L_{t-1} + T_{t-1})',
+  },
+  {
+    id: 'stl',
+    label: 'STL+ETS',
+    short: 'Dekompozisyon + extrapolasyon',
+    description: 'Klasik dekompozisyon — seriyi trend (12-aylık merkezli MA), mevsimsel indeks ve residual\'a ayırır. Trend lineer regresyonla geleceğe taşınır, mevsim deseni tekrarlanır.',
+    strength: 'Outlier\'lara (tek vessel sevkiyatı gibi anomaliler) HW\'den daha dayanıklı. Trend ve mevsimi görsel olarak ayrıştırabilirsin.',
+    weakness: 'Lineer trend varsayımı — hızlı büyüyen/küçülen seriler için yanlı sonuç verebilir.',
+    whenToUse: 'Outlier\'lı vessel-bazlı uluslararası trader\'lar (Mesopotamia, bazı Sunrise akışları).',
+    formula: 'y_t = T_t + S_t + R_t  (additive decomposition)',
+  },
+  {
+    id: 'snaive',
+    label: 'Seasonal Naive',
+    short: 'Geçen yıl aynı ay',
+    description: '"Önümüzdeki Mayıs, geçen Mayıs gibi olur" varsayımı. m=12 ile her ay için bir önceki yılın aynı ayı tekrar edilir.',
+    strength: 'Çok basit, zorla anlamlı bir baseline. Eğer diğer modeller bundan daha iyi çıkamıyorsa, modelimiz aslında bilgi katmıyor demektir.',
+    weakness: 'Trend yok — büyüme veya küçülme trendi varsa düşük tahmin verir. Yapısal değişimi hiç yakalayamaz.',
+    whenToUse: 'Stabil mevsimsel ürünler — bakliyat, organik feed gibi yıldan yıla benzer akışlar. Her zaman karşılaştırma için referans.',
+    formula: 'ŷ_{t+h} = y_{t+h-12}',
+  },
+  {
+    id: 'croston',
+    label: 'Croston (TSB)',
+    short: 'Lumpy / intermittent',
+    description: 'Aralıklı/sıçramalı talep için özelleşmiş. Demand miktarı (Z) ve sıfır-olmayan satışlar arası süre (P) ayrı üstel düzleme ile takip edilir, tahmin Z/P olarak çıkar.',
+    strength: 'Bazı aylarda satış olmayan trader\'lar için doğru olan tek model. HW veya naive bu seriler için resmen yanlış.',
+    weakness: 'Yapısal olarak düz forecast verir — trend veya mevsim yakalayamaz. Düzenli serilerde HW\'den daima zayıf.',
+    whenToUse: 'Vessel-temelli opportunistic trader\'lar (Mesopotamia FZE), 36 ayın <%60\'ında satış varsa otomatik olarak bu seçilir.',
+    formula: 'ŷ = Ẑ / P̂  (level / interval)',
+  },
+  {
+    id: 'ma3',
+    label: 'Moving Avg (3)',
+    short: 'Son 3 ay ortalaması',
+    description: 'Son 3 ayın aritmetik ortalaması, geleceğe sabit olarak taşınır. En basit hareketli ortalama.',
+    strength: 'Çok kararlı — kısa vadeli gürültüye dayanıklı. Hızlı trend değişikliklerini takip eder.',
+    weakness: 'Mevsimsel desen yok, trend yok — uzun vadede tüm forecast düz çizgi. Yıllık mevsimi tamamen kaçırır.',
+    whenToUse: 'Sadece son durum referansı için. Eğer best fit olarak çıkıyorsa, seri tahmin edilemez kadar gürültülü demektir.',
+    formula: 'ŷ_{t+h} = (y_{t-2} + y_{t-1} + y_t) / 3',
+  },
 ];
