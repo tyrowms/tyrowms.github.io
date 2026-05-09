@@ -100,72 +100,114 @@ export function mapToSeries(aggMap) {
 
 // ──────────────── Holt-Winters Triple Exponential Smoothing ──
 
-// Multiplicative seasonal, additive trend. Period = 12 (yıllık mevsim).
-// Otomatik α/β/γ grid search ile minimum SSE seçer.
-function fitHoltWinters(y, m = 12) {
-  if (y.length < m * 2) return null;  // en az 2 sezon gerekli
+// Damped Holt-Winters — additive ve multiplicative iki varyantı dener, en iyi SSE'liyi seçer.
+// Period = 12 (yıllık mevsim). Trend damping φ ile uzun vadede şişmeyi önler.
+// Sıfır içeren serilerde additive variant otomatik tercih edilir (multiplicative bozulur).
 
-  // İlk seviye: ilk sezonun ortalaması
+function fitHWAdditive(y, m = 12) {
+  if (y.length < m * 2) return null;
   const initLevel = mean(y.slice(0, m));
-  // İlk trend: (ikinci sezonun ortalaması - ilk sezonun ortalaması) / m
   const initTrend = (mean(y.slice(m, 2 * m)) - initLevel) / m;
-  // İlk mevsim indeksleri: ilk sezonun her ayı / sezon ortalaması (multiplicative)
   const initSeas = [];
-  for (let i = 0; i < m; i++) {
-    initSeas.push(initLevel === 0 ? 1 : (y[i] / initLevel));
-  }
-
-  // Grid search α, β, γ
-  const grid = [0.05, 0.1, 0.2, 0.3, 0.5];
+  for (let i = 0; i < m; i++) initSeas.push(y[i] - initLevel);
+  // Mevsim indekslerini sıfır toplamına normalize et
+  const seasMean = mean(initSeas);
+  for (let i = 0; i < m; i++) initSeas[i] -= seasMean;
+  const grid = [0.05, 0.1, 0.2, 0.3];
+  const phiGrid = [0.92, 0.96, 1.0];
   let best = null;
-  for (const alpha of grid) {
-    for (const beta of grid) {
-      for (const gamma of grid) {
-        const fit = applyHW(y, m, initLevel, initTrend, initSeas, alpha, beta, gamma);
-        if (!best || fit.sse < best.sse) best = fit;
-      }
-    }
+  for (const alpha of grid) for (const beta of grid) for (const gamma of grid) for (const phi of phiGrid) {
+    const fit = applyHWAdd(y, m, initLevel, initTrend, initSeas, alpha, beta, gamma, phi);
+    if (!best || fit.sse < best.sse) best = fit;
   }
   return best;
 }
-
-function applyHW(y, m, level0, trend0, seas0, alpha, beta, gamma) {
-  let L = level0, T = trend0;
-  const S = [...seas0];
+function applyHWAdd(y, m, L0, T0, S0, alpha, beta, gamma, phi) {
+  let L = L0, T = T0;
+  const S = [...S0];
   const fitted = new Array(y.length);
   let sse = 0;
   for (let t = 0; t < y.length; t++) {
     const sIdx = t % m;
     const sPrev = S[sIdx];
-    const yhat = (L + T) * sPrev;
+    const yhat = L + phi * T + sPrev;
     fitted[t] = yhat;
     sse += (y[t] - yhat) ** 2;
-
-    // Update
-    const newL = sPrev !== 0 ? alpha * (y[t] / sPrev) + (1 - alpha) * (L + T) : (L + T);
-    const newT = beta * (newL - L) + (1 - beta) * T;
-    const newS = newL !== 0 ? gamma * (y[t] / newL) + (1 - gamma) * sPrev : sPrev;
+    const newL = alpha * (y[t] - sPrev) + (1 - alpha) * (L + phi * T);
+    const newT = beta * (newL - L) + (1 - beta) * phi * T;
+    const newS = gamma * (y[t] - newL) + (1 - gamma) * sPrev;
     L = newL; T = newT; S[sIdx] = newS;
   }
-  return { L, T, S, fitted, sse, alpha, beta, gamma, m };
+  return { L, T, S, fitted, sse, alpha, beta, gamma, phi, m, kind: 'add' };
 }
 
-// h adım ileri tahmin
+function fitHWMultiplicative(y, m = 12) {
+  if (y.length < m * 2) return null;
+  // Multiplicative sadece tüm değerler pozitifse anlamlı — sıfır ay varsa skip
+  const allPositive = y.every(v => v > 0);
+  if (!allPositive) return null;
+  const initLevel = mean(y.slice(0, m));
+  if (initLevel <= 0) return null;
+  const initTrend = (mean(y.slice(m, 2 * m)) - initLevel) / m;
+  const initSeas = [];
+  for (let i = 0; i < m; i++) initSeas.push(y[i] / initLevel);
+  const grid = [0.05, 0.1, 0.2, 0.3];
+  const phiGrid = [0.92, 0.96, 1.0];
+  let best = null;
+  for (const alpha of grid) for (const beta of grid) for (const gamma of grid) for (const phi of phiGrid) {
+    const fit = applyHWMul(y, m, initLevel, initTrend, initSeas, alpha, beta, gamma, phi);
+    if (!best || fit.sse < best.sse) best = fit;
+  }
+  return best;
+}
+function applyHWMul(y, m, L0, T0, S0, alpha, beta, gamma, phi) {
+  let L = L0, T = T0;
+  const S = [...S0];
+  const fitted = new Array(y.length);
+  let sse = 0;
+  for (let t = 0; t < y.length; t++) {
+    const sIdx = t % m;
+    const sPrev = S[sIdx];
+    const yhat = (L + phi * T) * sPrev;
+    fitted[t] = yhat;
+    sse += (y[t] - yhat) ** 2;
+    const newL = sPrev > 0 ? alpha * (y[t] / sPrev) + (1 - alpha) * (L + phi * T) : (L + phi * T);
+    const newT = beta * (newL - L) + (1 - beta) * phi * T;
+    const newS = newL > 0 ? gamma * (y[t] / newL) + (1 - gamma) * sPrev : sPrev;
+    L = newL; T = newT; S[sIdx] = newS;
+  }
+  return { L, T, S, fitted, sse, alpha, beta, gamma, phi, m, kind: 'mul' };
+}
+
 function projectHW(fit, h) {
   if (!fit) return null;
   const out = new Array(h);
-  for (let i = 0; i < h; i++) {
-    const sIdx = (fit.fitted.length + i) % fit.m;
-    out[i] = (fit.L + (i + 1) * fit.T) * fit.S[sIdx];
+  // Damped trend için: T toplamı φ + φ² + ... + φ^h = φ(1-φ^h)/(1-φ); φ=1 ise = h
+  for (let i = 1; i <= h; i++) {
+    const trendSum = fit.phi >= 1 ? i * fit.T : fit.T * fit.phi * (1 - Math.pow(fit.phi, i)) / (1 - fit.phi);
+    const sIdx = (fit.fitted.length + i - 1) % fit.m;
+    if (fit.kind === 'mul') {
+      out[i - 1] = (fit.L + trendSum) * fit.S[sIdx];
+    } else {
+      out[i - 1] = fit.L + trendSum + fit.S[sIdx];
+    }
   }
   return out;
 }
 
 export function forecastHoltWinters(series, h) {
-  const fit = fitHoltWinters(series, 12);
+  const fitAdd = fitHWAdditive(series, 12);
+  const fitMul = fitHWMultiplicative(series, 12);
+  // İkisini karşılaştır, daha düşük SSE'li olanı al
+  let fit = null;
+  if (fitAdd && fitMul) fit = fitAdd.sse <= fitMul.sse ? fitAdd : fitMul;
+  else fit = fitAdd || fitMul;
   if (!fit) return forecastSeasonalNaive(series, h);  // fallback
   const point = projectHW(fit, h).map(x => Math.max(0, x));
-  // Confidence interval: residual stdev × √h
+  // Sanity check: forecast tarihçenin maksimumunun 3 katından büyükse muhtemelen patladı
+  const histMax = Math.max(...series, 1);
+  const sane = point.every(p => p <= histMax * 3);
+  if (!sane) return forecastSeasonalNaive(series, h);  // güvenlik fallback
   const residuals = series.map((y, i) => y - fit.fitted[i]);
   const sd = std(residuals);
   const ci = point.map((p, i) => 1.96 * sd * Math.sqrt(i + 1));
@@ -174,7 +216,7 @@ export function forecastHoltWinters(series, h) {
     lower: point.map((p, i) => Math.max(0, p - ci[i])),
     upper: point.map((p, i) => p + ci[i]),
     fitted: fit.fitted,
-    params: { alpha: fit.alpha, beta: fit.beta, gamma: fit.gamma },
+    params: { alpha: fit.alpha, beta: fit.beta, gamma: fit.gamma, phi: fit.phi, kind: fit.kind },
   };
 }
 
