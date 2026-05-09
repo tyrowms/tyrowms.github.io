@@ -174,6 +174,12 @@ function toISODate(raw) {
   return s;
 }
 
+// Türkçe-güvenli Title Case: "MEHMET YILMAZ" → "Mehmet Yılmaz", "ŞAHİN İÇTEN" → "Şahin İçten"
+// I→ı, İ→i; her kelimenin ilk harfi büyük, geri kalanı küçük (locale tr-TR)
+function trTitleCase(s) {
+  return String(s || '').toLocaleLowerCase('tr-TR').replace(/(^|[\s\-/.&_])(\S)/g, (m, sep, ch) => sep + ch.toLocaleUpperCase('tr-TR'));
+}
+
 // Trader master'dan traderid → description (isim) eşlemesini çek
 export async function fetchTraderNames(token, onProgress) {
   const select = ['mserp_traderid','mserp_description'].join(',');
@@ -190,7 +196,7 @@ export async function fetchTraderNames(token, onProgress) {
   for (const r of all) {
     const tid = String(r.mserp_traderid || '').trim();
     if (!tid) continue;
-    map.set(tid, String(r.mserp_description || ''));
+    map.set(tid, trTitleCase(r.mserp_description || ''));
   }
   return map;
 }
