@@ -5,7 +5,7 @@ const WorldMap3D = lazy(() => import('./WorldMap3D'));
 const LoginGlobe = lazy(() => import('./LoginGlobe'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend, fetchHistoricalSalesByTrader, fetchTraderNames, getDataverseToken } from './dataverseService';
 import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
-import { aggregateMonthly, mapToSeries, selectBestFit, buildTraderProfile, FORECAST_MODELS } from './salesForecast';
+import { aggregateMonthly, mapToSeries, selectBestFit, buildTraderProfile, FORECAST_MODELS, sum as sumArr } from './salesForecast';
 
 const INIT=[];
 const DEMO=INIT;
@@ -2907,8 +2907,8 @@ export default function App(){
                         const fcPts=activeResult.forecast.point;
                         const fcLow=activeResult.forecast.lower;
                         const fcUp=activeResult.forecast.upper;
-                        const histTotal=histArr?sum(histArr.slice(-12)):0;
-                        const fcTotal=sum(fcPts);
+                        const histTotal=histArr?sumArr(histArr.slice(-12)):0;
+                        const fcTotal=sumArr(fcPts);
                         const monthlyAvg=fcTotal/horizon;
                         const trendPct=histTotal>0?((fcTotal-histTotal*horizon/12)/(histTotal*horizon/12)*100):null;
                         return(<>
@@ -3031,7 +3031,7 @@ export default function App(){
                                   {/* Alt toplam */}
                                   <tr style={{background:$.acL,borderTop:'2px solid '+$.ac}}>
                                     <td style={{padding:'11px 14px',fontWeight:800,color:$.ac}}>TOPLAM</td>
-                                    <td style={{padding:'11px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:800,color:'#0d6e4f'}}>{fmtMetric(sum(fcPts))}</td>
+                                    <td style={{padding:'11px 14px',textAlign:'right',fontFamily:$.mo,fontWeight:800,color:'#0d6e4f'}}>{fmtMetric(sumArr(fcPts))}</td>
                                     <td colSpan={3}/>
                                   </tr>
                                 </tbody>

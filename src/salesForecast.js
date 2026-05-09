@@ -14,7 +14,7 @@
 
 // ──────────────── Utility ─────────────────────────────────────
 
-const sum = a => a.reduce((s, x) => s + x, 0);
+export const sum = a => a.reduce((s, x) => s + x, 0);
 const mean = a => (a.length ? sum(a) / a.length : 0);
 const std = a => {
   if (a.length < 2) return 0;
