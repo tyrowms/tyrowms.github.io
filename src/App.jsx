@@ -255,12 +255,15 @@ const CustomSelect=({value,onChange,options,placeholder='Tümü'})=>{
 };
 // SearchableSelect — kod ve isim bazlı arama destekli combobox (trader dropdown için)
 // items: [{value, label, sub}] — value seçim, label arama+display, sub alt yazı (opsiyonel)
-const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,emptyText='Eşleşme yok'})=>{
+// multi=true ise value array, checkbox listesi gösterir
+const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,emptyText='Eşleşme yok',multi=false})=>{
   const [open,setOpen]=useState(false);
   const [query,setQuery]=useState('');
   const ref=useRef(null);
   const inputRef=useRef(null);
-  const selected=items.find(i=>i.value===value);
+  const valueArr=multi?(Array.isArray(value)?value:[]):null;
+  const isSelected=v=>multi?valueArr.includes(v):v===value;
+  const selected=multi?null:items.find(i=>i.value===value);
   useEffect(()=>{
     if(!open)return;
     const close=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
@@ -270,6 +273,15 @@ const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,e
   const norm=s=>String(s||'').toLocaleLowerCase('tr-TR');
   const q=norm(query.trim());
   const filtered=q?items.filter(i=>norm(i.label).includes(q)||norm(i.value).includes(q)||norm(i.sub).includes(q)):items;
+  const triggerLabel=multi?(valueArr.length===0?placeholder:valueArr.length===1?(items.find(i=>i.value===valueArr[0])?.label||valueArr[0]):`${valueArr.length} trader seçili`):(selected?.label||placeholder);
+  const handleClick=v=>{
+    if(multi){
+      const next=valueArr.includes(v)?valueArr.filter(x=>x!==v):[...valueArr,v];
+      onChange(next);
+    }else{
+      onChange(v);setOpen(false);setQuery('');
+    }
+  };
   return(
     <div ref={ref} style={{position:'relative'}}>
       <div onClick={()=>{if(!disabled)setOpen(v=>!v);}} style={{
@@ -277,28 +289,35 @@ const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,e
         background:disabled?'rgba(0,0,0,.03)':open?'rgba(255,255,255,.95)':'rgba(255,255,255,.85)',
         border:'1px solid '+(open?'rgba(13,110,79,.35)':'rgba(226,231,238,.6)'),
         boxShadow:open?'0 0 0 3px rgba(13,110,79,.08),0 2px 6px rgba(0,0,0,.04)':'0 1px 3px rgba(0,0,0,.03)',
-        color:value?'#1a2332':'#8e9bb3',fontWeight:value?600:500,transition:'all .2s',
+        color:(multi?valueArr.length>0:!!value)?'#1a2332':'#8e9bb3',fontWeight:(multi?valueArr.length>0:!!value)?600:500,transition:'all .2s',
         whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',position:'relative',userSelect:'none'}}>
-        {selected?.label||placeholder}
+        {triggerLabel}
         <svg width="11" height="7" viewBox="0 0 11 7" style={{position:'absolute',right:11,top:'50%',transform:'translateY(-50%)'+(open?' rotate(180deg)':''),transition:'transform .2s'}}>
           <path d="M1 1l4.5 4.5L10 1" stroke="#0d6e4f" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </div>
       {open&&!disabled&&(
         <div style={{position:'absolute',top:'calc(100% + 5px)',left:0,right:0,zIndex:300,background:'rgba(255,255,255,.98)',backdropFilter:'blur(20px) saturate(180%)',borderRadius:12,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.15)',overflow:'hidden'}}>
-          <div style={{padding:'8px 10px',borderBottom:'1px solid '+$.bdL,position:'relative'}}>
-            <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Kod veya isim ile ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 10px 7px 30px',borderRadius:8,border:'1px solid '+$.bdL,fontSize:12,fontFamily:'inherit',outline:'none',background:'#fafbfc'}}/>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e9bb3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:'absolute',left:18,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <div style={{padding:'8px 10px',borderBottom:'1px solid '+$.bdL,position:'relative',display:'flex',gap:8,alignItems:'center'}}>
+            <div style={{position:'relative',flex:1}}>
+              <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Kod veya isim ile ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 10px 7px 30px',borderRadius:8,border:'1px solid '+$.bdL,fontSize:12,fontFamily:'inherit',outline:'none',background:'#fafbfc'}}/>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8e9bb3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            {multi&&valueArr.length>0&&<div onClick={()=>onChange([])} style={{cursor:'pointer',fontSize:11,fontWeight:600,color:$.red,padding:'4px 9px',borderRadius:6,background:$.redB,whiteSpace:'nowrap'}} className="rh">Temizle ({valueArr.length})</div>}
           </div>
           <div style={{maxHeight:280,overflowY:'auto',padding:4}}>
             {filtered.length===0?(
               <div style={{padding:'14px 12px',fontSize:11,color:$.t3,textAlign:'center'}}>{emptyText}</div>
-            ):filtered.slice(0,200).map(i=>(
-              <div key={i.value} onClick={()=>{onChange(i.value);setOpen(false);setQuery('');}} style={{padding:'8px 12px',borderRadius:7,cursor:'pointer',fontSize:12,color:i.value===value?'#0d6e4f':'#1a2332',fontWeight:i.value===value?700:500,background:i.value===value?'rgba(13,110,79,.08)':'transparent',transition:'background .12s',display:'flex',alignItems:'center',gap:8}} className="rh">
+            ):filtered.slice(0,200).map(i=>{
+              const sel=isSelected(i.value);
+              return(
+              <div key={i.value} onClick={()=>handleClick(i.value)} style={{padding:'8px 12px',borderRadius:7,cursor:'pointer',fontSize:12,color:sel?'#0d6e4f':'#1a2332',fontWeight:sel?700:500,background:sel?'rgba(13,110,79,.08)':'transparent',transition:'background .12s',display:'flex',alignItems:'center',gap:8}} className="rh">
+                {multi&&<div style={{width:14,height:14,borderRadius:4,border:'1.5px solid '+(sel?'#0d6e4f':$.bd),background:sel?'#0d6e4f':'transparent',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{sel&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}</div>}
                 <span style={{flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{i.label}</span>
-                {i.value===value&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d6e4f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                {!multi&&sel&&<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d6e4f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
               </div>
-            ))}
+              );
+            })}
             {filtered.length>200&&<div style={{padding:'8px 12px',fontSize:10,color:$.t3,textAlign:'center',borderTop:'1px solid '+$.bdL}}>+{filtered.length-200} daha · aramayı daraltın</div>}
           </div>
         </div>
@@ -563,7 +582,7 @@ export default function App(){
   const ERP_KEEP=useMemo(()=>new Set(['mserp_inventcolorid','mserp_closingpricemst','mserp_purchlifo','mserp_purchpricemst','mserp_amountmst','mserp_qty','mserp_itemname','mserp_headerreportdate','mserp_companyid','mserp_etgproductlevel03name','mserp_sfilotid','mserp_purchweav','mserp_amountsec','mserp_itemid','mserp_inventsizeid','mserp_inventdimension1','mserp_etgproductlevel02name','mserp_inventlocationid','mserp_prodweav','mserp_purchfifo','mserp_purchpricesec','mserp_prodfifo','mserp_prodlifo','mserp_vesselassignmentid','mserp_etgproductlevel01name','mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname','mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name','mserp_inventbatchid','mserp_inventdimension2','versionnumber','mserp_inventlocationname','mserp_traderid','mserp_maintraderid','mserp_tradername','mserp_maintradername']),[]);
 
   // ─── Satış Tahmini (fcst) ──────────────────────────────────
-  const [fcstTrader,setFcstTrader]=useState('');
+  const [fcstTrader,setFcstTrader]=useState([]);  // multi-select: trader code array
   const [fcstHorizon,setFcstHorizon]=useState(12);
   const [fcstMetric,setFcstMetric]=useState('qty');
   const [fcstActiveModel,setFcstActiveModel]=useState(null);
@@ -591,7 +610,7 @@ export default function App(){
   const loadFcstTraderList=useCallback(async()=>{
     if(!msalAccount||fcstTraderList.length>0||fcstTraderListLoading)return;
     try{
-      const cached=localStorage.getItem('tyrowms_fcst_traders');
+      const cached=localStorage.getItem('tyrowms_fcst_traders_v2');
       if(cached){
         const p=JSON.parse(cached);
         if(p&&p.fetchedAt&&Date.now()-p.fetchedAt<86400000&&Array.isArray(p.list)){
@@ -603,9 +622,14 @@ export default function App(){
     try{
       const token=await getDataverseToken(msalAccount);
       const map=await fetchTraderNames(token);
-      const list=[...map.entries()].map(([code,name])=>({code,name,label:name?`${code} — ${name}`:code})).sort((a,b)=>a.label.localeCompare(b.label,'tr'));
+      // Sadece TRD- veya DNM- prefix'li trader'lar; format "CODE : Name"
+      const list=[...map.entries()]
+        .filter(([code])=>{const c=String(code||'').toUpperCase();return c.startsWith('TRD-')||c.startsWith('TRD_')||c.startsWith('TRD')||c.startsWith('DNM-')||c.startsWith('DNM_')||c.startsWith('DNM');})
+        .filter(([code])=>{const c=String(code||'').toUpperCase();return /^(TRD|DNM)[-_A-Z0-9]*$/.test(c);})
+        .map(([code,name])=>({code,name,label:name?`${code} : ${name}`:code}))
+        .sort((a,b)=>a.label.localeCompare(b.label,'tr'));
       setFcstTraderList(list);
-      try{localStorage.setItem('tyrowms_fcst_traders',JSON.stringify({fetchedAt:Date.now(),list}));}catch(_){}
+      try{localStorage.setItem('tyrowms_fcst_traders_v2',JSON.stringify({fetchedAt:Date.now(),list}));}catch(_){}
     }catch(e){console.warn('Trader list yüklenemedi:',e);}
     finally{setFcstTraderListLoading(false);}
   },[msalAccount,fcstTraderList.length,fcstTraderListLoading]);
@@ -613,14 +637,15 @@ export default function App(){
   useEffect(()=>{if(pg==='fcst')loadFcstTraderList();},[pg,loadFcstTraderList]);
 
   const runForecast=useCallback(async()=>{
-    if(!fcstTrader||!msalAccount||fcstLoading)return;
+    const traders=Array.isArray(fcstTrader)?fcstTrader:(fcstTrader?[fcstTrader]:[]);
+    if(traders.length===0||!msalAccount||fcstLoading)return;
     setFcstLoading(true);setFcstError('');setFcstStatus('');
     setFcstStep(1);setFcstStepData({});
     setFcstResult(null);  // önceki sonucu temizle ki yeni hesaplama belli olsun
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     try{
-      // Cache key v2: aggregate path eski cache shape'iyle uyumlu değil, version bump
-      const cacheKey=`tyrowms_fcst_v2_${fcstTrader}`;
+      // Cache key v3: multi-trader desteği için sıralanmış kodlar
+      const cacheKey=`tyrowms_fcst_v3_${[...traders].sort().join('+')}`;
       let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0,fetchMode='aggregate';
       try{
         const cached=localStorage.getItem(cacheKey);
@@ -635,7 +660,7 @@ export default function App(){
       if(!aggMap){
         // Önce aggregate path dene — Hasata gibi 80K+ satırlı trader'lar için 25-30sn → 3-5sn
         try{
-          const agg=await fetchHistoricalAggregatesByTrader(msalAccount,fcstTrader,{
+          const agg=await fetchHistoricalAggregatesByTrader(msalAccount,traders,{
             onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'aggregate'}})),
           });
           aggMap=aggregateFromServer(agg.monthly);
@@ -648,7 +673,7 @@ export default function App(){
           fetchMode='raw';
           setFcstStepData(d=>({...d,fetched:{loaded:0,total:null,fromCache:false,mode:'raw',aggError:aggErr.message||String(aggErr)}}));
           // Fallback: raw fetch (mevcut akış, tutar discovery dahil)
-          const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fcstTrader,{
+          const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,traders,{
             onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'raw'}})),
           });
           recordCount=fetchRes.records.length;
@@ -685,7 +710,7 @@ export default function App(){
       setFcstStepData(d=>({...d,bestFit:{id:fitQty.bestId,mape:fitQty.results.find(r=>r.id===fitQty.bestId)?.mape}}));
       await wait(200);
       setFcstStep(6);
-      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:fcstTrader,horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
+      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:traders.length===1?traders[0]:traders.join('+'),traderCodes:traders,horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
       setFcstActiveModel(null);
       await wait(300);
       setFcstStep(0);
@@ -2851,12 +2876,13 @@ export default function App(){
                 if(!fcstResult||!fit)return;
                 const doIt=()=>{
                   const X=window.XLSX;
-                  const tName=fcstTraderList.find(t=>t.code===fcstResult.traderCode)?.name||fcstResult.traderCode;
+                  const codesArr=fcstResult.traderCodes||[fcstResult.traderCode];
+                  const tName=codesArr.length===1?(fcstTraderList.find(t=>t.code===codesArr[0])?.name||codesArr[0]):`${codesArr.length} trader birleşik`;
                   const metricLbl=fcstMetric==='value'?'Tutar (USD)':'Miktar (kg)';
                   // Sheet 1 — Özet
                   const summary=[
                     ['Satış Tahmini Raporu'],
-                    ['Trader',`${fcstResult.traderCode} — ${tName}`],
+                    ['Trader',codesArr.length===1?`${codesArr[0]} : ${tName}`:`${codesArr.length} trader: ${codesArr.join(', ')}`],
                     ['Grup Şirketi',fcstResult.profile?.mainGroup||'-'],
                     ['Karakter',fcstResult.profile?.character||'-'],
                     ['Metrik',metricLbl],
@@ -2891,7 +2917,7 @@ export default function App(){
                   const wb=X.utils.book_new();
                   X.utils.book_append_sheet(wb,ws1,'Özet');
                   X.utils.book_append_sheet(wb,ws2,'Aylık Detay');
-                  X.writeFile(wb,`TYRO_SatisTahmini_${fcstResult.traderCode}_${new Date().toISOString().slice(0,10)}.xlsx`);
+                  X.writeFile(wb,`TYRO_SatisTahmini_${codesArr.length===1?codesArr[0]:codesArr.length+'trader'}_${new Date().toISOString().slice(0,10)}.xlsx`);
                 };
                 if(window.XLSX)doIt();
                 else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
@@ -2907,14 +2933,15 @@ export default function App(){
                       {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:500,padding:'3px 9px',borderRadius:6,background:$.redB,cursor:'pointer'}} onClick={()=>setFcstError('')}>{fcstError} ✕</span>}
                     </div>
                     <div style={{padding:'14px 18px',display:'flex',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
-                      {/* Trader dropdown — kod & isim bazlı arama */}
+                      {/* Trader dropdown — multi-select, kod & isim bazlı arama */}
                       <div style={{minWidth:280,flex:'1 1 280px'}}>
-                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Trader (zorunlu)</div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Trader (zorunlu — çoklu seçim)</div>
                         <SearchableSelect
+                          multi
                           value={fcstTrader}
                           onChange={setFcstTrader}
                           items={fcstTraderList.map(t=>({value:t.code,label:t.label,sub:t.code}))}
-                          placeholder={fcstTraderListLoading?'Yükleniyor...':'Trader seçin (kod / isim ile ara)...'}
+                          placeholder={fcstTraderListLoading?'Yükleniyor...':'Bir veya birden fazla trader seçin (TRD- / DNM-)...'}
                           disabled={fcstTraderListLoading}
                           emptyText="Bu aramaya uyan trader yok"
                         />
@@ -2941,7 +2968,7 @@ export default function App(){
                         </div>
                       </div>
                       <div style={{flex:'0 0 auto',display:'flex',gap:8}}>
-                        <button className="tb-b pr" onClick={runForecast} disabled={!fcstTrader||fcstLoading} style={{padding:'9px 18px',fontSize:12,opacity:!fcstTrader||fcstLoading?.5:1}}>
+                        <button className="tb-b pr" onClick={runForecast} disabled={(!Array.isArray(fcstTrader)||fcstTrader.length===0)||fcstLoading} style={{padding:'9px 18px',fontSize:12,opacity:((!Array.isArray(fcstTrader)||fcstTrader.length===0)||fcstLoading)?.5:1}}>
                           {fcstLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<TrendingUp size={13}/>}
                           {fcstLoading?'Hesaplanıyor...':'Hesapla'}
                         </button>
@@ -2967,7 +2994,8 @@ export default function App(){
                   {/* ─── AI Thinking Loader ─── */}
                   {fcstLoading&&(()=>{
                     const sd=fcstStepData;
-                    const traderInfo=fcstTraderList.find(t=>t.code===fcstTrader);
+                    const selectedTraders=Array.isArray(fcstTrader)?fcstTrader:[fcstTrader].filter(Boolean);
+                    const traderInfo=selectedTraders.length===1?fcstTraderList.find(t=>t.code===selectedTraders[0]):null;
                     const fetchModeLabel=sd.fetched?.mode==='aggregate'?'Aggregate':sd.fetched?.mode==='raw'?'Raw fallback':'';
                     const steps=[
                       {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi (${fetchModeLabel.toLowerCase()||'agg'})`:sd.fetched.mode==='aggregate'?`UAT aggregate (yıl-bazlı): ${sd.fetched.loaded||0} / ${sd.fetched.total||16} query`:`UAT raw fallback${sd.fetched.aggError?' ('+sd.fetched.aggError.slice(0,40)+'...)':''}: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
@@ -3004,7 +3032,7 @@ export default function App(){
                             </span>
                           </div>
                           <div style={{fontSize:12,color:$.t3,fontWeight:500}}>
-                            <strong style={{color:$.t2}}>{traderInfo?.name||fcstTrader}</strong> için <strong style={{color:$.t2}}>{fcstHorizon} ay</strong> ileri tahmin oluşturuluyor
+                            <strong style={{color:$.t2}}>{traderInfo?.name||(selectedTraders.length>1?`${selectedTraders.length} trader birleşik`:selectedTraders[0]||'-')}</strong> için <strong style={{color:$.t2}}>{fcstHorizon} ay</strong> ileri tahmin oluşturuluyor
                           </div>
                         </div>
                         {/* Steps */}
@@ -3039,15 +3067,20 @@ export default function App(){
                   {/* ─── Result ─── */}
                   {fcstResult&&(()=>{
                     const profile=fcstResult.profile;
-                    const traderInfo=fcstTraderList.find(t=>t.code===fcstResult.traderCode);
+                    const resultTraderCodes=fcstResult.traderCodes||[fcstResult.traderCode];
+                    const isMulti=resultTraderCodes.length>1;
+                    const traderInfo=!isMulti?fcstTraderList.find(t=>t.code===resultTraderCodes[0]):null;
+                    const headerName=isMulti?`${resultTraderCodes.length} Trader Birleşik`:(traderInfo?.name||resultTraderCodes[0]);
+                    const headerSub=isMulti?resultTraderCodes.map(c=>fcstTraderList.find(t=>t.code===c)?.label||c).join(' · '):`${resultTraderCodes[0]} · ${profile.mainGroup}`;
+                    const headerInitials=isMulti?String(resultTraderCodes.length):(traderInfo?.name||resultTraderCodes[0]).split(' ').map(s=>s[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR');
                     return(<>
                       {/* ─── Trader Profili ─── */}
                       <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
                         <div style={{padding:'14px 18px',background:'linear-gradient(135deg,rgba(13,110,79,.04),rgba(59,130,246,.04))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-                          <div style={{width:42,height:42,borderRadius:11,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:14,letterSpacing:.5,boxShadow:'0 3px 8px rgba(13,110,79,.2)'}}>{(traderInfo?.name||fcstResult.traderCode).split(' ').map(s=>s[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR')}</div>
+                          <div style={{width:42,height:42,borderRadius:11,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:isMulti?16:14,letterSpacing:.5,boxShadow:'0 3px 8px rgba(13,110,79,.2)'}}>{headerInitials}</div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.2}}>{traderInfo?.name||fcstResult.traderCode}</div>
-                            <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1}}>{fcstResult.traderCode} · {profile.mainGroup}</div>
+                            <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.2}}>{headerName}</div>
+                            <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={headerSub}>{headerSub}</div>
                           </div>
                           <div style={{padding:'5px 11px',borderRadius:8,background:profile.intermittenceIndex>=.85?$.grnB:profile.intermittenceIndex>=.6?$.orgB:$.redB,fontSize:11,fontWeight:700,color:profile.intermittenceIndex>=.85?'#0d6e4f':profile.intermittenceIndex>=.6?'#92400e':$.red}}>
                             {profile.character}

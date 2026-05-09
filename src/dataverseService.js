@@ -242,13 +242,15 @@ async function fetchHistoricalAggregateXml(token, entity, fetchXmlInner) {
 // Aylık aggregate, top ürün, top müşteri — yıl-bazlı partitioned server-side queries
 // Dataverse aggregate 50K satır limit'i nedeniyle her yıl için ayrı query atılır;
 // 80K+ satırlı Hasata gibi trader'lar için bu kritik. Sonuçlar client'ta merge edilir.
-export async function fetchHistoricalAggregatesByTrader(account, traderCode, opts = {}) {
+// traderCodes: tek string veya string array (multi-select için)
+export async function fetchHistoricalAggregatesByTrader(account, traderCodes, opts = {}) {
   const token = await getDataverseTokenFor(account, HISTORICAL_DATAVERSE_URL);
   const today = new Date();
   const defaultFrom = new Date(today); defaultFrom.setUTCMonth(defaultFrom.getUTCMonth() - 36);
   const fromDate = opts.fromDate || defaultFrom.toISOString().slice(0, 10);
   const toDate = opts.toDate || today.toISOString().slice(0, 10);
-  const traderEsc = xmlEsc(traderCode);
+  const codes = Array.isArray(traderCodes) ? traderCodes : [traderCodes];
+  if (codes.length === 0) throw new Error('En az bir trader seçilmeli');
 
   // Entity discovery (raw fetch ile aynı liste, paylaş)
   if (!HISTORICAL_RESOLVED_ENTITY) {
@@ -275,8 +277,12 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCode, opt
   const buildYearQueries = (y) => {
     const yFrom = y === fromY ? fromDate : `${y}-01-01`;
     const yTo = y === toY ? toDate : `${y}-12-31`;
+    // Trader multi-select: tek code → eq, çok code → in (FetchXML <value> child'ları)
+    const traderCondition = codes.length === 1
+      ? `<condition attribute="mserp_trader" operator="eq" value="${xmlEsc(codes[0])}" />`
+      : `<condition attribute="mserp_trader" operator="in">${codes.map(c => `<value>${xmlEsc(c)}</value>`).join('')}</condition>`;
     const yFilter = `<filter type="and">
-      <condition attribute="mserp_trader" operator="eq" value="${traderEsc}" />
+      ${traderCondition}
       <condition attribute="mserp_shipdate" operator="on-or-after" value="${yFrom}" />
       <condition attribute="mserp_shipdate" operator="on-or-before" value="${yTo}" />
     </filter>`;
@@ -344,13 +350,15 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCode, opt
   const accounts = mergeBy('accounts', 'aid');
   const companies = mergeBy('companies', 'co');
 
-  return { monthly, products, accounts, companies, fromDate, toDate, traderCode, queryCount: totalQueries };
+  return { monthly, products, accounts, companies, fromDate, toDate, traderCodes: codes, queryCount: totalQueries };
 }
 
-export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {}) {
+export async function fetchHistoricalSalesByTrader(account, traderCodes, opts = {}) {
   // UAT URL'i için ayrı bir token al (PROD scope'unda olmaz)
   const token = await getDataverseTokenFor(account, HISTORICAL_DATAVERSE_URL);
   const onProgress = opts.onProgress;
+  const codes = Array.isArray(traderCodes) ? traderCodes : [traderCodes];
+  if (codes.length === 0) throw new Error('En az bir trader seçilmeli');
   // Default: son 36 ay (3 yıl)
   const today = new Date();
   const defaultFrom = new Date(today); defaultFrom.setUTCMonth(defaultFrom.getUTCMonth() - 36);
@@ -368,10 +376,14 @@ export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {
   ];
   const valueCandidates = ['mserp_amount','mserp_amountmst','mserp_amountsec','mserp_lineamount'];
 
-  console.log('[HistoricalSales] Filter trader code:', JSON.stringify(traderCode));
+  console.log('[HistoricalSales] Filter trader codes:', JSON.stringify(codes));
   const buildUrl = (entity, fields) => {
     const select = fields.join(',');
-    const filter = `mserp_trader eq '${odataStr(traderCode)}' and mserp_shipdate ge ${fromDate}T00:00:00Z and mserp_shipdate le ${toDate}T23:59:59Z`;
+    // OData multi-trader: code 1 → eq, çok code → OR chain
+    const traderExpr = codes.length === 1
+      ? `mserp_trader eq '${odataStr(codes[0])}'`
+      : '(' + codes.map(c => `mserp_trader eq '${odataStr(c)}'`).join(' or ') + ')';
+    const filter = `${traderExpr} and mserp_shipdate ge ${fromDate}T00:00:00Z and mserp_shipdate le ${toDate}T23:59:59Z`;
     return `${HISTORICAL_DATAVERSE_URL}/api/data/v9.2/${entity}?$select=${select}&$filter=${encodeURIComponent(filter)}&$count=true`;
   };
 
@@ -435,7 +447,7 @@ export async function fetchHistoricalSalesByTrader(account, traderCode, opts = {
     valueField: availableValueFields[0] || null,  // ilk bulunan tutar alanı
     fromDate,
     toDate,
-    traderCode,
+    traderCodes: codes,
   };
 }
 
