@@ -151,14 +151,10 @@ const SELECT_FIELDS = [
 const PROJECT_ENTITY_NAME = 'mserp_etgtryprojecttableentities';
 const PROJECT_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${PROJECT_ENTITY_NAME}`;
 
-// Fetch latest report date — $orderby desc, take top 1
-export async function fetchLatestReportDate(token) {
-  const url = `${API_BASE}?$orderby=${DATE_FIELD} desc&$top=1`;
-  const data = await dvFetch(url, token);
-  if (!data.value || data.value.length === 0) throw new Error('Entity boş — rapor verisi bulunamadı');
-  const rawDate = data.value[0][DATE_FIELD];
-  if (!rawDate) throw new Error('Rapor tarihi alanı boş');
-  return rawDate;
+// Rapor tarihi geçici olarak 2026-05-02'ye sabitlendi
+// Normale dönmek için aşağıdaki bloğu yorum satırı yapıp orijinal $orderby/$top sorgusunu aç
+export async function fetchLatestReportDate(/* token */) {
+  return '2026-05-02';
 }
 
 // Convert raw Dataverse date to YYYY-MM-DD for OData filter
@@ -306,6 +302,16 @@ export async function fetchErpData(account, onStatus) {
   } catch (e) {
     console.warn('Project trader fetch failed:', e);
     onStatus?.('Trader bilgisi alınamadı (devam ediliyor)');
+  }
+
+  // Ham (raw) records'u trader bilgisiyle zenginleştir — Ham Veriler sayfası bu fields'ı görsün
+  if (traderMap) {
+    for (const rec of records) {
+      const pid = String(rec.mserp_inventdimension2 || '').trim();
+      const tr = pid ? traderMap.get(pid) : null;
+      rec.mserp_traderid = tr ? tr.trader : '';
+      rec.mserp_maintraderid = tr ? tr.mainTrader : '';
+    }
   }
 
   onStatus?.('Veri dönüştürülüyor...');
