@@ -307,6 +307,26 @@ const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,e
   );
 };
 
+// Premium hover tooltip — terim açıklamaları için. Çocuk üzerine gelince koyu kart açılır.
+const InfoTip=({title,desc,detail,formula,children,placement='top',iconSize=11,inline=false})=>{
+  const [open,setOpen]=useState(false);
+  return(
+    <span style={{position:'relative',display:inline?'inline-flex':'inline-flex',alignItems:'center',gap:5}} onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
+      {children}
+      <Info size={iconSize} style={{opacity:.45,cursor:'help',flexShrink:0}}/>
+      {open&&(
+        <div style={{position:'absolute',[placement==='top'?'bottom':'top']:'calc(100% + 8px)',left:'50%',transform:'translateX(-50%)',zIndex:200,minWidth:240,maxWidth:340,background:'#1a2332',color:'#fff',borderRadius:10,padding:'12px 14px',boxShadow:'0 12px 32px rgba(0,0,0,.25)',pointerEvents:'none',animation:'stepFade .15s ease-out'}}>
+          <div style={{fontSize:12.5,fontWeight:800,color:'#fff',marginBottom:5}}>{title}</div>
+          <div style={{fontSize:11,color:'#cbd5e1',lineHeight:1.55}}>{desc}</div>
+          {detail&&<div style={{fontSize:10.5,color:'#94a3b8',marginTop:6,paddingTop:6,borderTop:'1px solid rgba(255,255,255,.08)',lineHeight:1.55}}>{detail}</div>}
+          {formula&&<div style={{fontSize:10.5,fontFamily:'Consolas,monospace',color:'#94a3b8',marginTop:6,padding:'5px 8px',background:'rgba(255,255,255,.04)',borderRadius:5}}>{formula}</div>}
+          <div style={{position:'absolute',[placement==='top'?'bottom':'top']:-5,left:'50%',transform:'translateX(-50%) rotate(45deg)',width:10,height:10,background:'#1a2332'}}/>
+        </div>
+      )}
+    </span>
+  );
+};
+
 const BCard=({children,span,rSpan,style:s2})=><div style={{gridColumn:span?`span ${span}`:'span 1',gridRow:rSpan?`span ${rSpan}`:'span 1',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden',...(s2||{})}}>{children}</div>;
 const BHead=({icon:Ic,color,bg,title})=><div style={{padding:'14px 18px 12px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}><div style={{width:26,height:26,borderRadius:7,background:bg,color,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><Ic size={14}/></div><span style={{fontSize:13,fontWeight:700,color:$.t1}}>{title}</span></div>;
 
@@ -3025,17 +3045,26 @@ export default function App(){
                         </div>
                         <div style={{padding:'14px 18px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14}}>
                           <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Son 12 Ay Toplam</div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                              Son 12 Ay Toplam
+                              <InfoTip title="Son 12 Ay Toplam" desc="Trader'ın geçmiş 12 aylık tüm satışlarının toplamı (kg). Bugünkü durumu gösterir." detail="Tahmin değildir — fiili gerçekleşen değerlerdir. Forecast, bu rakamın trendine göre projeksiyon yapar." iconSize={10}><span/></InfoTip>
+                            </div>
                             <div style={{fontSize:18,fontWeight:800,color:$.t1,fontFamily:$.mo}}>{fmtTon(profile.lastYearTotals.qty)}</div>
                             {profile.lastYearTotals.value>0&&<div style={{fontSize:11,color:'#0d6e4f',fontWeight:700,fontFamily:$.mo,marginTop:2}}>${fmt(profile.lastYearTotals.value)}</div>}
                           </div>
                           <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>YoY Değişim</div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                              YoY Değişim
+                              <InfoTip title="Year-over-Year (YoY)" desc="Yıldan yıla büyüme/daralma. Önceki 12 ayın toplamına göre son 12 ayın yüzde değişimi." detail="Trader'ın momentum'unu gösterir. Pozitif → büyüme, negatif → daralma. Mevsimselliği dengelemek için 12 ay penceresi kullanılır." formula="(son12 - önceki12) / önceki12 × 100" iconSize={10}><span/></InfoTip>
+                            </div>
                             <div style={{fontSize:18,fontWeight:800,color:profile.yoy==null?$.t3:profile.yoy>=0?'#0d6e4f':$.red,fontFamily:$.mo}}>{profile.yoy==null?'—':(profile.yoy>=0?'+':'')+profile.yoy.toFixed(1)+'%'}</div>
                             <div style={{fontSize:10,color:$.t3,fontWeight:600,marginTop:2}}>Önceki 12 ay vs son 12 ay</div>
                           </div>
                           <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Aktivite</div>
+                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                              Aktivite
+                              <InfoTip title="Aktivite (Intermittence Index)" desc="Geçmiş veride satış yapılan ayların yüzdesi. 100% her ay satış var demek; düşük değerler fasılalı/sezonluk akış." detail="≥85% Stabil aylık akış · 60-85% Düzensiz · <60% Lumpy/opportunistic. Düşük değerlerde Croston modeli otomatik tercih edilir." iconSize={10}><span/></InfoTip>
+                            </div>
                             <div style={{fontSize:18,fontWeight:800,color:$.t1,fontFamily:$.mo}}>{(profile.intermittenceIndex*100).toFixed(0)}%</div>
                             <div style={{fontSize:10,color:$.t3,fontWeight:600,marginTop:2}}>aylarda satış var</div>
                           </div>
@@ -3132,16 +3161,19 @@ export default function App(){
                               </div>
                             </div>
                           )}
-                          {/* Özet kartlar */}
+                          {/* Özet kartlar — hover'da terim açıklaması */}
                           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginBottom:14}}>
                             {[
-                              {l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),c:$.blu,bg:$.bluB},
-                              {l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),c:'#0d6e4f',bg:$.grnB},
-                              {l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bdL:trendPct>=0?$.grnB:$.redB},
-                              {l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bdL:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB},
+                              {l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),c:$.blu,bg:$.bluB,info:{title:'Aylık Ortalama Tahmin',desc:`Önümüzdeki ${horizon} ayın tahmin değerlerinin aritmetik ortalaması. Trader'ın tipik aylık kapasitesini gösterir.`,detail:'Toplam tahmin / horizon. Tek seferlik aşırı değerler ortalamaya yansır — uç değerler için medyan daha güvenilir olabilir.'}},
+                              {l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),c:'#0d6e4f',bg:$.grnB,info:{title:`${horizon} Ay Toplam Tahmin`,desc:`Önümüzdeki ${horizon} ay boyunca beklenen toplam ${fcstMetric==='value'?'satış değeri':'satış miktarı'}. Modelin kümülatif öngörüsü.`,detail:`Tahmin noktalarının toplamı. Mevsimsel pikleri ve trend'i içerir. Stok/kontrat planlama için referans.`}},
+                              {l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bdL:trendPct>=0?$.grnB:$.redB,info:{title:'Trend Değişim Oranı',desc:'Tahmin dönemi toplamının, son 12 ayın aynı süreye eşitlenmiş değerine göre yüzde değişimi.',detail:'Pozitif değer büyüme, negatif daralma sinyalidir. Mevsimsel düzeltme yapmaz — yıl üstü kıyaslamadır.',formula:'(tahmin_topl × 12/horizon) / son12 × 100 - 100'}},
+                              {l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bdL:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB,info:{title:'Backtest MAPE (Hata Oranı)',desc:'Mean Absolute Percentage Error — modelin geçmiş veride yaptığı tahminlerin gerçek değerlerden ortalama yüzde sapması.',detail:'%0-10 mükemmel · %10-20 kabul edilebilir · %20+ gürültülü/güvensiz. Düşük MAPE daha güvenilir tahmin.',formula:'mean(|gerçek - tahmin| / gerçek) × 100'}},
                             ].map((k,i)=>(
                               <div key={i} style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'14px 16px',boxShadow:$.sh}}>
-                                <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>{k.l}</div>
+                                <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                                  {k.l}
+                                  <InfoTip title={k.info.title} desc={k.info.desc} detail={k.info.detail} formula={k.info.formula} placement="bottom" iconSize={10}><span/></InfoTip>
+                                </div>
                                 <div style={{fontSize:18,fontWeight:800,color:k.c,fontFamily:$.mo}}>{k.v}</div>
                               </div>
                             ))}
@@ -3179,8 +3211,10 @@ export default function App(){
                               const allFcLow=[...new Array(qKeys.length).fill(null),...fcLow];
                               const allFcUp=[...new Array(qKeys.length).fill(null),...fcUp];
                               const histLen=qKeys.length;
-                              const allValues=allHistVals.map((v,i)=>[v,allFcUp[i]].filter(x=>x!=null)).flat();
-                              const maxV=Math.max(...allValues,1);
+                              const allValuesRaw=[...allHistVals,...allFcUp,...allFcVals].filter(v=>v!=null&&!isNaN(v));
+                              const dataMax=Math.max(...allValuesRaw,1);
+                              // Akıllı scale: 15% headroom — veri grafiğin ~%87'sini kaplar
+                              const maxV=dataMax*1.15;
                               const minV=0;
                               const W=1200,H=380,padL=72,padR=24,padT=24,padB=70;
                               const innerW=W-padL-padR,innerH=H-padT-padB;
@@ -3202,7 +3236,32 @@ export default function App(){
                                 return Math.round(v)+' kg';
                               };
                               const fmtTooltip=v=>fcstMetric==='value'?`$${fmt(v)}`:fmtTon(v);
-                              const histPath=allHistVals.map((v,i)=>v==null?null:`${i===0||allHistVals[i-1]==null?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+                              // Catmull-Rom benzeri smooth Bezier path — ardışık nokta dizisinden geçer
+                              const buildSmoothPath=(arr,xFn,yFn)=>{
+                                const segs=[];let cur=null;
+                                for(let i=0;i<arr.length;i++){
+                                  if(arr[i]==null){if(cur){segs.push(cur);cur=null;}continue;}
+                                  if(!cur)cur={pts:[]};
+                                  cur.pts.push([xFn(i),yFn(arr[i])]);
+                                }
+                                if(cur)segs.push(cur);
+                                let d='';
+                                for(const seg of segs){
+                                  const p=seg.pts;if(p.length===0)continue;
+                                  d+=`M${p[0][0].toFixed(1)},${p[0][1].toFixed(1)}`;
+                                  if(p.length<2)continue;
+                                  if(p.length===2){d+=`L${p[1][0].toFixed(1)},${p[1][1].toFixed(1)}`;continue;}
+                                  for(let i=0;i<p.length-1;i++){
+                                    const p0=p[i-1]||p[i],p1=p[i],p2=p[i+1],p3=p[i+2]||p[i+1];
+                                    const t=0.18;  // tension
+                                    const cp1x=p1[0]+(p2[0]-p0[0])*t,cp1y=p1[1]+(p2[1]-p0[1])*t;
+                                    const cp2x=p2[0]-(p3[0]-p1[0])*t,cp2y=p2[1]-(p3[1]-p1[1])*t;
+                                    d+=` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+                                  }
+                                }
+                                return d;
+                              };
+                              const histPath=buildSmoothPath(allHistVals,x,y);
                               // History altına gradient alan
                               const histAreaPath=(()=>{
                                 const validIdx=allHistVals.map((v,i)=>v!=null?i:null).filter(i=>i!=null);
@@ -3211,7 +3270,7 @@ export default function App(){
                                 const baseY=y(minV);
                                 return `M ${x(validIdx[0]).toFixed(1)},${baseY.toFixed(1)} L ${top} L ${x(validIdx[validIdx.length-1]).toFixed(1)},${baseY.toFixed(1)} Z`;
                               })();
-                              const fcPath=allFcVals.map((v,i)=>v==null?null:`${allFcVals[i-1]==null?'M':'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).filter(Boolean).join(' ');
+                              const fcPath=buildSmoothPath(allFcVals,x,y);
                               let bandPath='';
                               const ciIdxs=allFcUp.map((v,i)=>v!=null?i:null).filter(i=>i!=null);
                               if(ciIdxs.length>0){
@@ -3219,9 +3278,9 @@ export default function App(){
                               }
                               const yTicks=6;
                               const ticks=Array.from({length:yTicks+1},(_,i)=>minV+(maxV-minV)*i/yTicks);
-                              // Çeyreklik veya aylık key'i okunabilir label'a çevir
+                              // Çeyrek key → çeyreğin son ayının kısa adı + yıl ("Mar '24" gibi)
                               const chartLabel=k=>{
-                                if(k.includes('-Q')){const [yy,q]=k.split('-Q');return `Q${q} '${yy.slice(2)}`;}
+                                if(k.includes('-Q')){const [yy,q]=k.split('-Q');const lastMonth=+q*3;return `${MONTHS_TR[lastMonth-1].slice(0,3)} '${yy.slice(2)}`;}
                                 return monthLabel(k);
                               };
                               const isHistQuarter=k=>k&&k.includes('-Q');
@@ -3258,13 +3317,27 @@ export default function App(){
                                   }} onMouseLeave={()=>setFcstHoverIdx(null)}>
                                     <defs>
                                       <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity=".22"/>
+                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity=".28"/>
                                         <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
                                       </linearGradient>
                                       <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#0d6e4f" stopOpacity=".22"/>
-                                        <stop offset="100%" stopColor="#0d6e4f" stopOpacity=".06"/>
+                                        <stop offset="0%" stopColor="#0d6e4f" stopOpacity=".28"/>
+                                        <stop offset="100%" stopColor="#2dd4a0" stopOpacity=".05"/>
                                       </linearGradient>
+                                      <linearGradient id="histLineGrad" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stopColor="#3b82f6"/>
+                                        <stop offset="100%" stopColor="#6366f1"/>
+                                      </linearGradient>
+                                      <linearGradient id="fcLineGrad" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stopColor="#0d6e4f"/>
+                                        <stop offset="100%" stopColor="#2dd4a0"/>
+                                      </linearGradient>
+                                      <filter id="lineShadow" x="-10%" y="-10%" width="120%" height="120%">
+                                        <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                                        <feOffset dy="2"/>
+                                        <feComponentTransfer><feFuncA type="linear" slope=".18"/></feComponentTransfer>
+                                        <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+                                      </filter>
                                     </defs>
                                     {/* Y grid + labels */}
                                     {ticks.map((t,i)=>(
@@ -3277,10 +3350,10 @@ export default function App(){
                                     {histAreaPath&&<path d={histAreaPath} fill="url(#histGrad)" stroke="none"/>}
                                     {/* CI band */}
                                     {bandPath&&<path d={bandPath} fill="url(#ciGrad)" stroke="none"/>}
-                                    {/* History line */}
-                                    {histPath&&<path d={histPath} fill="none" stroke="#3b82f6" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>}
-                                    {/* Forecast line (dashed) */}
-                                    {fcPath&&<path d={fcPath} fill="none" stroke="#0d6e4f" strokeWidth="2.6" strokeDasharray="7 4" strokeLinecap="round" strokeLinejoin="round"/>}
+                                    {/* History line — premium with gradient + shadow */}
+                                    {histPath&&<path d={histPath} fill="none" stroke="url(#histLineGrad)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineShadow)"/>}
+                                    {/* Forecast line (dashed) — premium with gradient + shadow */}
+                                    {fcPath&&<path d={fcPath} fill="none" stroke="url(#fcLineGrad)" strokeWidth="3" strokeDasharray="7 4" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineShadow)"/>}
                                     {/* Vertical separator */}
                                     {histLen>0&&<line x1={x(histLen-1)} y1={padT} x2={x(histLen-1)} y2={H-padB} stroke="#94a3b8" strokeWidth="1.4" strokeDasharray="3 4" opacity=".7"/>}
                                     {histLen>0&&<text x={x(histLen-1)+5} y={padT+12} fontSize="10" fill="#64748b" fontWeight="700" fontFamily="-apple-system,Segoe UI,sans-serif">▶ TAHMİN</text>}
@@ -3318,6 +3391,98 @@ export default function App(){
                               );
                             })()}
                           </div>
+
+                          {/* ─── Mevsim & Trend Analizi ─── */}
+                          {(()=>{
+                            const histKeysAll=histKeys;
+                            const histArrAll=histArr||[];
+                            if(histArrAll.length<12)return null;
+                            // Mevsim profili: her ay için tarihsel ortalama (12 ay × N yıl ortalaması)
+                            const monthAvg=Array.from({length:12},()=>({sum:0,count:0}));
+                            for(let i=0;i<histArrAll.length;i++){
+                              const m=+histKeysAll[i].split('-')[1]-1;
+                              monthAvg[m].sum+=histArrAll[i]||0;monthAvg[m].count++;
+                            }
+                            const monthMeans=monthAvg.map(x=>x.count>0?x.sum/x.count:0);
+                            const overallMean=monthMeans.reduce((s,v)=>s+v,0)/12;
+                            const seasonality=monthMeans.map((m,i)=>({m,i,pct:overallMean>0?((m-overallMean)/overallMean*100):0}));
+                            const sortedSeas=[...seasonality].sort((a,b)=>b.pct-a.pct);
+                            const topMonths=sortedSeas.slice(0,3);
+                            const lowMonths=sortedSeas.slice(-3).reverse();
+                            // Trend gücü: lineer regresyon r²
+                            const xs=histArrAll.map((_,i)=>i),ys=histArrAll;
+                            const xMean2=xs.reduce((s,x)=>s+x,0)/xs.length;
+                            const yMean2=ys.reduce((s,y)=>s+y,0)/ys.length;
+                            let num2=0,denomX=0,denomY=0;
+                            for(let i=0;i<xs.length;i++){num2+=(xs[i]-xMean2)*(ys[i]-yMean2);denomX+=(xs[i]-xMean2)**2;denomY+=(ys[i]-yMean2)**2;}
+                            const r2=denomX>0&&denomY>0?(num2*num2)/(denomX*denomY):0;
+                            const slope2=denomX>0?num2/denomX:0;
+                            const trendDir=slope2>overallMean*0.005?'up':slope2<-overallMean*0.005?'down':'flat';
+                            const trendLabel=trendDir==='up'?'Artan':trendDir==='down'?'Azalan':'Yatay';
+                            // Güven seviyesi
+                            const mape=activeResult?.mape;
+                            const confidence=mape==null?'low':mape<10?'high':mape<20?'medium':'low';
+                            const confColor=confidence==='high'?'#0d6e4f':confidence==='medium'?$.org:$.red;
+                            const confBg=confidence==='high'?$.grnB:confidence==='medium'?$.orgB:$.redB;
+                            const confLabel=confidence==='high'?'YÜKSEK GÜVEN':confidence==='medium'?'ORTA GÜVEN':'DÜŞÜK GÜVEN';
+                            const confDesc=confidence==='high'?'Tahmin sapması düşük (<%10). Modelin geçmişteki başarısı yüksek; planlama için güvenle kullanılabilir.':confidence==='medium'?'Orta sapma (%10-20). Tahmin yön gösterir ama kesin sayı için ±%20 marj bırakın.':'Yüksek sapma (>%20). Seri çok gürültülü veya yapısal kırılma var. Tahmin sadece referans olarak kullanın.';
+                            return(
+                              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:10,marginBottom:14}}>
+                                {/* Mevsim profili */}
+                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,padding:'14px 16px'}}>
+                                  <div style={{fontSize:11,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
+                                    Mevsim Profili
+                                    <InfoTip title="Mevsim Profili" desc="Her takvim ayının tarihsel ortalamasının, genel ortalamaya göre yüzde sapması. Trader'ın hangi aylarda yoğun, hangilerinde düşük çalıştığını gösterir." detail="Pikler agro hasat dönemleri (ayçiçeği yaz, nohut sonbahar) veya tüketici takvimi (Ramazan, bayram) ile ilişkili olabilir." iconSize={10}><span/></InfoTip>
+                                  </div>
+                                  <div style={{display:'flex',gap:1,marginBottom:8,height:50,alignItems:'flex-end'}}>
+                                    {seasonality.map(s=>{
+                                      const norm=(s.m/Math.max(...monthMeans,1))*100;
+                                      return(<div key={s.i} title={`${MONTHS_TR[s.i]}: ${s.pct>=0?'+':''}${s.pct.toFixed(0)}%`} style={{flex:1,height:Math.max(norm,4)+'%',background:s.pct>=10?'#0d6e4f':s.pct>=-10?'#3b82f6':$.bdL,borderRadius:'2px 2px 0 0',transition:'all .15s'}}/>);
+                                    })}
+                                  </div>
+                                  <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:$.t3,fontFamily:$.mo,fontWeight:600,marginBottom:8}}>
+                                    {[0,2,4,6,8,10].map(i=><span key={i}>{MONTHS_TR[i].slice(0,1)}</span>)}
+                                  </div>
+                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.5}}>
+                                    <strong style={{color:'#0d6e4f'}}>Pik aylar:</strong> {topMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3}}>(+%{topMonths[0].pct.toFixed(0)} ortalamada)</span>
+                                  </div>
+                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.5,marginTop:3}}>
+                                    <strong style={{color:$.red}}>Düşük aylar:</strong> {lowMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3}}>(%{lowMonths[0].pct.toFixed(0)} ortalamadan)</span>
+                                  </div>
+                                </div>
+                                {/* Trend gücü */}
+                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,padding:'14px 16px'}}>
+                                  <div style={{fontSize:11,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
+                                    Trend Analizi
+                                    <InfoTip title="Trend Yönü ve Gücü" desc="Geçmiş veriye lineer regresyon uygulanarak hesaplanır. R² (determinasyon katsayısı) trend'in serideki varyansı ne kadar açıkladığını gösterir." detail="R² > 0.7 → güçlü trend · 0.3-0.7 → orta · < 0.3 → trend yok/zayıf, mevsimsellik ya da gürültü baskın." formula="R² = SSR / SST" iconSize={10}><span/></InfoTip>
+                                  </div>
+                                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                                    <div style={{width:48,height:48,borderRadius:12,background:trendDir==='up'?$.grnB:trendDir==='down'?$.redB:$.bdL,display:'flex',alignItems:'center',justifyContent:'center',color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t3,fontSize:22}}>
+                                      {trendDir==='up'?'↗':trendDir==='down'?'↘':'→'}
+                                    </div>
+                                    <div>
+                                      <div style={{fontSize:18,fontWeight:800,color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t1,fontFamily:$.mo}}>{trendLabel}</div>
+                                      <div style={{fontSize:10.5,color:$.t3,fontWeight:600,marginTop:1}}>R² = {r2.toFixed(2)} · {r2>=0.7?'güçlü':r2>=0.3?'orta':'zayıf'} açıklama gücü</div>
+                                    </div>
+                                  </div>
+                                  <div style={{height:6,borderRadius:3,background:$.bdL,overflow:'hidden',marginBottom:6}}>
+                                    <div style={{height:'100%',width:Math.min(r2*100,100)+'%',background:r2>=0.7?'#0d6e4f':r2>=0.3?$.org:$.red,transition:'width .4s'}}/>
+                                  </div>
+                                  <div style={{fontSize:10.5,color:$.t3,lineHeight:1.5}}>{r2>=0.7?'Modeller bu trader\'da güvenle çalışır.':r2>=0.3?'Trend var ama varyans yüksek; tahmin koridor şeklinde yorumlanmalı.':'Trend belirsiz; mevsim veya gürültü baskın. Seasonal Naive sık kazanabilir.'}</div>
+                                </div>
+                                {/* Güven seviyesi */}
+                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,padding:'14px 16px'}}>
+                                  <div style={{fontSize:11,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
+                                    Tahmin Güveni
+                                    <InfoTip title="Tahmin Güven Seviyesi" desc="Aktif modelin backtest MAPE değerine göre belirlenir. Geçmişte ne kadar başarılıysa, gelecek tahmininin de o kadar güvenilir olması beklenir." detail="High (<%10) · Medium (%10-20) · Low (>%20). Düşük güvende sayıları nokta tahmin değil koridor olarak yorumlayın." iconSize={10}><span/></InfoTip>
+                                  </div>
+                                  <div style={{display:'inline-block',padding:'5px 11px',borderRadius:7,background:confBg,fontSize:11,fontWeight:800,color:confColor,letterSpacing:.5,marginBottom:10}}>{confLabel}</div>
+                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.55}}>{confDesc}</div>
+                                  {mape!=null&&<div style={{fontSize:10.5,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:8,paddingTop:8,borderTop:'1px solid '+$.bdL}}>Backtest MAPE: <strong style={{color:confColor}}>{mape.toFixed(1)}%</strong></div>}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Aylık tahmin tablosu */}
                           <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
