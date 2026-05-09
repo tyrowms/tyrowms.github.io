@@ -8,7 +8,7 @@ import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
 
 const INIT=[];
 const DEMO=INIT;
-const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün"];
+const HDR=["Şirket Kodu","Şirket Adı","Madde Kodu","Ürün Adı","Menşe","Proje No","Ambalaj","Gümrük","Miktar","Tesis","Tesis Adı","Depo","Ambar Adı","Parti No","L1","L1 Adı","L2","L2 Adı","L3","L3 Adı","L4","L4 Adı","L5","L5 Adı","Fiyat ₺","Fiyat $","PurchWEAV","PurchFIFO","PurchLIFO","ProdWEAV","ProdFIFO","ProdLIFO","Gün","Proje ID","Trader","Ana Trader"];
 const NC=new Set([8,24,25,26,27,28,29,30,31,32]);
 const CTM={"ADN":"Adana","ADP":"Adapazarı","BND":"Bandırma","BRS":"Bursa","CRM":"Çorum","EDN":"Edirne","GZT":"Gaziantep","GRS":"Giresun","HTY":"Hatay","ISK":"İskenderun","DTC":"İstanbul","DISTICARET":"İstanbul","IST":"İstanbul","IZM":"İzmir","KRM":"Karaman","KON":"Konya","MRS":"Mersin","MUS":"Muş","ORD":"Ordu","SMS":"Samsun","TKR":"Tekirdağ","KOC":"Kocaeli","TRB":"Trabzon","SILAM":"Samsun","TRY-BND":"Bandırma","TRY-CRM":"Çorum","TRY-DTS":"İstanbul","TRY-GYM":"Gaziantep","TRY-GZT":"Gaziantep","TRY-IST":"İstanbul","TRY-MRS":"Mersin","TRY-SLM":"Bandırma","TRY-SDN":"İstanbul","YLD-KON":"Konya","YLD-MUS":"Muş","YLD-TKD":"Tekirdağ"};
 const CLL={"Adana":[37,35.33],"Adapazarı":[40.68,30.4],"Bandırma":[40.35,27.97],"Bursa":[40.19,29.06],"Çorum":[40.55,34.96],"Edirne":[41.68,26.56],"Gaziantep":[37.07,37.38],"Giresun":[40.91,38.39],"Hatay":[36.2,36.16],"İskenderun":[36.59,36.17],"İstanbul":[41.01,28.98],"İzmir":[38.42,27.14],"Karaman":[37.18,33.23],"Konya":[37.87,32.48],"Mersin":[36.81,34.64],"Muş":[38.74,41.49],"Ordu":[40.99,37.88],"Samsun":[41.29,36.33],"Tekirdağ":[41.0,27.52],"Kocaeli":[40.76,29.92],"Trabzon":[41.0,39.72]};
@@ -279,9 +279,9 @@ export default function App(){
   useEffect(()=>{try{if(rows.length>0)localStorage.setItem('tyrowms_rows',JSON.stringify(rows));else localStorage.removeItem('tyrowms_rows');}catch(e){}},[rows]);
   const [gSearch,setGSearch]=useState('');
   const [gSearchFocus,setGSearchFocus]=useState(false);
-  const GS_IDX=[1,3,4,10,12,15,17,19,21,23]; // searchable text column indices
+  const GS_IDX=[1,3,4,10,12,15,17,19,21,23,33,34,35]; // searchable text column indices (33=Proje ID, 34=Trader, 35=Ana Trader)
   // ── Global Gelişmiş Filtre (gRows'dan önce tanımlanmalı) ──
-  const GF_INIT={grp:'',comp:'',urun:'',mense:'',tesis:'',l2:'',l3:''};
+  const GF_INIT={grp:'',comp:'',urun:'',mense:'',tesis:'',l2:'',l3:'',mtrader:'',trader:''};
   const [gFilter,setGFilter]=useState(()=>{try{const s=localStorage.getItem('tyrowms_gfilter');if(s){const p=JSON.parse(s);if(p&&typeof p==='object')return{...GF_INIT,...p};}}catch(e){}return GF_INIT;});
   const [showGFilter,setShowGFilter]=useState(false);
   useEffect(()=>{try{localStorage.setItem('tyrowms_gfilter',JSON.stringify(gFilter));}catch(e){}},[gFilter]);
@@ -302,8 +302,8 @@ export default function App(){
     if(!incFark&&wh.includes('fark'))return false;
     return true;
   }),[rows,incTransit,incFark]);
-  const gFilterOpts=useMemo(()=>({grps:[...new Set(calcRows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),comps:[...new Set(calcRows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),uruns:[...new Set(calcRows.map(r=>r[3]||''))].filter(Boolean).sort(),menses:[...new Set(calcRows.map(r=>r[4]||''))].filter(v=>v).sort(),tesisler:[...new Set(calcRows.map(r=>r[10]||''))].filter(v=>v).sort(),l2s:[...new Set(calcRows.map(r=>r[17]||''))].filter(v=>v).sort(),l3s:[...new Set(calcRows.map(r=>r[19]||''))].filter(v=>v).sort()}),[calcRows]);
-  const applyGF=(r,gf)=>{if(gf.grp&&gGrp(r[0])!==gf.grp)return false;if(gf.comp&&(r[1]||r[0])!==gf.comp)return false;if(gf.urun&&(r[3]||'')!==gf.urun)return false;if(gf.mense&&(r[4]||'')!==gf.mense)return false;if(gf.tesis&&(r[10]||'')!==gf.tesis)return false;if(gf.l2&&(r[17]||'')!==gf.l2)return false;if(gf.l3&&(r[19]||'')!==gf.l3)return false;return true;};
+  const gFilterOpts=useMemo(()=>({grps:[...new Set(calcRows.map(r=>gGrp(r[0])))].filter(Boolean).sort(),comps:[...new Set(calcRows.map(r=>r[1]||r[0]||''))].filter(Boolean).sort(),uruns:[...new Set(calcRows.map(r=>r[3]||''))].filter(Boolean).sort(),menses:[...new Set(calcRows.map(r=>r[4]||''))].filter(v=>v).sort(),tesisler:[...new Set(calcRows.map(r=>r[10]||''))].filter(v=>v).sort(),l2s:[...new Set(calcRows.map(r=>r[17]||''))].filter(v=>v).sort(),l3s:[...new Set(calcRows.map(r=>r[19]||''))].filter(v=>v).sort(),traders:[...new Set(calcRows.map(r=>r[34]||''))].filter(v=>v).sort(),mtraders:[...new Set(calcRows.map(r=>r[35]||''))].filter(v=>v).sort()}),[calcRows]);
+  const applyGF=(r,gf)=>{if(gf.grp&&gGrp(r[0])!==gf.grp)return false;if(gf.comp&&(r[1]||r[0])!==gf.comp)return false;if(gf.urun&&(r[3]||'')!==gf.urun)return false;if(gf.mense&&(r[4]||'')!==gf.mense)return false;if(gf.tesis&&(r[10]||'')!==gf.tesis)return false;if(gf.l2&&(r[17]||'')!==gf.l2)return false;if(gf.l3&&(r[19]||'')!==gf.l3)return false;if(gf.trader&&(r[34]||'')!==gf.trader)return false;if(gf.mtrader&&(r[35]||'')!==gf.mtrader)return false;return true;};
   const gRows=useMemo(()=>{let r=calcRows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[calcRows,gSearch,gFilter,gFilterCount]);
   // rawRows: all rows (unfiltered by madde kodu) for Rapor Satırları only
   const rawRows=useMemo(()=>{let r=rows;if(gSearch.trim()){const terms=gSearch.toLowerCase().split(/\s+/).filter(Boolean);r=r.filter(row=>{const grp=gGrp(row[0]).toLowerCase();return terms.every(t=>GS_IDX.some(i=>String(row[i]||'').toLowerCase().includes(t))||grp.includes(t));});}if(gFilterCount>0)r=r.filter(row=>applyGF(row,gFilter));return r;},[rows,gSearch,gFilter,gFilterCount]);
@@ -314,6 +314,8 @@ export default function App(){
     if(!gSearch.trim()||calcRows.length===0)return[];
     const t=gSearch.toLowerCase();
     const cats=[
+      {id:'mtrader',l:'Ana Trader',icon:'users',vals:[...new Set(calcRows.map(r=>r[35]||''))]},
+      {id:'trader',l:'Trader',icon:'user',vals:[...new Set(calcRows.map(r=>r[34]||''))]},
       {id:'grp',l:'Grup',icon:'layers',vals:[...new Set(calcRows.map(r=>gGrp(r[0])))]},
       {id:'comp',l:'Şirket',icon:'building',vals:[...new Set(calcRows.map(r=>r[1]||r[0]||''))]},
       {id:'prod',l:'Ürün',icon:'package',vals:[...new Set(calcRows.map(r=>r[3]||''))]},
@@ -476,7 +478,7 @@ export default function App(){
   const [erpSearch,setErpSearch]=useState('');
   const [rawPage,setRawPage]=useState(0);
   const [erpPage,setErpPage]=useState(0);
-  const RAWF_INIT={grp:'',comp:'',madde:'',urun:'',mense:'',tesis:'',l2:'',l3:'',miktarMin:'',miktarMax:'',gunMin:'',gunMax:'',risk:''};
+  const RAWF_INIT={grp:'',comp:'',madde:'',urun:'',mense:'',tesis:'',l2:'',l3:'',miktarMin:'',miktarMax:'',gunMin:'',gunMax:'',risk:'',trader:'',mtrader:''};
   const [rawFilter,setRawFilter]=useState(RAWF_INIT);
   const [showRawFilter,setShowRawFilter]=useState(false);
   const [pageSize,setPageSize]=useState(100);
@@ -615,6 +617,8 @@ export default function App(){
     tesisler:[...new Set(rows.map(r=>r[10]||''))].filter(v=>v).sort(),
     l2s:[...new Set(rows.map(r=>r[17]||''))].filter(v=>v).sort(),
     l3s:[...new Set(rows.map(r=>r[19]||''))].filter(v=>v).sort(),
+    traders:[...new Set(rows.map(r=>r[34]||''))].filter(v=>v).sort(),
+    mtraders:[...new Set(rows.map(r=>r[35]||''))].filter(v=>v).sort(),
   }),[rows]);
   const activeFilterCount=useMemo(()=>Object.values(rawFilter).filter(v=>v!=='').length,[rawFilter]);
   const filtered=useMemo(()=>{
@@ -628,6 +632,8 @@ export default function App(){
     if(rawFilter.tesis)r=r.filter(row=>row[10]===rawFilter.tesis);
     if(rawFilter.l2)r=r.filter(row=>row[17]===rawFilter.l2);
     if(rawFilter.l3)r=r.filter(row=>row[19]===rawFilter.l3);
+    if(rawFilter.trader)r=r.filter(row=>(row[34]||'')===rawFilter.trader);
+    if(rawFilter.mtrader)r=r.filter(row=>(row[35]||'')===rawFilter.mtrader);
     if(rawFilter.miktarMin!=='')r=r.filter(row=>row[8]>=Number(rawFilter.miktarMin));
     if(rawFilter.miktarMax!=='')r=r.filter(row=>row[8]<=Number(rawFilter.miktarMax));
     if(rawFilter.gunMin!=='')r=r.filter(row=>row[27]>=Number(rawFilter.gunMin));
@@ -1041,6 +1047,8 @@ export default function App(){
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 10px'}}>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Ana Trader</div><CustomSelect value={gFilter.mtrader} onChange={v=>setGFilter(p=>({...p,mtrader:v}))} options={gFilterOpts.mtraders}/></div>
+                <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Trader</div><CustomSelect value={gFilter.trader} onChange={v=>setGFilter(p=>({...p,trader:v}))} options={gFilterOpts.traders}/></div>
                 <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket Grubu</div><CustomSelect value={gFilter.grp} onChange={v=>setGFilter(p=>({...p,grp:v}))} options={gFilterOpts.grps}/></div>
                 <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Şirket</div><CustomSelect value={gFilter.comp} onChange={v=>setGFilter(p=>({...p,comp:v}))} options={gFilterOpts.comps}/></div>
                 <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:3}}>Ürün</div><CustomSelect value={gFilter.urun} onChange={v=>setGFilter(p=>({...p,urun:v}))} options={gFilterOpts.uruns}/></div>
@@ -1107,6 +1115,8 @@ export default function App(){
                   </div>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 12px'}}>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ana Trader</div><CustomSelect value={gFilter.mtrader} onChange={v=>setGFilter(p=>({...p,mtrader:v}))} options={gFilterOpts.mtraders}/></div>
+                  <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Trader</div><CustomSelect value={gFilter.trader} onChange={v=>setGFilter(p=>({...p,trader:v}))} options={gFilterOpts.traders}/></div>
                   <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket Grubu</div><CustomSelect value={gFilter.grp} onChange={v=>setGFilter(p=>({...p,grp:v}))} options={gFilterOpts.grps}/></div>
                   <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket</div><CustomSelect value={gFilter.comp} onChange={v=>setGFilter(p=>({...p,comp:v}))} options={gFilterOpts.comps}/></div>
                   <div><div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ürün</div><CustomSelect value={gFilter.urun} onChange={v=>setGFilter(p=>({...p,urun:v}))} options={gFilterOpts.uruns}/></div>
@@ -2052,6 +2062,22 @@ export default function App(){
                       {activeFilterCount>0&&<button className="tb-b" onClick={()=>setRawFilter(RAWF_INIT)} style={{gap:5,fontSize:11,padding:'4px 10px',color:$.red,borderColor:$.red}}><RotateCcw size={11}/>Sıfırla</button>}
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:'10px 12px'}}>
+                      {/* Ana Trader */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Ana Trader</div>
+                        <select className="fi" value={rawFilter.mtrader} onChange={e=>setRawFilter(p=>({...p,mtrader:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.mtraders.map(m=><option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      {/* Trader */}
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Trader</div>
+                        <select className="fi" value={rawFilter.trader} onChange={e=>setRawFilter(p=>({...p,trader:e.target.value}))} style={{width:'100%',fontSize:11}}>
+                          <option value="">Tümü</option>
+                          {rawFilterOpts.traders.map(t=><option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
                       {/* Şirket Grubu */}
                       <div>
                         <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:4}}>Şirket Grubu</div>
@@ -2209,7 +2235,7 @@ export default function App(){
 
             {/* ===== RAPORLAR ===== */}
             {pg==='rep'&&(()=>{
-              const tabs=[{id:'grp',l:'Grup',idx:-1,lbl:-1},{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4},{id:'prod',l:'Ürünler',idx:3,lbl:3}];
+              const tabs=[{id:'grp',l:'Grup',idx:-1,lbl:-1},{id:'mtra',l:'Ana Trader',idx:35,lbl:35},{id:'tra',l:'Trader',idx:34,lbl:34},{id:'comp',l:'Şirket',idx:0,lbl:1},{id:'fac',l:'Tesis',idx:9,lbl:10},{id:'l2',l:'Seviye 2',idx:16,lbl:17},{id:'l3',l:'Seviye 3',idx:18,lbl:19},{id:'origin',l:'Menşe',idx:4,lbl:4},{id:'prod',l:'Ürünler',idx:3,lbl:3}];
               const cur=tabs.find(t=>t.id===repTab)||tabs[0];
               const pv=(cur.id==='grp'?buildGroupPivot(gRows,r=>gGrp(r[0])):buildPivot(gRows,cur.idx,cur.lbl)).sort((a,b)=>{
                 let va,vb;
@@ -2242,6 +2268,37 @@ export default function App(){
                       <span style={{fontSize:11,color:$.t3,fontFamily:$.mo}}>{pv.length} kayıt</span>
                       <div style={{marginLeft:'auto',display:'flex',gap:6}}>
                         <button className="tb-b" onClick={()=>{
+                          // Düzgün XLSX export — bold header, sayısal format, freeze, alt toplam
+                          const doIt=()=>{
+                            const X=window.XLSX;
+                            const headers=[cur.l,'Toplam Miktar (kg)','Toplam Değer ($)','Ort.Yaş (gün)',...BK.map(b=>b.k+' gün'),'% Pay'];
+                            const rowsX=pv.map(r=>[r.n,Math.round(r.total),Math.round(r.totalVal),r.avg,...BK.map(b=>Math.round(r.ag[b.k]||0)),gt>0?+(r.total/gt*100).toFixed(2):0]);
+                            const totalAg=BK.map(b=>Math.round(pv.reduce((s,r)=>s+(r.ag[b.k]||0),0)));
+                            const totalRow=['ALT TOPLAM',Math.round(gt),Math.round(gtVal),D.s.avgAge,...totalAg,100];
+                            const data=[headers,...rowsX,totalRow];
+                            const ws=X.utils.aoa_to_sheet(data);
+                            ws['!cols']=[{wch:32},{wch:18},{wch:18},{wch:12},...BK.map(()=>({wch:14})),{wch:10}];
+                            ws['!freeze']={ySplit:1};
+                            const lastCol=headers.length-1;
+                            for(let r=1;r<data.length;r++){
+                              for(let c=1;c<headers.length;c++){
+                                const ref=X.utils.encode_cell({r,c});
+                                if(!ws[ref])continue;
+                                ws[ref].t='n';
+                                if(c===2)ws[ref].z='"$"#,##0';
+                                else if(c===3)ws[ref].z='0" gün"';
+                                else if(c===lastCol)ws[ref].z='0.00"%"';
+                                else ws[ref].z='#,##0';
+                              }
+                            }
+                            for(let c=0;c<headers.length;c++){const ref=X.utils.encode_cell({r:0,c});if(ws[ref])ws[ref].s={font:{bold:true}};}
+                            const wb=X.utils.book_new();
+                            X.utils.book_append_sheet(wb,ws,cur.l+' Raporu');
+                            X.writeFile(wb,'TYRO_'+cur.l.replace(/\s+/g,'')+'_Rapor_'+new Date().toISOString().slice(0,10)+'.xlsx');
+                          };
+                          if(window.XLSX)doIt();
+                          else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
+                          return; // eski CSV path'i devre dışı (alttaki ölü kod no-op'a düşer)
                           const hd=[cur.l,'Toplam Miktar (kg)','Toplam Değer ($)','Ort.Yaş (gün)',...BK.map(b=>b.k)];
                           const csvRows=pv.map(r=>['"'+r.n+'"',Math.round(r.total),Math.round(r.totalVal),r.avg,...BK.map(b=>Math.round(r.ag[b.k]||0))].join(','));
                           const csv=hd.join(',')+'\n'+csvRows.join('\n');
@@ -2249,21 +2306,29 @@ export default function App(){
                         }} style={{fontSize:11}}><Download size={13}/>Excel</button>
                         <button className="tb-b pr" onClick={()=>{
                           const w=window.open('','_blank');
-                          const gtot=pv.reduce((s,r)=>s+r.total,0);
-                          const bkH=BK.map(b=>'<th style="padding:8px 6px;text-align:right;font-size:9px;color:'+b.c+';border-bottom:2px solid #ddd;white-space:nowrap">'+b.k+'</th>').join('');
+                          const bkH=BK.map(b=>'<th style="padding:9px 6px;text-align:right;font-size:9px;color:'+b.c+';white-space:nowrap;font-weight:800">'+b.k+' g</th>').join('');
                           const trs=pv.map((r,i)=>{
-                            const bkC=BK.map(b=>{const v=r.ag[b.k]||0;return '<td style="padding:7px 6px;text-align:right;font-family:monospace;font-size:10px;color:'+(v>0?'#333':'#ccc')+'">'+( v>0?Math.round(v).toLocaleString('tr-TR'):'-')+'</td>';}).join('');
-                            return '<tr style="background:'+(i%2?'#fafbfc':'#fff')+'"><td style="padding:7px 10px;font-weight:600;font-size:11px">'+r.n+'</td><td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;font-size:11px">'+Math.round(r.total).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;font-size:10px;color:#3b82f6">$'+Math.round(r.totalVal).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right"><span style="font-family:monospace;font-size:10px;font-weight:700;color:'+(r.avg<60?'#0d6e4f':r.avg<180?'#f5a623':'#e5484d')+';padding:2px 6px;border-radius:4px;background:'+(r.avg<60?'rgba(45,212,160,.1)':r.avg<180?'rgba(245,166,35,.08)':'rgba(229,72,77,.08)')+'">'+r.avg+' g</span></td>'+bkC+'</tr>';
+                            const bkC=BK.map(b=>{const v=r.ag[b.k]||0;const p=r.total>0?((v/r.total)*100).toFixed(0):'0';return '<td style="padding:7px 6px;text-align:right;font-family:Consolas,monospace;font-size:10px;color:'+(v>0?'#333':'#ccc')+';white-space:nowrap;border-bottom:1px solid #eef1f6">'+(v>0?Math.round(v).toLocaleString('tr-TR')+' <small style="color:#aaa;font-size:8px">'+p+'%</small>':'—')+'</td>';}).join('');
+                            const sharePct=gt>0?(r.total/gt*100).toFixed(1):'0';
+                            const segs=BK.map(b=>{const v=r.ag[b.k]||0;const p=r.total>0?(v/r.total)*100:0;return p>0?'<div style="width:'+p+'%;background:'+b.c+';height:100%"></div>':'';}).join('');
+                            const segBar='<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:#eef1f6;width:120px">'+segs+'</div>';
+                            const ageColor=r.avg<60?'#0d6e4f':r.avg<180?'#f5a623':'#e5484d';
+                            const ageBg=r.avg<60?'rgba(45,212,160,.12)':r.avg<180?'rgba(245,166,35,.1)':'rgba(229,72,77,.1)';
+                            return '<tr style="background:'+(i%2?'#fafbfc':'#fff')+'"><td style="padding:7px 10px;font-weight:600;font-size:11px;border-bottom:1px solid #eef1f6">'+r.n+'</td><td style="padding:7px 10px;text-align:right;font-family:Consolas,monospace;font-weight:700;font-size:11px;border-bottom:1px solid #eef1f6">'+Math.round(r.total).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right;font-family:Consolas,monospace;font-weight:700;font-size:10px;color:#3b82f6;border-bottom:1px solid #eef1f6">$'+Math.round(r.totalVal).toLocaleString('tr-TR')+'</td><td style="padding:7px 10px;text-align:right;border-bottom:1px solid #eef1f6"><span style="font-family:Consolas,monospace;font-size:10px;font-weight:700;color:'+ageColor+';padding:2px 6px;border-radius:4px;background:'+ageBg+'">'+r.avg+' g</span></td>'+bkC+'<td style="padding:7px 10px;border-bottom:1px solid #eef1f6"><div style="display:flex;align-items:center;gap:6px">'+segBar+'<span style="font-family:Consolas,monospace;font-size:9px;font-weight:700;color:#666;min-width:32px;text-align:right">'+sharePct+'%</span></div></td></tr>';
                           }).join('');
-                          const gBk=BK.map(b=>{const v=pv.reduce((s,r)=>s+(r.ag[b.k]||0),0);return '<td style="padding:8px 6px;text-align:right;font-family:monospace;font-size:10px;font-weight:700;color:'+b.c+'">'+Math.round(v).toLocaleString('tr-TR')+'</td>';}).join('');
-                          w.document.write('<!DOCTYPE html><html><head><title>T-Stock '+cur.l+' Raporu</title><style>@page{size:landscape;margin:15mm}body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#1a2332}table{width:100%;border-collapse:collapse}th{text-align:left;padding:8px 10px;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #ddd}td{border-bottom:1px solid #eee}.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #0d6e4f}.logo{display:flex;align-items:center;gap:10px}.lbox{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#134E5E,#0d7a5f,#2dd4a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:900}.meta{text-align:right;font-size:11px;color:#888}.ttl{font-size:20px;font-weight:800}.sub{font-size:10px;color:#0d6e4f;font-weight:700;letter-spacing:2px;text-transform:uppercase}.ftr{margin-top:20px;padding-top:12px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:9px;color:#aaa}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>');
-                          w.document.write('<div class="hdr"><div class="logo"><div class="lbox">T</div><div><div class="ttl">TYRO</div><div class="sub">WH AGENT</div></div></div><div class="meta">'+cur.l+' Bazlı Yaşlandırma Raporu<br>'+new Date().toLocaleDateString('tr-TR')+'<br><span style="font-size:10px;color:#555">'+pv.length+' kayıt · Toplam '+Math.round(gtot).toLocaleString('tr-TR')+' kg</span></div></div>');
-                                                    const gvt=pv.reduce((s,r)=>s+r.totalVal,0);
-                          w.document.write('<table><thead><tr><th>'+cur.l+'</th><th style="text-align:right">Toplam Miktar</th><th style="text-align:right">Toplam Değer</th><th style="text-align:right">Ort.Yaş</th>'+bkH+'</tr></thead><tbody>'+trs+'<tr style="background:#e4f5ee;border-top:2px solid #0d6e4f"><td style="padding:8px 10px;font-weight:800;color:#0d6e4f">TOPLAM</td><td style="padding:8px 10px;text-align:right;font-family:monospace;font-weight:800;color:#0d6e4f">'+Math.round(gtot).toLocaleString('tr-TR')+'</td><td style="padding:8px 10px;text-align:right;font-family:monospace;font-weight:800;color:#3b82f6">$'+Math.round(gvt).toLocaleString('tr-TR')+'</td><td></td>'+gBk+'</tr></tbody></table>');
-                          w.document.write('<div class="ftr"><span>Powered by TTECH Business Solutions</span><span>© '+new Date().getFullYear()+' TYRO WH AGENT — Stok Yaşlandırma Raporu</span></div>');
+                          const gBk=BK.map(b=>{const v=pv.reduce((s,r)=>s+(r.ag[b.k]||0),0);return '<td style="padding:9px 6px;text-align:right;font-family:Consolas,monospace;font-size:10px;font-weight:800;color:'+b.c+'">'+Math.round(v).toLocaleString('tr-TR')+'</td>';}).join('');
+                          const tagFooter={};BK.forEach(b=>{tagFooter[b.k]=pv.reduce((s,r)=>s+(r.ag[b.k]||0),0);});
+                          const totalSegs=BK.map(b=>{const v=tagFooter[b.k]||0;const p=gt>0?(v/gt)*100:0;return p>0?'<div style="width:'+p+'%;background:'+b.c+';height:100%"></div>':'';}).join('');
+                          const totalSegBar='<div style="display:flex;height:11px;border-radius:5px;overflow:hidden;background:#fff;width:120px;border:1px solid rgba(13,110,79,.2)">'+totalSegs+'</div>';
+                          const avgColor=D.s.avgAge<60?'#0d6e4f':D.s.avgAge<180?'#f5a623':'#e5484d';
+                          w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>TYRO — '+cur.l+' Yaşlandırma Raporu</title><style>@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Arial,sans-serif;margin:0;padding:18px;color:#1a2332;font-size:11px}table{width:100%;border-collapse:collapse;table-layout:auto}thead th{text-align:left;padding:9px 10px;font-size:9.5px;color:#475569;text-transform:uppercase;letter-spacing:.6px;border-bottom:2px solid #0d6e4f;background:#f4f9f7;font-weight:800}.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid #0d6e4f}.brand{display:flex;align-items:center;gap:12px}.lbox{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#0d6e4f,#2dd4a0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900;letter-spacing:-1px;box-shadow:0 3px 8px rgba(13,110,79,.25)}.meta{text-align:right;font-size:10.5px;color:#475569;line-height:1.5}.ttl{font-size:22px;font-weight:900;color:#0d6e4f;letter-spacing:-.5px}.sub{font-size:9px;color:#0d6e4f;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-top:1px;opacity:.75}.kpis{display:flex;gap:10px;margin-bottom:14px}.kpi{flex:1;background:#f4f9f7;border:1px solid #d4e8df;border-radius:8px;padding:9px 12px}.kpi-l{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}.kpi-v{font-size:15px;font-weight:800;color:#0d6e4f;font-family:Consolas,monospace}.ftr{margin-top:18px;padding-top:10px;border-top:1px solid #eef1f6;display:flex;justify-content:space-between;font-size:9px;color:#94a3b8}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>');
+                          w.document.write('<div class="hdr"><div class="brand"><div class="lbox">T</div><div><div class="ttl">TYRO</div><div class="sub">WH Agent · Yaşlandırma Raporu</div></div></div><div class="meta"><div style="font-size:13px;font-weight:700;color:#1a2332">'+cur.l+' Bazlı Yaşlandırma</div><div>'+new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})+'</div></div></div>');
+                          w.document.write('<div class="kpis"><div class="kpi"><div class="kpi-l">Kayıt</div><div class="kpi-v">'+pv.length+'</div></div><div class="kpi"><div class="kpi-l">Toplam Miktar</div><div class="kpi-v">'+Math.round(gt).toLocaleString('tr-TR')+' kg</div></div><div class="kpi"><div class="kpi-l">Toplam Değer</div><div class="kpi-v" style="color:#3b82f6">$'+Math.round(gtVal).toLocaleString('tr-TR')+'</div></div><div class="kpi"><div class="kpi-l">Ortalama Yaş</div><div class="kpi-v" style="color:'+avgColor+'">'+D.s.avgAge+' gün</div></div></div>');
+                          w.document.write('<table><thead><tr><th>'+cur.l+'</th><th style="text-align:right">Toplam Miktar</th><th style="text-align:right">Toplam Değer</th><th style="text-align:right">Ort.Yaş</th>'+bkH+'<th style="min-width:170px">Dağılım</th></tr></thead><tbody>'+trs+'<tr style="background:linear-gradient(90deg,#e4f5ee,#f4f9f7);border-top:2px solid #0d6e4f"><td style="padding:10px;font-weight:900;color:#0d6e4f;font-size:11.5px;letter-spacing:.4px">ALT TOPLAM</td><td style="padding:10px;text-align:right;font-family:Consolas,monospace;font-weight:900;color:#0d6e4f">'+Math.round(gt).toLocaleString('tr-TR')+'</td><td style="padding:10px;text-align:right;font-family:Consolas,monospace;font-weight:900;color:#3b82f6">$'+Math.round(gtVal).toLocaleString('tr-TR')+'</td><td style="padding:10px;text-align:right;font-family:Consolas,monospace;font-weight:900;color:'+avgColor+'">'+D.s.avgAge+'g</td>'+gBk+'<td style="padding:10px"><div style="display:flex;align-items:center;gap:6px">'+totalSegBar+'<span style="font-family:Consolas,monospace;font-size:9.5px;font-weight:800;color:#0d6e4f">100%</span></div></td></tr></tbody></table>');
+                          w.document.write('<div class="ftr"><span>Powered by TTECH Business Solutions · TYRO WH Agent</span><span>© '+new Date().getFullYear()+' Tiryaki Agro</span></div>');
                           w.document.write('</body></html>');
                           w.document.close();
-                          setTimeout(()=>w.print(),300);
+                          setTimeout(()=>{try{w.focus();w.print();}catch(_){/**/}},400);
                         }} style={{fontSize:11}}><Download size={13}/>PDF</button>
                       </div>
                     </div>
@@ -2322,28 +2387,44 @@ export default function App(){
                     </div>
                   </div>
 
-                  {/* Top 10 Bar Chart */}
-                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginTop:16}}>
-                    <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:7}}>
+                  {/* Top 10 — Stabil grid layout, hizalı kolonlar */}
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginTop:16,overflow:'hidden'}}>
+                    <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:8}}>
                       <div style={{width:26,height:26,borderRadius:7,background:$.orgB,color:$.org,display:'inline-flex',alignItems:'center',justifyContent:'center'}}><BarChart3 size={14}/></div>
-                      <span style={{fontSize:13,fontWeight:700}}>Top {Math.min(10,pv.length)} — Stok ve Yaşlanma</span>
+                      <span style={{fontSize:13,fontWeight:700}}>Top {Math.min(10,pv.length)} — Stok & Yaşlanma Dağılımı</span>
+                      <span style={{fontSize:10.5,color:$.t3,fontWeight:500,marginLeft:'auto',fontFamily:$.mo}}>Toplam stok payına göre</span>
                     </div>
-                    <div style={{padding:'16px 18px'}}>
-                      {pv.slice(0,10).map((r,i)=>(
-                        <div key={r.n} className="fu" style={{animationDelay:i*30+'ms',marginBottom:10}}>
-                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                            <span style={{fontSize:12,fontWeight:600,color:$.t1,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.n}</span>
-                            <div style={{display:'flex',alignItems:'center',gap:10}}>
-                              <span style={{fontFamily:$.mo,fontSize:12,fontWeight:700,color:$.t1}}>{fN(r.total)} kg</span>
-                              <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(r.avg),padding:'2px 8px',borderRadius:5,background:acBg(r.avg)}}>{r.avg}g</span>
+                    <div style={{padding:'14px 18px 18px'}}>
+                      {(()=>{const top=pv.slice(0,10);const mxQ=Math.max(...top.map(r=>r.total),1);return top.map((r,i)=>{
+                        const pct=gt>0?(r.total/gt)*100:0;
+                        const fillPct=(r.total/mxQ)*100;
+                        return(
+                          <div key={r.n} className="fu" style={{animationDelay:i*30+'ms',display:'grid',gridTemplateColumns:'24px minmax(140px,1.2fr) 1.5fr auto auto',gap:10,alignItems:'center',padding:'9px 0',borderBottom:i<top.length-1?'1px dashed '+$.bdL:'none'}}>
+                            <div style={{fontSize:10,fontWeight:800,color:$.t3,fontFamily:$.mo,textAlign:'center',background:i<3?$.acL:'transparent',color:i<3?$.ac:$.t3,borderRadius:5,padding:'2px 0'}}>#{i+1}</div>
+                            <div style={{minWidth:0,overflow:'hidden'}}>
+                              <div style={{fontSize:12,fontWeight:600,color:$.t1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}} title={r.n}>{r.n}</div>
+                              <div style={{fontSize:10,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{fN(r.total)} kg · ${fN(r.totalVal)}</div>
                             </div>
+                            <div style={{position:'relative',height:18,minWidth:0}}>
+                              <div style={{position:'absolute',inset:0,borderRadius:9,background:'rgba(13,110,79,.04)'}}/>
+                              <div style={{position:'absolute',top:0,left:0,height:'100%',width:fillPct+'%',borderRadius:9,overflow:'hidden',display:'flex',transition:'width .5s cubic-bezier(.4,0,.2,1)'}}>
+                                {BK.map(b=>{const v=r.ag[b.k]||0;const p=r.total>0?(v/r.total)*100:0;return p>0?<div key={b.k} title={b.k+' gün: '+fN(v)+' kg ('+p.toFixed(0)+'%)'} style={{width:p+'%',background:b.c,opacity:.92}}/>:null;})}
+                              </div>
+                            </div>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:ac(r.avg),padding:'3px 8px',borderRadius:5,background:acBg(r.avg),whiteSpace:'nowrap',justifySelf:'end'}}>{r.avg}g</span>
+                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:$.t1,minWidth:48,textAlign:'right',justifySelf:'end'}}>{pct.toFixed(1)}%</span>
                           </div>
-                          <div style={{display:'flex',alignItems:'center',gap:6}}>
-                            <SegBar ag={r.ag} total={r.total} h={14} rd={7}/>
-                            <span style={{fontSize:10,fontFamily:$.mo,color:$.t3,fontWeight:600,minWidth:35}}>{gt>0?((r.total/gt)*100).toFixed(0)+'%':''}</span>
+                        );
+                      });})()}
+                      {/* Yaşlandırma legend — bar renklerinin anlamı */}
+                      <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:14,paddingTop:12,borderTop:'1px solid '+$.bdL}}>
+                        {BK.map(b=>(
+                          <div key={b.k} style={{display:'flex',alignItems:'center',gap:5}}>
+                            <div style={{width:9,height:9,borderRadius:2.5,background:b.c}}/>
+                            <span style={{fontSize:10,color:$.t3,fontWeight:600,fontFamily:$.mo}}>{b.k} gün</span>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

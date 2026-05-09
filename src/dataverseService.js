@@ -144,7 +144,12 @@ const SELECT_FIELDS = [
   'mserp_inventsiteid','mserp_inventsitename','mserp_pricesec','mserp_companyname',
   'mserp_product','mserp_closingpricesec','mserp_pricemst','mserp_etgproductlevel04name',
   'mserp_inventbatchid','mserp_inventdimension2','mserp_inventlocationname',
+  // mserp_inventdimension2 = proje no (proje master entity'sindeki mserp_projid ile join)
 ].join(',');
+
+// Tiryaki proje master entity — projid → trader / ana trader eşlemesi
+const PROJECT_ENTITY_NAME = 'mserp_etgtryprojecttableentities';
+const PROJECT_API_BASE = `${DATAVERSE_URL}/api/data/v9.2/${PROJECT_ENTITY_NAME}`;
 
 // Fetch latest report date — $orderby desc, take top 1
 export async function fetchLatestReportDate(token) {
@@ -168,6 +173,31 @@ function toISODate(raw) {
   const d = new Date(s);
   if (!isNaN(d)) return d.toISOString().split('T')[0];
   return s;
+}
+
+// Proje entity'sinden tüm projid → {trader, mainTrader} eşlemesini çek
+// 5000'lik sayfalama, paginate yaparak tüm kayıtları toplar
+export async function fetchProjectTraders(token, onProgress) {
+  const select = ['mserp_projid','mserp_traderid','mserp_maintraderid'].join(',');
+  const url = `${PROJECT_API_BASE}?$select=${select}`;
+  let all = [];
+  let nextUrl = url;
+  while (nextUrl) {
+    const data = await dvFetch(nextUrl, token, 'odata.maxpagesize=5000');
+    all = all.concat(data.value || []);
+    if (onProgress) onProgress(all.length);
+    nextUrl = data['@odata.nextLink'] || null;
+  }
+  const map = new Map();
+  for (const r of all) {
+    const pid = String(r.mserp_projid || '').trim();
+    if (!pid) continue;
+    map.set(pid, {
+      trader: String(r.mserp_traderid || ''),
+      mainTrader: String(r.mserp_maintraderid || ''),
+    });
+  }
+  return map;
 }
 
 export async function fetchEntityByDate(token, reportDate, onProgress) {
@@ -239,10 +269,17 @@ function castValue(raw, type) {
   }
 }
 
-export function mapToRows(records) {
-  return records.map(rec =>
-    FIELD_MAP.map(f => castValue(rec[f.key], f.type))
-  );
+export function mapToRows(records, traderMap = null) {
+  return records.map(rec => {
+    const row = FIELD_MAP.map(f => castValue(rec[f.key], f.type));
+    // Proje no: mserp_inventdimension2 (stok satırında); proje master entity'sinde aynı değer mserp_projid alanında
+    const projid = String(rec['mserp_inventdimension2'] || '').trim();
+    const tr = (traderMap && projid) ? (traderMap.get(projid) || null) : null;
+    row.push(projid);                       // 33 Proje ID
+    row.push(tr ? tr.trader : '');          // 34 Trader
+    row.push(tr ? tr.mainTrader : '');      // 35 Ana Trader
+    return row;
+  });
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -260,11 +297,22 @@ export async function fetchErpData(account, onStatus) {
     onStatus?.(`Veri çekiliyor... ${loaded}${total ? ' / ' + total : ''} kayıt`);
   });
 
+  // Proje master'dan trader bilgilerini çek (projid → trader, ana trader)
+  let traderMap = null;
+  try {
+    onStatus?.('Trader bilgileri yükleniyor...');
+    traderMap = await fetchProjectTraders(token, n => onStatus?.(`Trader: ${n} kayıt...`));
+    onStatus?.(`Trader: ${traderMap.size} proje eşlendi`);
+  } catch (e) {
+    console.warn('Project trader fetch failed:', e);
+    onStatus?.('Trader bilgisi alınamadı (devam ediliyor)');
+  }
+
   onStatus?.('Veri dönüştürülüyor...');
-  const rows = mapToRows(records);
+  const rows = mapToRows(records, traderMap);
 
   onStatus?.(`${rows.length} satır yüklendi`);
-  return { rows, reportDate, recordCount: records.length, rawRecords: records };
+  return { rows, reportDate, recordCount: records.length, rawRecords: records, traderMapSize: traderMap?.size || 0 };
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
