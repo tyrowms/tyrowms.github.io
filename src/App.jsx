@@ -577,6 +577,16 @@ export default function App(){
   const [fcstStepData,setFcstStepData]=useState({});  // her aşamadan veri (rows count, model results vs.)
   const [fcstHoverIdx,setFcstHoverIdx]=useState(null);  // grafikte hover edilen ay indexi
   const [fcstHoverModel,setFcstHoverModel]=useState(null);  // modeli üzerinde hover (id)
+  const [fcstChartW,setFcstChartW]=useState(1200);  // gerçek container genişliği (responsive, no stretch)
+  const fcstChartRef=useRef(null);
+  useEffect(()=>{
+    if(!fcstChartRef.current)return;
+    const update=()=>{const w=fcstChartRef.current?.getBoundingClientRect()?.width;if(w&&w>200)setFcstChartW(Math.round(w));};
+    update();
+    const ro=new ResizeObserver(update);
+    ro.observe(fcstChartRef.current);
+    return()=>ro.disconnect();
+  },[fcstResult,pg]);
 
   const loadFcstTraderList=useCallback(async()=>{
     if(!msalAccount||fcstTraderList.length>0||fcstTraderListLoading)return;
@@ -3216,7 +3226,7 @@ export default function App(){
                               // Akıllı scale: 15% headroom — veri grafiğin ~%87'sini kaplar
                               const maxV=dataMax*1.15;
                               const minV=0;
-                              const W=1200,H=380,padL=72,padR=24,padT=24,padB=70;
+                              const W=fcstChartW,H=380,padL=72,padR=24,padT=24,padB=70;
                               const innerW=W-padL-padR,innerH=H-padT-padB;
                               const x=i=>padL+(allKeys.length>1?i*innerW/(allKeys.length-1):innerW/2);
                               const y=v=>padT+innerH-((v-minV)/(maxV-minV))*innerH;
@@ -3307,10 +3317,10 @@ export default function App(){
                                 return ly!=null&&ly>0?((cur-ly)/ly*100):null;
                               })():null;
                               return(
-                                <div style={{position:'relative',width:'100%',padding:'10px 0 6px'}}>
-                                  <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{width:'100%',height:380,display:'block'}} onMouseMove={e=>{
+                                <div ref={fcstChartRef} style={{position:'relative',width:'100%',padding:'10px 0 6px',minHeight:380}}>
+                                  <svg width={W} height={H} style={{display:'block'}} onMouseMove={e=>{
                                     const rect=e.currentTarget.getBoundingClientRect();
-                                    const relX=(e.clientX-rect.left)/rect.width*W;
+                                    const relX=e.clientX-rect.left;
                                     if(relX<padL||relX>W-padR)return setFcstHoverIdx(null);
                                     const idx=Math.round((relX-padL)/innerW*(allKeys.length-1));
                                     if(idx>=0&&idx<allKeys.length)setFcstHoverIdx(idx);
@@ -3374,7 +3384,7 @@ export default function App(){
                                   </svg>
                                   {/* Hover tooltip */}
                                   {hi!=null&&hoverKey&&(
-                                    <div style={{position:'absolute',top:14,left:`calc(${(x(hi)/W*100).toFixed(2)}% + 0px)`,transform:`translateX(${hi<allKeys.length/2?'10px':'calc(-100% - 10px)'})`,pointerEvents:'none',background:'#1a2332',color:'#fff',borderRadius:10,padding:'10px 14px',boxShadow:'0 8px 24px rgba(0,0,0,.18)',fontSize:11.5,minWidth:200,zIndex:10}}>
+                                    <div style={{position:'absolute',top:14,left:x(hi),transform:`translateX(${hi<allKeys.length/2?'10px':'calc(-100% - 10px)'})`,pointerEvents:'none',background:'#1a2332',color:'#fff',borderRadius:10,padding:'10px 14px',boxShadow:'0 8px 24px rgba(0,0,0,.18)',fontSize:11.5,minWidth:200,zIndex:10}}>
                                       <div style={{fontSize:10,color:'#94a3b8',fontWeight:700,letterSpacing:.5,textTransform:'uppercase',marginBottom:6}}>{hi>=histLen?'Tahmin':isHistQuarter(hoverKey)?'Geçmiş (çeyrek)':'Geçmiş'} · {chartLabel(hoverKey)}</div>
                                       {hoverHist!=null&&(<>
                                         <div style={{fontSize:16,fontWeight:800,fontFamily:$.mo,color:'#fff'}}>{fmtTooltip(hoverHist)}</div>
