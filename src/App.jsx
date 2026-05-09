@@ -3099,10 +3099,18 @@ export default function App(){
                         </div>
                       </div>
 
-                      {/* ─── Model Sekmeleri (skipped olanlar gizli, hover tooltip ile) ─── */}
+                      {/* ─── Model Sekmeleri (skipped gizli, MAPE düşükten yükseğe sıralı) ─── */}
                       <div style={{position:'relative',marginBottom:14}}>
                         <div style={{display:'flex',gap:0,padding:4,background:'#f0f1f3',borderRadius:11,overflowX:'auto',flexWrap:'nowrap'}}>
-                          {FORECAST_MODELS.filter(m=>{const r=fit?.results?.find(x=>x.id===m.id);return !r||!r.skipped;}).map(m=>{
+                          {FORECAST_MODELS.filter(m=>{const r=fit?.results?.find(x=>x.id===m.id);return !r||!r.skipped;}).slice().sort((a,b)=>{
+                            const ra=fit?.results?.find(x=>x.id===a.id);
+                            const rb=fit?.results?.find(x=>x.id===b.id);
+                            const ma=ra?.mape,mb=rb?.mape;
+                            if(ma==null&&mb==null)return 0;
+                            if(ma==null)return 1;
+                            if(mb==null)return -1;
+                            return ma-mb;
+                          }).map(m=>{
                             const r=fit?.results?.find(x=>x.id===m.id);
                             const isBest=fit?.bestId===m.id;
                             const isActive=activeModelId===m.id;
@@ -3545,7 +3553,15 @@ export default function App(){
                               </span>
                             </div>
                             <div style={{padding:'14px 18px 16px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:10}}>
-                              {fit.results.map(r=>{
+                              {[...fit.results].sort((a,b)=>{
+                                // MAPE küçükten büyüğe; null (skipped) en sona
+                                if(a.skipped&&!b.skipped)return 1;
+                                if(!a.skipped&&b.skipped)return -1;
+                                if(a.mape==null&&b.mape==null)return 0;
+                                if(a.mape==null)return 1;
+                                if(b.mape==null)return -1;
+                                return a.mape-b.mape;
+                              }).map(r=>{
                                 const m=FORECAST_MODELS.find(mm=>mm.id===r.id);
                                 const isBest=fit.bestId===r.id;
                                 const mapeColor=r.mape==null?$.t3:r.mape<10?'#0d6e4f':r.mape<20?$.org:$.red;
