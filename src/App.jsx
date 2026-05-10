@@ -16,7 +16,7 @@ import {
   ArrowLeft01Icon, InformationCircleIcon, FilterIcon,
   RankingIcon, FactoryIcon, DeliveryTruck01Icon, CalendarIcon, FlashIcon,
   ArrowUpRight01Icon, ArrowDownRight01Icon, PercentSquareIcon,
-  BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon,
+  BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon, AiAudioIcon,
 } from '@hugeicons/core-free-icons';
 
 const INIT=[];
@@ -3260,9 +3260,10 @@ export default function App(){
               return(
                 <div>
                   {/* ─── Filtre Paneli (Premium Aurora-Emerald) ─── */}
-                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,overflow:'hidden',position:'relative'}}>
-                    {/* Üst gradient şerit — Aurora→Emerald */}
-                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 35%, #3b82f6 70%, #8b5cf6 100%)'}}/>
+                  {/* overflow:visible — combobox dropdown'ları kart sınırına çarpmasın */}
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,position:'relative'}}>
+                    {/* Üst gradient şerit — Aurora→Emerald (border-radius ile yuvarlak köşeli) */}
+                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 35%, #3b82f6 70%, #8b5cf6 100%)',borderTopLeftRadius:13,borderTopRightRadius:13}}/>
                     <div style={{padding:'16px 20px 14px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.025), rgba(59,130,246,.015))'}}>
                       <div style={{width:34,height:34,borderRadius:10,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 8px rgba(13,110,79,.22)'}}>
                         <HugeiconsIcon icon={FilterIcon} size={17} strokeWidth={2}/>
@@ -3337,11 +3338,11 @@ export default function App(){
                       </div>
                       {/* Action buttons — Premium */}
                       <div style={{flex:'0 0 auto',display:'flex',gap:10,alignSelf:'flex-end'}}>
-                        <button onClick={runForecast} disabled={(fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 20px',fontSize:12.5,fontWeight:800,color:'#fff',background:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'linear-gradient(135deg, #94a3b8, #64748b)':'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 100%)',border:'none',borderRadius:9,cursor:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'not-allowed':'pointer',boxShadow:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'none':'0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)',letterSpacing:.2,transition:'all .2s ease-out',transform:'translateY(0)'}} onMouseEnter={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 18px rgba(13,110,79,.36), 0 2px 5px rgba(13,110,79,.24)';}}} onMouseLeave={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)';}}}>
-                          {fcstLoading?<span style={{display:'inline-block',width:13,height:13,border:'2px solid rgba(255,255,255,.55)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<HugeiconsIcon icon={AnalyticsUpIcon} size={14} strokeWidth={2.2}/>}
+                        <button onClick={runForecast} disabled={(fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'11px 20px',fontSize:13,fontWeight:600,color:'#fff',background:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'linear-gradient(135deg, #94a3b8, #64748b)':'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 100%)',border:'none',borderRadius:9,cursor:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'not-allowed':'pointer',boxShadow:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'none':'0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)',letterSpacing:.1,transition:'all .2s ease-out',transform:'translateY(0)'}} onMouseEnter={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 18px rgba(13,110,79,.36), 0 2px 5px rgba(13,110,79,.24)';}}} onMouseLeave={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)';}}}>
+                          {fcstLoading?<span style={{display:'inline-block',width:13,height:13,border:'2px solid rgba(255,255,255,.55)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<HugeiconsIcon icon={AiAudioIcon} size={15} strokeWidth={1.8}/>}
                           {fcstLoading?'Hesaplanıyor...':'Hesapla'}
                         </button>
-                        {fcstResult&&<button onClick={exportXLSX} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:12.5,fontWeight:700,color:$.ac,background:'#fff',border:'1.5px solid rgba(13,110,79,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out'}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.04))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';}}>
+                        {fcstResult&&<button onClick={exportXLSX} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:13,fontWeight:600,color:$.ac,background:'#fff',border:'1.5px solid rgba(13,110,79,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.04))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';}}>
                           <HugeiconsIcon icon={Download01Icon} size={14} strokeWidth={2}/>Excel
                         </button>}
                       </div>
