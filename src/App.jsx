@@ -1623,7 +1623,7 @@ export default function App(){
             {pg!=='fcst'&&pg!=='set'&&(gSearch||gFilterCount>0)&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
             {erpStatus&&<div style={{padding:'3px 9px',borderRadius:7,background:$.grnB,fontSize:11,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
             {erpError&&<div style={{padding:'3px 9px',borderRadius:7,background:$.redB,fontSize:11,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
-            <div style={{fontSize:11,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>
+            {pg!=='fcst'&&pg!=='set'&&<div style={{fontSize:11,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>}
             {pg!=='fcst'&&pg!=='set'&&MSAL_ENABLED&&msalAccount&&(
               <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:5,fontSize:11,padding:'6px 12px',borderRadius:8}}>
                 {erpLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={13}/>}
