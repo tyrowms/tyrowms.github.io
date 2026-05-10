@@ -17,6 +17,7 @@ import {
   RankingIcon, FactoryIcon, DeliveryTruck01Icon, CalendarIcon, FlashIcon,
   ArrowUpRight01Icon, ArrowDownRight01Icon, PercentSquareIcon,
   BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon, AiAudioIcon,
+  AiBrain04Icon, CloudDownloadIcon,
 } from '@hugeicons/core-free-icons';
 
 const INIT=[];
@@ -1357,17 +1358,17 @@ export default function App(){
             </div>);})}
           {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Simülasyon'}</div>}
           {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
-          {[{id:'fcst',icon:TrendingUp,label:'Satış Tahmini'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'fcst',hugeicon:AiBrain04Icon,label:'Satış Tahmini'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
-              <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
+              {p.hugeicon?<HugeiconsIcon icon={p.hugeicon} size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>:<p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>}{sbExpanded&&p.label}
             </div>);})}
           {sbExpanded&&<div style={{padding:'14px 8px 6px',fontSize:9,fontWeight:700,letterSpacing:1.8,textTransform:'uppercase',color:$.t3,opacity:.45}}>{'Veri'}</div>}
           {!sbExpanded&&<div style={{margin:'10px 8px',borderTop:'1px solid rgba(226,231,238,.4)'}}/>}
-          {[{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',icon:Globe,label:'Ham Veriler'}].map(p=>{const isA=pg===p.id;return(
+          {[{id:'raw',icon:Database,label:'ERP Veriler'},{id:'erp',hugeicon:CloudDownloadIcon,label:'Ham Veriler'}].map(p=>{const isA=pg===p.id;return(
             <div key={p.id} className="sbn" title={!sbExpanded?p.label:undefined} onClick={()=>{setPg(p.id);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);setSbOpen(false);}} style={{display:'flex',alignItems:'center',gap:10,padding:sbExpanded?'8px 11px':'8px',margin:'1px 0',borderRadius:8,color:isA?$.ac:$.t2,cursor:'pointer',fontSize:12.5,fontWeight:isA?600:500,background:isA?'rgba(13,110,79,.07)':'transparent',position:'relative',transition:'all .2s ease',justifyContent:sbExpanded?'flex-start':'center'}}>
               {isA&&sbExpanded&&<div style={{position:'absolute',left:-12,top:'50%',transform:'translateY(-50%)',width:3,height:18,background:$.ac,borderRadius:'0 3px 3px 0'}}/>}
-              <p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>{sbExpanded&&p.label}
+              {p.hugeicon?<HugeiconsIcon icon={p.hugeicon} size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>:<p.icon size={sbExpanded?16:18} strokeWidth={isA?2.2:1.8}/>}{sbExpanded&&p.label}
               {sbExpanded&&p.id==='raw'&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.blu,color:'#fff',minWidth:18,textAlign:'center'}}>{rows.length}</span>}
               {sbExpanded&&p.id==='erp'&&erpRaw.length>0&&<span style={{marginLeft:'auto',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:6,background:$.ac,color:'#fff',minWidth:18,textAlign:'center'}}>{erpRaw.length}</span>}
             </div>);})}
