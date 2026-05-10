@@ -279,11 +279,30 @@ const CustomSelect=({value,onChange,options,placeholder='Tümü'})=>{
 const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,emptyText='Eşleşme yok',multi=false})=>{
   const [open,setOpen]=useState(false);
   const [query,setQuery]=useState('');
+  // Position:fixed pozisyon (parent overflow:hidden olsa da kırpılmasın)
+  const [pos,setPos]=useState(null);  // {x, y, w}
   const ref=useRef(null);
   const inputRef=useRef(null);
+  const triggerRef=useRef(null);
   const valueArr=multi?(Array.isArray(value)?value:[]):null;
   const isSelected=v=>multi?valueArr.includes(v):v===value;
   const selected=multi?null:items.find(i=>i.value===value);
+  // Dropdown açıldığında trigger pozisyonunu hesapla + window resize/scroll'da güncelle
+  useEffect(()=>{
+    if(!open||!triggerRef.current){setPos(null);return;}
+    const update=()=>{
+      if(!triggerRef.current)return;
+      const r=triggerRef.current.getBoundingClientRect();
+      setPos({x:r.left,y:r.bottom+5,w:r.width});
+    };
+    update();
+    window.addEventListener('resize',update);
+    window.addEventListener('scroll',update,true);  // true: capture, nested scroll için
+    return()=>{
+      window.removeEventListener('resize',update);
+      window.removeEventListener('scroll',update,true);
+    };
+  },[open]);
   useEffect(()=>{
     if(!open)return;
     const close=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
@@ -304,7 +323,7 @@ const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,e
   };
   return(
     <div ref={ref} style={{position:'relative'}}>
-      <div onClick={()=>{if(!disabled)setOpen(v=>!v);}} style={{
+      <div ref={triggerRef} onClick={()=>{if(!disabled)setOpen(v=>!v);}} style={{
         padding:'9px 32px 9px 12px',borderRadius:10,fontSize:12.5,fontFamily:'inherit',cursor:disabled?'not-allowed':'pointer',
         background:disabled?'rgba(0,0,0,.03)':open?'rgba(255,255,255,.95)':'rgba(255,255,255,.85)',
         border:'1px solid '+(open?'rgba(13,110,79,.35)':'rgba(226,231,238,.6)'),
@@ -316,8 +335,8 @@ const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,e
           <path d="M1 1l4.5 4.5L10 1" stroke="#0d6e4f" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </div>
-      {open&&!disabled&&(
-        <div style={{position:'absolute',top:'calc(100% + 5px)',left:0,right:0,zIndex:300,background:'rgba(255,255,255,.98)',backdropFilter:'blur(20px) saturate(180%)',borderRadius:12,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.15)',overflow:'hidden'}}>
+      {open&&!disabled&&pos&&(
+        <div style={{position:'fixed',left:pos.x,top:pos.y,width:pos.w,zIndex:9999,background:'rgba(255,255,255,.98)',backdropFilter:'blur(20px) saturate(180%)',borderRadius:12,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 12px 40px rgba(0,0,0,.15)',overflow:'hidden'}}>
           <div style={{padding:'8px 10px',borderBottom:'1px solid '+$.bdL,position:'relative',display:'flex',gap:8,alignItems:'center'}}>
             <div style={{position:'relative',flex:1}}>
               <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Kod veya isim ile ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 10px 7px 30px',borderRadius:8,border:'1px solid '+$.bdL,fontSize:12,fontFamily:'inherit',outline:'none',background:'#fafbfc'}}/>
@@ -3397,11 +3416,10 @@ export default function App(){
               };
               return(
                 <div>
-                  {/* ─── Filtre Paneli (Premium Aurora-Emerald) — header bloğu kaldırıldı, direkt input row'undan başlıyor ─── */}
-                  {/* overflow:visible — combobox dropdown'ları kart sınırına çarpmasın */}
-                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,position:'relative'}}>
-                    {/* Üst gradient şerit — kartın 1px border'ını yutarak köşelere mükemmel oturur (Trader Profile akıcılığı) */}
-                    <div style={{position:'absolute',top:-1,left:-1,right:-1,height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',borderTopLeftRadius:14,borderTopRightRadius:14,pointerEvents:'none',zIndex:1}}/>
+                  {/* ─── Filtre Paneli (Premium Aurora-Emerald) — Trader Profile pattern: overflow:hidden + normal-flow gradient şerit ─── */}
+                  {/* SearchableSelect dropdown artık position:fixed olduğu için overflow:hidden dropdown'u kırpmıyor */}
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,overflow:'hidden'}}>
+                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)'}}/>
                     {/* Status/error mesajı — input row'unun üstünde sade bar */}
                     {(fcstStatus||fcstError)&&(
                       <div style={{padding:'8px 20px',borderBottom:'1px solid '+$.bdL,background:'#fafbfc',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
@@ -4664,7 +4682,7 @@ export default function App(){
                               .scn-slider::-webkit-slider-thumb:hover{transform:scale(1.15);box-shadow:0 4px 14px rgba(245,166,35,.55), 0 2px 5px rgba(245,166,35,.40), inset 0 1px 0 rgba(255,255,255,.30);}
                               .scn-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg, #f5a623, #ea580c);box-shadow:0 2px 8px rgba(245,166,35,.45);border:2px solid #fff;cursor:pointer;}
                             `}</style>
-                            {/* Drawer panel */}
+                            {/* Drawer panel — floating round (her köşe yuvarlak, ekrandan margin) */}
                             <div style={{
                               position:'fixed',
                               ...(isMobile?{
@@ -4674,17 +4692,18 @@ export default function App(){
                                 borderTopRightRadius:24,
                                 animation:'scnSlideU .35s cubic-bezier(.16,1,.3,1)',
                               }:{
-                                top:0,right:0,
+                                top:14,right:14,bottom:14,
                                 width:460,
-                                height:'100vh',
+                                borderRadius:20,
                                 animation:'scnSlideR .35s cubic-bezier(.16,1,.3,1)',
                               }),
                               background:$.bg2,
-                              borderLeft:isMobile?'none':'1px solid '+$.bdL,
-                              boxShadow:isMobile?'0 -12px 48px rgba(0,0,0,.20)':'-12px 0 36px rgba(0,0,0,.14)',
+                              border:isMobile?'none':'1px solid '+$.bdL,
+                              boxShadow:isMobile?'0 -12px 48px rgba(0,0,0,.20)':'0 24px 64px rgba(0,0,0,.20), 0 8px 24px rgba(0,0,0,.10)',
                               zIndex:9999,
                               display:'flex',
                               flexDirection:'column',
+                              overflow:'hidden',
                             }}>
                               {/* Üst gradient şerit */}
                               <div style={{height:3,background:'linear-gradient(90deg, #f5a623 0%, #ea580c 100%)',flexShrink:0}}/>
