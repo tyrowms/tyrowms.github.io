@@ -7,6 +7,17 @@ import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITr
 import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
 import { aggregateMonthly, aggregateFromServer, mapToSeries, selectBestFit, buildTraderProfile, buildTraderProfileFromAggregates, FORECAST_MODELS, sum as sumArr, aggregateByItemid, forecastItemidBatch, reconcileItemForecasts, classifySeries } from './salesForecast';
 import { applyScenario, isBaseline, DEFAULT_SCENARIO } from './salesSimulation';
+// ─── HugeIcons (Stroke Rounded, free) — Forecast page premium icon set ───
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  AnalyticsUpIcon, PackageIcon, Building03Icon, GlobalIcon, Target02Icon,
+  Clock01Icon, Activity03Icon, EyeIcon, ArrowDown01Icon,
+  Download01Icon, RefreshIcon, Cancel01Icon, Alert02Icon,
+  ArrowLeft01Icon, InformationCircleIcon, FilterIcon,
+  RankingIcon, FactoryIcon, DeliveryTruck01Icon, CalendarIcon, FlashIcon,
+  ArrowUpRight01Icon, ArrowDownRight01Icon, PercentSquareIcon,
+  BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon,
+} from '@hugeicons/core-free-icons';
 
 const INIT=[];
 const DEMO=INIT;
@@ -3241,19 +3252,29 @@ export default function App(){
               };
               return(
                 <div>
-                  {/* ─── Filtre Paneli ─── */}
-                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14}}>
-                    <div style={{padding:'15px 18px 13px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-                      <div style={{width:28,height:28,borderRadius:8,background:$.grnB,color:'#0d6e4f',display:'inline-flex',alignItems:'center',justifyContent:'center'}}><TrendingUp size={15}/></div>
-                      <span style={{fontSize:13.5,fontWeight:700}}>Satış Tahmini Hesaplama</span>
-                      {fcstStatus&&<span style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{fcstStatus}</span>}
-                      {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:500,padding:'3px 9px',borderRadius:6,background:$.redB,cursor:'pointer'}} onClick={()=>setFcstError('')}>{fcstError} ✕</span>}
+                  {/* ─── Filtre Paneli (Premium Aurora-Emerald) ─── */}
+                  <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,overflow:'hidden',position:'relative'}}>
+                    {/* Üst gradient şerit — Aurora→Emerald */}
+                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 35%, #3b82f6 70%, #8b5cf6 100%)'}}/>
+                    <div style={{padding:'16px 20px 14px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.025), rgba(59,130,246,.015))'}}>
+                      <div style={{width:34,height:34,borderRadius:10,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 8px rgba(13,110,79,.22)'}}>
+                        <HugeiconsIcon icon={FilterIcon} size={17} strokeWidth={2}/>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Satış Tahmini Hesaplama</div>
+                        <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1}}>Trader veya ana trader seçimi · 3-12 ay ileri tahmin</div>
+                      </div>
+                      {fcstStatus&&<span style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:500,padding:'3px 9px',borderRadius:6,background:$.bg}}>{fcstStatus}</span>}
+                      {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:600,padding:'4px 10px',borderRadius:7,background:$.redB,border:'1px solid rgba(229,72,77,.25)',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:5}} onClick={()=>setFcstError('')}>
+                        <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2}/>{fcstError}<HugeiconsIcon icon={Cancel01Icon} size={11} strokeWidth={2.5}/>
+                      </span>}
                     </div>
-                    <div style={{padding:'14px 18px',display:'flex',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
-                      {/* Ana Trader dropdown — multi-select, opsiyonel hızlı filtre */}
+                    <div style={{padding:'18px 20px',display:'flex',alignItems:'flex-end',gap:14,flexWrap:'wrap'}}>
+                      {/* Ana Trader dropdown */}
                       <div style={{minWidth:240,flex:'1 1 240px'}}>
-                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5,display:'flex',alignItems:'center',gap:5}}>
-                          Ana Trader (opsiyonel)
+                        <div style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                          <HugeiconsIcon icon={RankingIcon} size={11} color={$.t3} strokeWidth={2}/>
+                          Ana Trader <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>(opsiyonel)</span>
                           <InfoTip title="Ana Trader" desc="Bir veya birkaç ana trader seçerek altındaki tüm trader'ların satışlarını birleşik tahminleyebilirsiniz. Tek tek alt trader seçmenize gerek yok." detail="Ana trader seçildiğinde Trader combobox o ana trader'a bağlı alt trader'larla daraltılır. Trader hiç seçilmezse tahmin doğrudan ana trader satış verisi üzerinden yapılır." iconSize={10}><span/></InfoTip>
                         </div>
                         <SearchableSelect
@@ -3266,9 +3287,12 @@ export default function App(){
                           emptyText="Ana trader yok"
                         />
                       </div>
-                      {/* Trader dropdown — multi-select, ana trader seçildiyse otomatik daraltılır */}
+                      {/* Trader dropdown */}
                       <div style={{minWidth:280,flex:'1 1 280px'}}>
-                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Trader {fcstAnaTrader.length>0?'(ana traderdan filtrelenmiş)':'(zorunlu — çoklu seçim)'}</div>
+                        <div style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                          <HugeiconsIcon icon={Building03Icon} size={11} color={$.t3} strokeWidth={2}/>
+                          Trader <span style={{fontWeight:600,color:fcstAnaTrader.length>0?$.blu:$.red,letterSpacing:.2,textTransform:'none'}}>{fcstAnaTrader.length>0?'(ana traderdan filtrelenmiş)':'(zorunlu — çoklu)'}</span>
+                        </div>
                         <SearchableSelect
                           multi
                           value={fcstTrader}
@@ -3281,31 +3305,38 @@ export default function App(){
                       </div>
                       {/* Horizon */}
                       <div>
-                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Horizon</div>
-                        <div style={{display:'flex',gap:0,background:$.bg,borderRadius:8,padding:3,border:'1px solid '+$.bdL}}>
+                        <div style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                          <HugeiconsIcon icon={CalendarIcon} size={11} color={$.t3} strokeWidth={2}/>Horizon
+                        </div>
+                        <div style={{display:'flex',gap:0,background:$.bg,borderRadius:9,padding:3,border:'1px solid '+$.bdL,boxShadow:'inset 0 1px 2px rgba(0,0,0,.03)'}}>
                           {[3,6,12].map(h=>(
-                            <div key={h} onClick={()=>setFcstHorizon(h)} style={{padding:'6px 14px',borderRadius:6,fontSize:12,fontWeight:fcstHorizon===h?700:500,cursor:'pointer',background:fcstHorizon===h?'#fff':'transparent',color:fcstHorizon===h?$.t1:$.t3,boxShadow:fcstHorizon===h?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .15s',userSelect:'none'}}>{h} ay</div>
+                            <div key={h} onClick={()=>setFcstHorizon(h)} style={{padding:'7px 16px',borderRadius:7,fontSize:12,fontWeight:fcstHorizon===h?800:600,cursor:'pointer',background:fcstHorizon===h?'#fff':'transparent',color:fcstHorizon===h?$.ac:$.t3,boxShadow:fcstHorizon===h?'0 1px 3px rgba(13,110,79,.10), 0 0 0 1px rgba(13,110,79,.10)':'none',transition:'all .18s',userSelect:'none',fontVariantNumeric:'tabular-nums'}}>{h} ay</div>
                           ))}
                         </div>
                       </div>
                       {/* Metrik toggle */}
                       <div>
-                        <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.4,marginBottom:5}}>Metrik</div>
-                        <div style={{display:'flex',gap:0,background:$.bg,borderRadius:8,padding:3,border:'1px solid '+$.bdL}}>
+                        <div style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                          <HugeiconsIcon icon={ChartLineData01Icon} size={11} color={$.t3} strokeWidth={2}/>Metrik
+                        </div>
+                        <div style={{display:'flex',gap:0,background:$.bg,borderRadius:9,padding:3,border:'1px solid '+$.bdL,boxShadow:'inset 0 1px 2px rgba(0,0,0,.03)'}}>
                           {[{id:'qty',l:'Miktar'},{id:'value',l:'Tutar'}].map(m=>{
                             const disabled=m.id==='value'&&fcstResult&&!fcstResult.valueAvailable;
                             return(
-                              <div key={m.id} onClick={()=>{if(!disabled)setFcstMetric(m.id);}} title={disabled?'Tutar alanı bu trader için bulunamadı':undefined} style={{padding:'6px 14px',borderRadius:6,fontSize:12,fontWeight:fcstMetric===m.id?700:500,cursor:disabled?'not-allowed':'pointer',background:fcstMetric===m.id?'#fff':'transparent',color:disabled?$.bdL:fcstMetric===m.id?$.t1:$.t3,boxShadow:fcstMetric===m.id?'0 1px 3px rgba(0,0,0,.08)':'none',opacity:disabled?.5:1,transition:'all .15s',userSelect:'none'}}>{m.l}</div>
+                              <div key={m.id} onClick={()=>{if(!disabled)setFcstMetric(m.id);}} title={disabled?'Tutar alanı bu trader için bulunamadı':undefined} style={{padding:'7px 16px',borderRadius:7,fontSize:12,fontWeight:fcstMetric===m.id?800:600,cursor:disabled?'not-allowed':'pointer',background:fcstMetric===m.id?'#fff':'transparent',color:disabled?$.bdL:fcstMetric===m.id?$.ac:$.t3,boxShadow:fcstMetric===m.id?'0 1px 3px rgba(13,110,79,.10), 0 0 0 1px rgba(13,110,79,.10)':'none',opacity:disabled?.5:1,transition:'all .18s',userSelect:'none'}}>{m.l}</div>
                             );
                           })}
                         </div>
                       </div>
-                      <div style={{flex:'0 0 auto',display:'flex',gap:8}}>
-                        <button className="tb-b pr" onClick={runForecast} disabled={(fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading} style={{padding:'9px 18px',fontSize:12,opacity:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?.5:1}}>
-                          {fcstLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<TrendingUp size={13}/>}
+                      {/* Action buttons — Premium */}
+                      <div style={{flex:'0 0 auto',display:'flex',gap:10,alignSelf:'flex-end'}}>
+                        <button onClick={runForecast} disabled={(fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 20px',fontSize:12.5,fontWeight:800,color:'#fff',background:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'linear-gradient(135deg, #94a3b8, #64748b)':'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 100%)',border:'none',borderRadius:9,cursor:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'not-allowed':'pointer',boxShadow:((fcstTrader.length===0&&fcstAnaTrader.length===0)||fcstLoading)?'none':'0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)',letterSpacing:.2,transition:'all .2s ease-out',transform:'translateY(0)'}} onMouseEnter={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 18px rgba(13,110,79,.36), 0 2px 5px rgba(13,110,79,.24)';}}} onMouseLeave={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)';}}}>
+                          {fcstLoading?<span style={{display:'inline-block',width:13,height:13,border:'2px solid rgba(255,255,255,.55)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<HugeiconsIcon icon={AnalyticsUpIcon} size={14} strokeWidth={2.2}/>}
                           {fcstLoading?'Hesaplanıyor...':'Hesapla'}
                         </button>
-                        {fcstResult&&<button className="tb-b" onClick={exportXLSX} style={{padding:'9px 16px',fontSize:12}}><Download size={13}/>Excel</button>}
+                        {fcstResult&&<button onClick={exportXLSX} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:12.5,fontWeight:700,color:$.ac,background:'#fff',border:'1.5px solid rgba(13,110,79,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out'}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.04))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';}}>
+                          <HugeiconsIcon icon={Download01Icon} size={14} strokeWidth={2}/>Excel
+                        </button>}
                       </div>
                     </div>
                   </div>
@@ -3444,65 +3475,95 @@ export default function App(){
                     const subPrefix=isMulti?resultTraderCodes.map(c=>lookupList.find(t=>t.code===c)?.label||c).join(' · '):`${resultTraderCodes[0]}${isAnaScope?' (Ana Trader)':' · '+profile.mainGroup}`;
                     const headerInitials=isMulti?String(resultTraderCodes.length):(traderInfo?.name||resultTraderCodes[0]).split(' ').map(s=>s[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR');
                     return(<>
-                      {/* ─── Trader Profili ─── */}
-                      <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
-                        <div style={{padding:'14px 18px',background:'linear-gradient(135deg,rgba(13,110,79,.04),rgba(59,130,246,.04))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-                          <div style={{width:42,height:42,borderRadius:11,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:isMulti?16:14,letterSpacing:.5,boxShadow:'0 3px 8px rgba(13,110,79,.2)'}}>{headerInitials}</div>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.2}}>{headerName}</div>
-                            <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1,whiteSpace:'nowrap',overflow:'visible'}}>
-                              <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{subPrefix}</span>
-                              {subLink&&(<><span> — </span>{subLink}</>)}
+                      {/* ─── Trader Profili — Premium Hero + 3 Top Cards ─── */}
+                      <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05)',marginBottom:14,overflow:'hidden'}}>
+                        {/* Üst gradient şerit */}
+                        <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)'}}/>
+                        {/* HERO HEADER (glassmorphism) */}
+                        <div style={{padding:'16px 20px',background:'linear-gradient(135deg, rgba(13,110,79,.05) 0%, rgba(59,130,246,.04) 50%, rgba(139,92,246,.04) 100%)',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+                          <div style={{position:'relative',width:48,height:48,borderRadius:12,background:'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:isMulti?15:14,letterSpacing:.4,boxShadow:'0 4px 14px rgba(13,110,79,.28), 0 1px 3px rgba(13,110,79,.20), inset 0 1px 0 rgba(255,255,255,.18)'}}>
+                            {headerInitials}
+                            <div style={{position:'absolute',top:-3,right:-3,width:16,height:16,borderRadius:'50%',background:'#fff',border:'1.5px solid '+$.bg2,boxShadow:'0 1px 3px rgba(0,0,0,.10)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                              <HugeiconsIcon icon={RankingIcon} size={9} color={$.ac} strokeWidth={2.5}/>
                             </div>
                           </div>
-                          <div style={{padding:'5px 11px',borderRadius:8,background:profile.intermittenceIndex>=.85?$.grnB:profile.intermittenceIndex>=.6?$.orgB:$.redB,fontSize:11,fontWeight:700,color:profile.intermittenceIndex>=.85?'#0d6e4f':profile.intermittenceIndex>=.6?'#92400e':$.red}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:16,fontWeight:800,color:$.t1,letterSpacing:-.3,lineHeight:1.2}}>{headerName}</div>
+                            <div style={{fontSize:11.5,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:3,whiteSpace:'nowrap',overflow:'visible'}}>
+                              <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{subPrefix}</span>
+                              {subLink&&(<><span> · </span>{subLink}</>)}
+                            </div>
+                          </div>
+                          {/* Karakter rozeti — premium pill */}
+                          <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 13px',borderRadius:9,background:profile.intermittenceIndex>=.85?'linear-gradient(135deg, rgba(45,212,160,.14), rgba(13,110,79,.06))':profile.intermittenceIndex>=.6?'linear-gradient(135deg, rgba(245,166,35,.14), rgba(234,88,12,.06))':'linear-gradient(135deg, rgba(229,72,77,.14), rgba(229,72,77,.06))',border:'1px solid '+(profile.intermittenceIndex>=.85?'rgba(13,110,79,.22)':profile.intermittenceIndex>=.6?'rgba(245,166,35,.30)':'rgba(229,72,77,.25)'),fontSize:11.5,fontWeight:800,color:profile.intermittenceIndex>=.85?'#0d6e4f':profile.intermittenceIndex>=.6?'#92400e':$.red,letterSpacing:.2,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
+                            <HugeiconsIcon icon={Activity03Icon} size={12} strokeWidth={2.2}/>
                             {profile.character}
                           </div>
                         </div>
-                        <div style={{padding:'14px 18px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14}}>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                              Son 12 Ay Toplam
-                              <InfoTip title="Son 12 Ay Toplam" desc="Trader'ın geçmiş 12 aylık tüm satışlarının toplamı (kg). Bugünkü durumu gösterir." detail="Tahmin değildir — fiili gerçekleşen değerlerdir. Forecast, bu rakamın trendine göre projeksiyon yapar." iconSize={10}><span/></InfoTip>
+                        {/* PERFORMANS ÖZETİ — 3 stat */}
+                        <div style={{padding:'18px 20px 4px',display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))',gap:14}}>
+                          {[
+                            {icon:ChartLineData01Icon,iconColor:$.blu,iconBg:$.bluB,label:'Son 12 Ay Toplam',value:fmtTon(profile.lastYearTotals.qty),sub:profile.lastYearTotals.value>0?'$'+fmt(profile.lastYearTotals.value):'fiili veri',subColor:profile.lastYearTotals.value>0?'#0d6e4f':$.t3,info:{title:'Son 12 Ay Toplam',desc:"Trader'ın geçmiş 12 aylık tüm satışlarının toplamı (kg). Bugünkü durumu gösterir.",detail:'Tahmin değildir — fiili gerçekleşen değerlerdir. Forecast, bu rakamın trendine göre projeksiyon yapar.'}},
+                            {icon:profile.yoy==null?ChartLineData01Icon:profile.yoy>=0?ArrowUpRight01Icon:ArrowDownRight01Icon,iconColor:profile.yoy==null?$.t3:profile.yoy>=0?'#0d6e4f':$.red,iconBg:profile.yoy==null?$.bg:profile.yoy>=0?$.grnB:$.redB,label:'YoY Değişim',value:profile.yoy==null?'—':(profile.yoy>=0?'+':'')+profile.yoy.toFixed(1)+'%',valueColor:profile.yoy==null?$.t3:profile.yoy>=0?'#0d6e4f':$.red,sub:'Önceki 12 ay vs son 12 ay',info:{title:'Year-over-Year (YoY)',desc:'Yıldan yıla büyüme/daralma. Önceki 12 ayın toplamına göre son 12 ayın yüzde değişimi.',detail:"Trader'ın momentum'unu gösterir. Pozitif → büyüme, negatif → daralma. Mevsimselliği dengelemek için 12 ay penceresi kullanılır.",formula:'(son12 - önceki12) / önceki12 × 100'}},
+                            {icon:Activity03Icon,iconColor:$.pur,iconBg:$.purB,label:'Aktivite (Süreklilik)',value:(profile.intermittenceIndex*100).toFixed(0)+'%',sub:profile.intermittenceIndex>=.85?'stabil aylık akış':profile.intermittenceIndex>=.6?'düzensiz akış':'lumpy / fasılalı',info:{title:'Aktivite (Intermittence Index)',desc:'Geçmiş veride satış yapılan ayların yüzdesi. 100% her ay satış var demek; düşük değerler fasılalı/sezonluk akış.',detail:'≥85% Stabil aylık akış · 60-85% Düzensiz · <60% Lumpy/opportunistic. Düşük değerlerde Croston modeli otomatik tercih edilir.'}},
+                          ].map((s,i)=>(
+                            <div key={i} style={{padding:'12px 14px',borderRadius:11,background:'#fafbfc',border:'1px solid '+$.bdL,transition:'all .2s'}} onMouseEnter={e=>{e.currentTarget.style.background='#f6f8fb';e.currentTarget.style.borderColor=$.bd;}} onMouseLeave={e=>{e.currentTarget.style.background='#fafbfc';e.currentTarget.style.borderColor=$.bdL;}}>
+                              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                                <div style={{width:24,height:24,borderRadius:7,background:s.iconBg,color:s.iconColor,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                  <HugeiconsIcon icon={s.icon} size={13} strokeWidth={2}/>
+                                </div>
+                                <span style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.5,flex:1}}>{s.label}</span>
+                                <InfoTip title={s.info.title} desc={s.info.desc} detail={s.info.detail} formula={s.info.formula} iconSize={10}><span/></InfoTip>
+                              </div>
+                              <div style={{fontSize:20,fontWeight:800,color:s.valueColor||$.t1,fontFamily:$.mo,letterSpacing:-.4,fontVariantNumeric:'tabular-nums'}}>{s.value}</div>
+                              <div style={{fontSize:10.5,color:s.subColor||$.t3,fontWeight:600,marginTop:3}}>{s.sub}</div>
                             </div>
-                            <div style={{fontSize:18,fontWeight:800,color:$.t1,fontFamily:$.mo}}>{fmtTon(profile.lastYearTotals.qty)}</div>
-                            {profile.lastYearTotals.value>0&&<div style={{fontSize:11,color:'#0d6e4f',fontWeight:700,fontFamily:$.mo,marginTop:2}}>${fmt(profile.lastYearTotals.value)}</div>}
-                          </div>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                              YoY Değişim
-                              <InfoTip title="Year-over-Year (YoY)" desc="Yıldan yıla büyüme/daralma. Önceki 12 ayın toplamına göre son 12 ayın yüzde değişimi." detail="Trader'ın momentum'unu gösterir. Pozitif → büyüme, negatif → daralma. Mevsimselliği dengelemek için 12 ay penceresi kullanılır." formula="(son12 - önceki12) / önceki12 × 100" iconSize={10}><span/></InfoTip>
-                            </div>
-                            <div style={{fontSize:18,fontWeight:800,color:profile.yoy==null?$.t3:profile.yoy>=0?'#0d6e4f':$.red,fontFamily:$.mo}}>{profile.yoy==null?'—':(profile.yoy>=0?'+':'')+profile.yoy.toFixed(1)+'%'}</div>
-                            <div style={{fontSize:10,color:$.t3,fontWeight:600,marginTop:2}}>Önceki 12 ay vs son 12 ay</div>
-                          </div>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                              Aktivite
-                              <InfoTip title="Aktivite (Intermittence Index)" desc="Geçmiş veride satış yapılan ayların yüzdesi. 100% her ay satış var demek; düşük değerler fasılalı/sezonluk akış." detail="≥85% Stabil aylık akış · 60-85% Düzensiz · <60% Lumpy/opportunistic. Düşük değerlerde Croston modeli otomatik tercih edilir." iconSize={10}><span/></InfoTip>
-                            </div>
-                            <div style={{fontSize:18,fontWeight:800,color:$.t1,fontFamily:$.mo}}>{(profile.intermittenceIndex*100).toFixed(0)}%</div>
-                            <div style={{fontSize:10,color:$.t3,fontWeight:600,marginTop:2}}>aylarda satış var</div>
-                          </div>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Top Şirketler</div>
-                            <div style={{fontSize:11,color:$.t2,fontWeight:600,lineHeight:1.5}}>
-                              {profile.topCompanies.slice(0,3).map(c=>`${c.name} (${c.pct.toFixed(0)}%)`).join(' · ')||'—'}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Top Ürünler</div>
-                            <div style={{fontSize:11,color:$.t2,fontWeight:600,lineHeight:1.5}}>
-                              {profile.topProducts.slice(0,3).map(p=>`${p.name} (${p.pct.toFixed(0)}%)`).join(' · ')||'—'}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Top Müşteriler</div>
-                            <div style={{fontSize:11,color:$.t2,fontWeight:600,lineHeight:1.5}}>
-                              {profile.topDestinations.slice(0,3).map(d=>`${d.name} (${d.pct.toFixed(0)}%)`).join(' · ')||'—'}
-                            </div>
-                          </div>
+                          ))}
                         </div>
+                        {/* TOP CARDS — 3 ayrı premium kart, ranked progress bar */}
+                        {(()=>{
+                          const renderTopCard=(icon,iconColor,iconBg,title,items,emptyText,monoNames=false)=>{
+                            const list=(items||[]).slice(0,3);
+                            const rankColors=['#fbbf24','#94a3b8','#cd7f32'];  // gold, silver, bronze
+                            return(
+                              <div style={{padding:'14px 16px',borderRadius:12,background:$.bg2,border:'1px solid '+$.bdL,boxShadow:'0 1px 2px rgba(0,0,0,.03)'}}>
+                                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:11}}>
+                                  <div style={{width:26,height:26,borderRadius:8,background:iconBg,color:iconColor,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                    <HugeiconsIcon icon={icon} size={14} strokeWidth={2}/>
+                                  </div>
+                                  <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5}}>{title}</span>
+                                </div>
+                                {list.length===0?(
+                                  <div style={{fontSize:11,color:$.t3,fontStyle:'italic',padding:'4px 0'}}>{emptyText}</div>
+                                ):(
+                                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                                    {list.map((item,i)=>(
+                                      <div key={i} style={{display:'flex',alignItems:'center',gap:10}}>
+                                        <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:18,height:18,borderRadius:5,background:`linear-gradient(135deg, ${rankColors[i]}, ${rankColors[i]}cc)`,color:'#fff',fontSize:9.5,fontWeight:900,boxShadow:`0 1px 3px ${rankColors[i]}55`,flexShrink:0}}>{i+1}</div>
+                                        <div style={{flex:1,minWidth:0}}>
+                                          <div style={{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:8,marginBottom:3}}>
+                                            <span style={{fontSize:11.5,fontWeight:700,color:$.t1,fontFamily:monoNames?$.mo:'inherit',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={item.name}>{item.name}</span>
+                                            <span style={{fontSize:11,fontWeight:800,color:iconColor,fontFamily:$.mo,fontVariantNumeric:'tabular-nums',flexShrink:0}}>{item.pct.toFixed(1)}%</span>
+                                          </div>
+                                          <div style={{height:5,borderRadius:3,background:$.bg,overflow:'hidden',position:'relative'}}>
+                                            <div style={{width:Math.min(100,item.pct)+'%',height:'100%',background:`linear-gradient(90deg, ${iconColor}aa, ${iconColor})`,borderRadius:3,transition:'width .5s cubic-bezier(.4,0,.2,1)'}}/>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          };
+                          return(
+                            <div style={{padding:'14px 20px 18px',display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))',gap:12}}>
+                              {renderTopCard(FactoryIcon,$.ac,$.acL,'Top Şirketler',profile.topCompanies,'Henüz şirket verisi yok',true)}
+                              {renderTopCard(PackageIcon,$.blu,$.bluB,'Top Ürünler',profile.topProducts,'Henüz ürün verisi yok',true)}
+                              {renderTopCard(DeliveryTruck01Icon,$.pur,$.purB,'Top Müşteriler / Destinasyonlar',profile.topDestinations,'Henüz müşteri verisi yok',false)}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* ─── Model Sekmeleri (skipped gizli, MAPE düşükten yükseğe sıralı) ─── */}
@@ -3602,35 +3663,46 @@ export default function App(){
                               </div>
                             </div>
                           )}
-                          {/* Özet kartlar — hover'da terim açıklaması; senaryo aktifse Δ rozet */}
+                          {/* KPI Kartlar — Premium glassmorphism, hover lift */}
                           {(()=>{
                             const scActive=fcstScenarioResult&&fcstScenarioResult.isActive;
                             const scAdjPts=scActive?fcstScenarioResult.adjustedForecast?.point:null;
                             const scTotal=scAdjPts?sumArr(scAdjPts):null;
                             const scAvg=scTotal!=null?scTotal/horizon:null;
                             const cards=[
-                              {l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),scV:scAvg!=null?fmtMetric(scAvg):null,scDelta:scAvg!=null&&monthlyAvg>0?((scAvg-monthlyAvg)/monthlyAvg*100):null,c:$.blu,bg:$.bluB,info:{title:'Aylık Ortalama Tahmin',desc:`Önümüzdeki ${horizon} ayın tahmin değerlerinin aritmetik ortalaması. Trader'ın tipik aylık kapasitesini gösterir.`,detail:'Toplam tahmin / horizon. Tek seferlik aşırı değerler ortalamaya yansır — uç değerler için medyan daha güvenilir olabilir.'}},
-                              {l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),scV:scTotal!=null?fmtMetric(scTotal):null,scDelta:scTotal!=null&&fcTotal>0?((scTotal-fcTotal)/fcTotal*100):null,c:'#0d6e4f',bg:$.grnB,info:{title:`${horizon} Ay Toplam Tahmin`,desc:`Önümüzdeki ${horizon} ay boyunca beklenen toplam ${fcstMetric==='value'?'satış değeri':'satış miktarı'}. Modelin kümülatif öngörüsü.`,detail:`Tahmin noktalarının toplamı. Mevsimsel pikleri ve trend'i içerir. Stok/kontrat planlama için referans.`}},
-                              {l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',scV:null,scDelta:null,c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bdL:trendPct>=0?$.grnB:$.redB,info:{title:'Trend Değişim Oranı',desc:'Tahmin dönemi toplamının, son 12 ayın aynı süreye eşitlenmiş değerine göre yüzde değişimi.',detail:'Pozitif değer büyüme, negatif daralma sinyalidir. Mevsimsel düzeltme yapmaz — yıl üstü kıyaslamadır.',formula:'(tahmin_topl × 12/horizon) / son12 × 100 - 100'}},
-                              {l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',scV:null,scDelta:null,c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bdL:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB,info:{title:'Backtest MAPE (Hata Oranı)',desc:'Mean Absolute Percentage Error — modelin geçmiş veride yaptığı tahminlerin gerçek değerlerden ortalama yüzde sapması.',detail:'%0-10 mükemmel · %10-20 kabul edilebilir · %20+ gürültülü/güvensiz. Düşük MAPE daha güvenilir tahmin.',formula:'mean(|gerçek - tahmin| / gerçek) × 100'}},
+                              {icon:CalendarIcon,l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),scV:scAvg!=null?fmtMetric(scAvg):null,scDelta:scAvg!=null&&monthlyAvg>0?((scAvg-monthlyAvg)/monthlyAvg*100):null,c:$.blu,bg:$.bluB,gradient:'linear-gradient(135deg, rgba(59,130,246,.08), rgba(59,130,246,.02))',info:{title:'Aylık Ortalama Tahmin',desc:`Önümüzdeki ${horizon} ayın tahmin değerlerinin aritmetik ortalaması. Trader'ın tipik aylık kapasitesini gösterir.`,detail:'Toplam tahmin / horizon. Tek seferlik aşırı değerler ortalamaya yansır — uç değerler için medyan daha güvenilir olabilir.'}},
+                              {icon:ChartLineData01Icon,l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),scV:scTotal!=null?fmtMetric(scTotal):null,scDelta:scTotal!=null&&fcTotal>0?((scTotal-fcTotal)/fcTotal*100):null,c:'#0d6e4f',bg:$.grnB,gradient:'linear-gradient(135deg, rgba(13,110,79,.08), rgba(45,212,160,.02))',info:{title:`${horizon} Ay Toplam Tahmin`,desc:`Önümüzdeki ${horizon} ay boyunca beklenen toplam ${fcstMetric==='value'?'satış değeri':'satış miktarı'}. Modelin kümülatif öngörüsü.`,detail:`Tahmin noktalarının toplamı. Mevsimsel pikleri ve trend'i içerir. Stok/kontrat planlama için referans.`}},
+                              {icon:trendPct==null?ChartLineData01Icon:trendPct>=0?ArrowUpRight01Icon:ArrowDownRight01Icon,l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',scV:null,scDelta:null,c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bg:trendPct>=0?$.grnB:$.redB,gradient:trendPct==null?'linear-gradient(135deg, rgba(0,0,0,.02), rgba(0,0,0,.005))':trendPct>=0?'linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.02))':'linear-gradient(135deg, rgba(229,72,77,.06), rgba(229,72,77,.02))',info:{title:'Trend Değişim Oranı',desc:'Tahmin dönemi toplamının, son 12 ayın aynı süreye eşitlenmiş değerine göre yüzde değişimi.',detail:'Pozitif değer büyüme, negatif daralma sinyalidir. Mevsimsel düzeltme yapmaz — yıl üstü kıyaslamadır.',formula:'(tahmin_topl × 12/horizon) / son12 × 100 - 100'}},
+                              {icon:PercentSquareIcon,l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',scV:null,scDelta:null,c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bg:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB,gradient:activeResult.mape==null?'linear-gradient(135deg, rgba(0,0,0,.02), rgba(0,0,0,.005))':activeResult.mape<10?'linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.02))':activeResult.mape<20?'linear-gradient(135deg, rgba(245,166,35,.06), rgba(234,88,12,.02))':'linear-gradient(135deg, rgba(229,72,77,.06), rgba(229,72,77,.02))',info:{title:'Backtest MAPE (Hata Oranı)',desc:'Mean Absolute Percentage Error — modelin geçmiş veride yaptığı tahminlerin gerçek değerlerden ortalama yüzde sapması.',detail:'%0-10 mükemmel · %10-20 kabul edilebilir · %20+ gürültülü/güvensiz. Düşük MAPE daha güvenilir tahmin.',formula:'mean(|gerçek - tahmin| / gerçek) × 100'}},
                             ];
                             return(
-                              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginBottom:14}}>
+                              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12,marginBottom:14}}>
                                 {cards.map((k,i)=>(
-                                  <div key={i} style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'14px 16px',boxShadow:$.sh,position:'relative'}}>
+                                  <div key={i} style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,padding:'16px 18px',boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04)',position:'relative',transition:'all .25s ease-out',overflow:'hidden'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.04)';}}>
+                                    {/* Background tint */}
+                                    <div style={{position:'absolute',inset:0,background:k.gradient,pointerEvents:'none',zIndex:0}}/>
+                                    {/* Senaryo Δ rozeti — glassmorphism */}
                                     {k.scDelta!=null&&(
-                                      <span title={`Senaryo: ${k.scV}`} style={{position:'absolute',top:8,right:8,fontSize:10,fontFamily:$.mo,fontWeight:800,padding:'2px 7px',borderRadius:5,background:k.scDelta>=0?'rgba(13,110,79,.10)':'rgba(229,72,77,.10)',color:k.scDelta>=0?'#0d6e4f':$.red,border:'1px solid '+(k.scDelta>=0?'rgba(13,110,79,.20)':'rgba(229,72,77,.20)')}}>
+                                      <span title={`Senaryo: ${k.scV}`} style={{position:'absolute',top:10,right:10,zIndex:2,display:'inline-flex',alignItems:'center',gap:3,fontSize:10.5,fontFamily:$.mo,fontWeight:900,padding:'3px 8px',borderRadius:6,background:k.scDelta>=0?'rgba(13,110,79,.95)':'rgba(229,72,77,.95)',color:'#fff',boxShadow:k.scDelta>=0?'0 2px 6px rgba(13,110,79,.30)':'0 2px 6px rgba(229,72,77,.30)',backdropFilter:'blur(4px)',letterSpacing:.3}}>
+                                        <HugeiconsIcon icon={Target02Icon} size={9} strokeWidth={2.5}/>
                                         {k.scDelta>=0?'+':''}{k.scDelta.toFixed(1)}%
                                       </span>
                                     )}
-                                    <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                                      {k.l}
+                                    {/* Header: icon + label + InfoTip */}
+                                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,position:'relative',zIndex:1}}>
+                                      <div style={{width:26,height:26,borderRadius:7,background:k.bg,color:k.c,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                        <HugeiconsIcon icon={k.icon} size={14} strokeWidth={2}/>
+                                      </div>
+                                      <span style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.5,flex:1}}>{k.l}</span>
                                       <InfoTip title={k.info.title} desc={k.info.desc} detail={k.info.detail} formula={k.info.formula} placement="bottom" iconSize={10}><span/></InfoTip>
                                     </div>
-                                    <div style={{fontSize:18,fontWeight:800,color:k.c,fontFamily:$.mo}}>{k.v}</div>
+                                    {/* Value: 24px premium */}
+                                    <div style={{fontSize:24,fontWeight:800,color:k.c,fontFamily:$.mo,letterSpacing:-.5,lineHeight:1.1,fontVariantNumeric:'tabular-nums',position:'relative',zIndex:1}}>{k.v}</div>
+                                    {/* Senaryo değeri (turuncu) */}
                                     {k.scV!=null&&(
-                                      <div style={{fontSize:11,fontWeight:700,color:'#92400e',fontFamily:$.mo,marginTop:3,display:'flex',alignItems:'center',gap:4}}>
-                                        <Target size={10}/>{k.scV}
+                                      <div style={{fontSize:11.5,fontWeight:800,color:'#ea580c',fontFamily:$.mo,marginTop:4,display:'inline-flex',alignItems:'center',gap:5,position:'relative',zIndex:1,padding:'3px 8px',borderRadius:6,background:'rgba(245,166,35,.10)',border:'1px solid rgba(245,166,35,.18)'}}>
+                                        <HugeiconsIcon icon={Target02Icon} size={10} strokeWidth={2}/>
+                                        Senaryo: {k.scV}
                                       </div>
                                     )}
                                   </div>
@@ -3639,51 +3711,63 @@ export default function App(){
                             );
                           })()}
 
-                          {/* Çizgi grafik */}
-                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14}}>
-                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-                              <BarChart3 size={15} color={$.ac}/>
-                              <span>Tahmin Grafiği — {FORECAST_MODELS.find(m=>m.id===activeModelId)?.label}</span>
-                              {/* ─── Görünüm combobox: Trader Toplamı / Itemid lookup ─── */}
+                          {/* Çizgi grafik (Premium header — Görünüm + Senaryolar) */}
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05)',marginBottom:14,overflow:'hidden'}}>
+                            <style>{`
+                              @keyframes scnPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.45)}50%{box-shadow:0 0 0 6px rgba(245,166,35,0)}}
+                              .scn-active-btn{animation:scnPulse 2s ease-in-out infinite}
+                            `}</style>
+                            <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.025), rgba(59,130,246,.015))'}}>
+                              <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',boxShadow:'0 2px 6px rgba(13,110,79,.20)'}}>
+                                <HugeiconsIcon icon={ChartBarLineIcon} size={15} strokeWidth={2}/>
+                              </div>
+                              <div style={{minWidth:0,flex:'0 1 auto'}}>
+                                <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Tahmin Grafiği</div>
+                                <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1,fontFamily:$.mo}}>{FORECAST_MODELS.find(m=>m.id===activeModelId)?.label||'—'}</div>
+                              </div>
+                              {/* ─── Görünüm combobox (Premium Aurora outline) ─── */}
                               {fcstResult?.itemForecasts&&fcstResult.itemForecasts.length>0&&(()=>{
                                 const items=fcstResult.itemForecasts;
                                 const filtered=fcstViewSearch?items.filter(it=>it.pid.toLowerCase().includes(fcstViewSearch.toLowerCase())):items;
                                 const showCount=Math.min(filtered.length,30);
                                 return(
-                                  <div style={{position:'relative',marginLeft:14}} onClick={e=>e.stopPropagation()}>
-                                    <button onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',fontSize:11,fontWeight:700,color:$.t2,background:isItemView?'linear-gradient(135deg,rgba(59,130,246,.10),rgba(139,92,246,.08))':'#f7f8fa',border:'1px solid '+(isItemView?'rgba(59,130,246,.30)':$.bdL),borderRadius:8,cursor:'pointer',transition:'all .15s'}}>
-                                      <Eye size={12}/>
-                                      <span style={{fontFamily:isItemView?$.mo:'inherit',fontSize:isItemView?11:11}}>{isItemView?activeItem?.pid:'Trader Toplamı'}</span>
-                                      <ChevronDown size={11} style={{opacity:.6,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
+                                  <div style={{position:'relative',marginLeft:'auto'}} onClick={e=>e.stopPropagation()}>
+                                    <button onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'8px 13px',fontSize:12,fontWeight:700,color:isItemView?$.blu:$.t2,background:isItemView?'linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.06))':'#fff',border:'1.5px solid '+(isItemView?'rgba(59,130,246,.40)':$.bdL),borderRadius:9,cursor:'pointer',transition:'all .18s',height:36,boxShadow:isItemView?'0 0 0 3px rgba(59,130,246,.08), 0 1px 3px rgba(59,130,246,.10)':'0 1px 2px rgba(0,0,0,.03)'}} onMouseEnter={e=>{if(!isItemView){e.currentTarget.style.borderColor='rgba(59,130,246,.30)';e.currentTarget.style.background='rgba(59,130,246,.03)';}}} onMouseLeave={e=>{if(!isItemView){e.currentTarget.style.borderColor=$.bdL;e.currentTarget.style.background='#fff';}}}>
+                                      <HugeiconsIcon icon={EyeIcon} size={13} strokeWidth={2}/>
+                                      <span style={{fontFamily:isItemView?$.mo:'inherit',maxWidth:isItemView?180:'none',overflow:'hidden',textOverflow:'ellipsis'}}>{isItemView?activeItem?.pid:'Trader Toplamı'}</span>
+                                      <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4} style={{opacity:.7,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
                                     </button>
                                     {fcstShowViewMenu&&(
                                       <>
                                         <div style={{position:'fixed',inset:0,zIndex:39}} onClick={()=>setFcstShowViewMenu(false)}/>
-                                        <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:340,maxWidth:420,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:11,boxShadow:'0 10px 30px rgba(0,0,0,.14)',zIndex:40,overflow:'hidden'}}>
+                                        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,minWidth:360,maxWidth:440,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:12,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:40,overflow:'hidden'}}>
                                           {/* Trader Toplamı sabit üst seçenek */}
-                                          <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'10px 14px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',borderBottom:'1px solid '+$.bdL,background:!isItemView?$.bluB:'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(isItemView)e.currentTarget.style.background='#f7f8fa';}} onMouseLeave={e=>{if(isItemView)e.currentTarget.style.background='transparent';}}>
-                                            <BarChart3 size={13} color={$.blu}/>
-                                            <span style={{fontSize:12,fontWeight:!isItemView?800:600,color:!isItemView?$.blu:$.t1}}>Trader Toplamı</span>
-                                            {!isItemView&&<span style={{marginLeft:'auto',fontSize:10,fontWeight:700,color:$.blu}}>● aktif</span>}
+                                          <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:9,cursor:'pointer',borderBottom:'1px solid '+$.bdL,background:!isItemView?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(isItemView)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(isItemView)e.currentTarget.style.background='transparent';}}>
+                                            <HugeiconsIcon icon={ChartBarLineIcon} size={14} color={$.blu} strokeWidth={2}/>
+                                            <span style={{fontSize:12.5,fontWeight:!isItemView?800:600,color:!isItemView?$.blu:$.t1}}>Trader Toplamı</span>
+                                            {!isItemView&&<span style={{marginLeft:'auto',fontSize:10,fontWeight:800,color:$.blu,padding:'2px 8px',borderRadius:4,background:'rgba(59,130,246,.10)',letterSpacing:.5}}>● AKTİF</span>}
                                           </div>
                                           {/* Search */}
-                                          <div style={{padding:'8px 10px',background:'#f7f8fa',borderBottom:'1px solid '+$.bdL}}>
-                                            <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Itemid ara…" autoFocus style={{width:'100%',padding:'5px 9px',fontSize:11,border:'1px solid '+$.bdL,borderRadius:6,background:$.bg2,outline:'none',color:$.t1}}/>
+                                          <div style={{padding:'10px 12px',background:'#fafbfc',borderBottom:'1px solid '+$.bdL}}>
+                                            <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Itemid ara…" autoFocus style={{width:'100%',padding:'7px 11px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:7,background:$.bg2,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600}}/>
                                           </div>
                                           {/* Itemid list */}
-                                          <div style={{maxHeight:340,overflowY:'auto'}}>
-                                            <div style={{padding:'5px 12px',fontSize:9,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,background:'#fafbfc'}}>Top {showCount} Itemid (forecast hacmine göre)</div>
+                                          <div style={{maxHeight:360,overflowY:'auto'}}>
+                                            <div style={{padding:'7px 14px',fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,background:'#fafbfc',display:'flex',alignItems:'center',gap:5}}>
+                                              <HugeiconsIcon icon={PackageIcon} size={11} color={$.t3} strokeWidth={2}/>
+                                              Top {showCount} Itemid <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· hacme göre</span>
+                                            </div>
                                             {filtered.slice(0,30).map(it=>{
                                               const sel=fcstChartView===it.pid;
                                               return(
-                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'8px 14px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:sel?$.bluB:'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#f7f8fa';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
-                                                  <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:sel?$.blu:$.t2,minWidth:130,overflow:'hidden',textOverflow:'ellipsis'}}>{it.pid}</span>
-                                                  <span style={{marginLeft:'auto',fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600}}>{fmtTon(it.last12)}</span>
-                                                  {!it.isStable&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:700,letterSpacing:.3}}>DÜZENSİZ</span>}
+                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'9px 14px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:sel?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                                  <span style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:sel?$.blu:$.t1,minWidth:130,overflow:'hidden',textOverflow:'ellipsis'}}>{it.pid}</span>
+                                                  <span style={{marginLeft:'auto',fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,fontVariantNumeric:'tabular-nums'}}>{fmtTon(it.last12)}</span>
+                                                  {!it.isStable&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:800,letterSpacing:.4}}><HugeiconsIcon icon={Alert02Icon} size={9} strokeWidth={2.5}/>DÜZENSİZ</span>}
                                                 </div>
                                               );
                                             })}
-                                            {filtered.length===0&&<div style={{padding:'14px 14px',fontSize:11,color:$.t3,textAlign:'center'}}>Eşleşme yok</div>}
+                                            {filtered.length===0&&<div style={{padding:'18px 14px',fontSize:11,color:$.t3,textAlign:'center',fontStyle:'italic'}}>Eşleşme yok</div>}
                                           </div>
                                         </div>
                                       </>
@@ -3691,16 +3775,16 @@ export default function App(){
                                   </div>
                                 );
                               })()}
-                              {/* ─── Senaryo butonu ─── */}
+                              {/* ─── Senaryolar butonu (Premium turuncu glassmorphism) ─── */}
                               {(()=>{
                                 const scenarioActive=fcstScenarioResult&&fcstScenarioResult.isActive;
                                 return(
-                                  <button onClick={()=>setFcstShowScenarios(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',fontSize:11,fontWeight:700,color:scenarioActive?'#92400e':$.t2,background:scenarioActive?'linear-gradient(135deg,rgba(245,166,35,.12),rgba(245,166,35,.06))':'#f7f8fa',border:'1px solid '+(scenarioActive?'rgba(245,166,35,.35)':$.bdL),borderRadius:8,cursor:'pointer',transition:'all .15s',marginLeft:8,position:'relative'}}>
-                                    <Target size={12}/>
+                                  <button onClick={()=>setFcstShowScenarios(true)} className={scenarioActive?'scn-active-btn':''} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'8px 14px',fontSize:12,fontWeight:scenarioActive?800:700,color:scenarioActive?'#fff':$.t1,background:scenarioActive?'linear-gradient(135deg, #f5a623 0%, #ea580c 100%)':'#fff',border:'1.5px solid '+(scenarioActive?'rgba(245,166,35,.55)':'rgba(245,166,35,.30)'),borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',position:'relative',height:36,boxShadow:scenarioActive?'0 4px 14px rgba(245,166,35,.30), 0 1px 3px rgba(245,166,35,.20)':'0 1px 3px rgba(245,166,35,.08)',letterSpacing:.3,textTransform:'uppercase'}} onMouseEnter={e=>{if(!scenarioActive){e.currentTarget.style.background='linear-gradient(135deg, rgba(245,166,35,.10), rgba(234,88,12,.06))';e.currentTarget.style.borderColor='rgba(245,166,35,.50)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(245,166,35,.18)';}else{e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(!scenarioActive){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(245,166,35,.30)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(245,166,35,.08)';}else{e.currentTarget.style.transform='translateY(0)';}}}>
+                                    <HugeiconsIcon icon={Target02Icon} size={14} strokeWidth={2.2}/>
                                     <span>Senaryolar</span>
                                     {scenarioActive&&(
-                                      <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'1px 6px',borderRadius:4,background:'#f5a623',color:'#fff',fontSize:9,fontWeight:800,letterSpacing:.4,marginLeft:2}}>
-                                        AKTİF · {fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
+                                      <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:5,background:'rgba(255,255,255,.25)',backdropFilter:'blur(4px)',color:'#fff',fontSize:10,fontWeight:900,letterSpacing:.5,marginLeft:2,fontFamily:$.mo,fontVariantNumeric:'tabular-nums'}}>
+                                        <HugeiconsIcon icon={FlashIcon} size={9} strokeWidth={2.5}/>{fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
                                       </span>
                                     )}
                                   </button>
@@ -4101,26 +4185,33 @@ export default function App(){
                               );
                             };
                             return(
-                              <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
-                                <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',background:'linear-gradient(135deg,rgba(45,212,160,.04),rgba(59,130,246,.03))'}}>
-                                  <Package size={15} color={$.ac}/>
-                                  <span style={{fontSize:13,fontWeight:800,color:$.t1}}>Ürün Bazlı Tahmin</span>
-                                  <span style={{fontSize:11,color:$.t3,fontWeight:500}}>{fcstShowAllItems?`Top ${sortedItems.length}`:`İlk 10`} itemid · forecast hacmine göre sıralı</span>
+                              <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:14,overflow:'hidden'}}>
+                                <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.04), rgba(45,212,160,.02))'}}>
+                                  <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(13,110,79,.20)'}}>
+                                    <HugeiconsIcon icon={PackageIcon} size={15} strokeWidth={2}/>
+                                  </div>
+                                  <div style={{minWidth:0}}>
+                                    <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Ürün Bazlı Tahmin</div>
+                                    <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>{fcstShowAllItems?`Top ${sortedItems.length} itemid`:`İlk 10 itemid`} <span style={{fontWeight:500,color:$.t3}}>· forecast hacmine göre</span></div>
+                                  </div>
                                   {fcstResult.itemReconcile&&Math.abs(fcstResult.itemReconcile.scalingFactor-1)>0.02&&(
-                                    <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',fontSize:10,padding:'3px 9px',borderRadius:6,background:$.orgB,color:'#92400e',fontWeight:700,fontFamily:$.mo}}>Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%</span>
+                                    <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',display:'inline-flex',alignItems:'center',gap:5,fontSize:10.5,padding:'4px 10px',borderRadius:7,background:'rgba(245,166,35,.10)',color:'#92400e',fontWeight:800,fontFamily:$.mo,border:'1px solid rgba(245,166,35,.25)'}}>
+                                      <HugeiconsIcon icon={Alert02Icon} size={11} strokeWidth={2.2}/>
+                                      Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%
+                                    </span>
                                   )}
                                 </div>
                                 <div style={{overflowX:'auto'}}>
                                   <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
                                     <thead>
-                                      <tr style={{background:'#fafbfc',borderBottom:'2px solid '+$.bdL}}>
-                                        <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:36}}>#</th>
-                                        <th onClick={()=>sortClick('pid')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Itemid{sortIcon('pid')}</th>
-                                        <th onClick={()=>sortClick('last12')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Son 12 Ay{sortIcon('last12')}</th>
-                                        <th onClick={()=>sortClick('hAhead')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Tahmin {horizon} Ay{sortIcon('hAhead')}</th>
-                                        <th onClick={()=>sortClick('yoy')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>YoY %{sortIcon('yoy')}</th>
-                                        <th onClick={()=>sortClick('mape')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Best Model{sortIcon('mape')}</th>
-                                        <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:90}}>Trend</th>
+                                      <tr style={{background:'linear-gradient(180deg, #fafbfc, #f5f7fa)',borderBottom:'2px solid '+$.bd}}>
+                                        <th style={{padding:'10px 10px',textAlign:'center',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,width:38,position:'sticky',top:0}}>#</th>
+                                        <th onClick={()=>sortClick('pid')} style={{padding:'10px 12px',textAlign:'left',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Itemid{sortIcon('pid')}</th>
+                                        <th onClick={()=>sortClick('last12')} style={{padding:'10px 10px',textAlign:'right',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Son 12 Ay{sortIcon('last12')}</th>
+                                        <th onClick={()=>sortClick('hAhead')} style={{padding:'10px 10px',textAlign:'right',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Tahmin {horizon} Ay{sortIcon('hAhead')}</th>
+                                        <th onClick={()=>sortClick('yoy')} style={{padding:'10px 10px',textAlign:'right',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>YoY %{sortIcon('yoy')}</th>
+                                        <th onClick={()=>sortClick('mape')} style={{padding:'10px 12px',textAlign:'left',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Best Model{sortIcon('mape')}</th>
+                                        <th style={{padding:'10px 10px',textAlign:'center',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,width:96}}>Trend</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -4133,23 +4224,36 @@ export default function App(){
                                         const mape=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.mape;
                                         const fc=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.forecast?.point;
                                         return(
-                                          <tr key={it.pid} onClick={()=>setFcstChartView(it.pid)} style={{borderBottom:'1px solid '+$.bdL,cursor:'pointer',background:sel?$.bluB:'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
-                                            <td style={{padding:'8px 10px',textAlign:'center',color:$.t3,fontFamily:$.mo,fontSize:11,fontWeight:600}}>{idx+1}</td>
-                                            <td style={{padding:'8px 10px'}}>
-                                              <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                                                <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:sel?$.blu:$.t1}}>{it.pid}</span>
-                                                {!it.isStable&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:700,letterSpacing:.3,textTransform:'uppercase'}}>Düzensiz</span>}
-                                                {sel&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.bluB,color:$.blu,fontWeight:700,letterSpacing:.3}}>● aktif</span>}
+                                          <tr key={it.pid} onClick={()=>setFcstChartView(it.pid)} style={{borderBottom:'1px solid '+$.bdL,cursor:'pointer',background:sel?'linear-gradient(90deg, rgba(59,130,246,.08), rgba(139,92,246,.03))':'transparent',transition:'background .15s',borderLeft:sel?'3px solid '+$.blu:'3px solid transparent'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='linear-gradient(90deg, rgba(13,110,79,.025), transparent)';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                            <td style={{padding:'10px 10px',textAlign:'center',color:idx<3?'#fff':$.t3,fontFamily:$.mo,fontSize:11,fontWeight:800}}>
+                                              {idx<3?(
+                                                <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:20,height:20,borderRadius:5,background:`linear-gradient(135deg, ${['#fbbf24','#94a3b8','#cd7f32'][idx]}, ${['#fbbf24','#94a3b8','#cd7f32'][idx]}cc)`,color:'#fff',fontSize:10,fontWeight:900,boxShadow:`0 1px 3px ${['#fbbf24','#94a3b8','#cd7f32'][idx]}55`}}>{idx+1}</span>
+                                              ):idx+1}
+                                            </td>
+                                            <td style={{padding:'10px 12px'}}>
+                                              <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
+                                                <span style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:sel?$.blu:$.t1,letterSpacing:-.1}}>{it.pid}</span>
+                                                {!it.isStable&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:800,letterSpacing:.4,textTransform:'uppercase',border:'1px solid rgba(245,166,35,.20)'}}><HugeiconsIcon icon={Alert02Icon} size={9} strokeWidth={2.5}/>Düzensiz</span>}
+                                                {it.isStable&&it.classification?.type==='smooth'&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.grnB,color:'#0d6e4f',fontWeight:800,letterSpacing:.4,textTransform:'uppercase',border:'1px solid rgba(13,110,79,.18)'}}><HugeiconsIcon icon={Activity03Icon} size={9} strokeWidth={2.5}/>Stabil</span>}
+                                                {sel&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.bluB,color:$.blu,fontWeight:800,letterSpacing:.4,border:'1px solid rgba(59,130,246,.20)'}}>● Aktif</span>}
                                               </div>
                                             </td>
-                                            <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(last12)}</td>
-                                            <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:hAhead!=null?$.t1:$.t3}}>{hAhead!=null?fmtTon(hAhead):'—'}</td>
-                                            <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:yoy==null?$.t3:yoy>=0?'#0d6e4f':$.red}}>{yoy!=null?(yoy>=0?'+':'')+yoy.toFixed(1)+'%':'—'}</td>
-                                            <td style={{padding:'8px 10px',textAlign:'left'}}>
+                                            <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11.5,fontWeight:700,color:$.t2,fontVariantNumeric:'tabular-nums'}}>{fmtTon(last12)}</td>
+                                            <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:hAhead!=null?$.ac:$.t3,fontVariantNumeric:'tabular-nums'}}>{hAhead!=null?fmtTon(hAhead):'—'}</td>
+                                            <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:yoy==null?$.t3:yoy>=0?'#0d6e4f':$.red,fontVariantNumeric:'tabular-nums'}}>
+                                              {yoy!=null?(
+                                                <span style={{display:'inline-flex',alignItems:'center',gap:3}}>
+                                                  <HugeiconsIcon icon={yoy>=0?ArrowUpRight01Icon:ArrowDownRight01Icon} size={11} strokeWidth={2.2}/>
+                                                  {yoy>=0?'+':''}{yoy.toFixed(1)}%
+                                                </span>
+                                              ):'—'}
+                                            </td>
+                                            <td style={{padding:'10px 12px',textAlign:'left'}}>
                                               {bestModel?(
-                                                <div style={{display:'flex',alignItems:'center',gap:5}}>
-                                                  <span style={{fontSize:11,fontWeight:600,color:$.t2}}>{bestModel.label}</span>
-                                                  {mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,fontWeight:700,padding:'2px 6px',borderRadius:4,background:mape<10?$.grnB:mape<20?$.orgB:$.redB,color:mape<10?'#0d6e4f':mape<20?'#92400e':$.red}}>{mape.toFixed(1)}%</span>}
+                                                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                                  {it.fit?.bestId===bestModel.id&&<HugeiconsIcon icon={BookmarkIcon} size={11} color="#fbbf24" strokeWidth={2.2}/>}
+                                                  <span style={{fontSize:11,fontWeight:700,color:$.t1}}>{bestModel.label}</span>
+                                                  {mape!=null&&<span style={{fontSize:9.5,fontFamily:$.mo,fontWeight:800,padding:'2px 7px',borderRadius:5,background:mape<10?$.grnB:mape<20?$.orgB:$.redB,color:mape<10?'#0d6e4f':mape<20?'#92400e':$.red,letterSpacing:.2,border:'1px solid '+(mape<10?'rgba(13,110,79,.18)':mape<20?'rgba(245,166,35,.20)':'rgba(229,72,77,.20)')}}>{mape.toFixed(1)}%</span>}
                                                 </div>
                                               ):<span style={{color:$.t3,fontStyle:'italic',fontSize:11}}>—</span>}
                                             </td>
@@ -4160,11 +4264,14 @@ export default function App(){
                                         );
                                       })}
                                       {tail&&tail.count>0&&fcstShowAllItems&&(
-                                        <tr style={{borderBottom:'1px solid '+$.bdL,background:'#fafbfc'}}>
-                                          <td colSpan={2} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:600}}>+ Uzun kuyruk: {tail.count} itemid (top 30 dışı)</td>
-                                          <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{fmtTon(tail.last12||0)}</td>
-                                          <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{tail.estimatedHAhead!=null?fmtTon(tail.estimatedHAhead):'—'}</td>
-                                          <td colSpan={3} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11}}>{tail.count>0?'MA-3 ortalaması (toplu)':''}</td>
+                                        <tr style={{borderBottom:'1px solid '+$.bdL,background:'linear-gradient(180deg, #fafbfc, #f5f7fa)'}}>
+                                          <td colSpan={2} style={{padding:'12px 12px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:6}}>
+                                            <HugeiconsIcon icon={PackageIcon} size={11} color={$.t3} strokeWidth={2}/>
+                                            + Uzun kuyruk: <strong style={{color:$.t2}}>{tail.count} itemid</strong> (top 30 dışı)
+                                          </td>
+                                          <td style={{padding:'12px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:700}}>{fmtTon(tail.last12||0)}</td>
+                                          <td style={{padding:'12px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:700}}>{tail.estimatedHAhead!=null?fmtTon(tail.estimatedHAhead):'—'}</td>
+                                          <td colSpan={3} style={{padding:'12px 12px',color:$.t3,fontStyle:'italic',fontSize:11}}>{tail.count>0?'MA-3 ortalaması (toplu)':''}</td>
                                         </tr>
                                       )}
                                     </tbody>
@@ -4172,12 +4279,12 @@ export default function App(){
                                 </div>
                                 {/* Daha fazla göster / daha az göster toggle */}
                                 {sortedItems.length>10&&(
-                                  <div style={{padding:'10px 14px',borderTop:'1px solid '+$.bdL,background:'#fafbfc',display:'flex',justifyContent:'center'}}>
-                                    <button onClick={()=>setFcstShowAllItems(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',background:'#fff',border:'1px solid '+$.bdL,borderRadius:8,fontSize:11.5,fontWeight:700,color:$.blu,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background=$.bluB;e.currentTarget.style.borderColor='rgba(59,130,246,.30)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor=$.bdL;}}>
+                                  <div style={{padding:'12px 14px',borderTop:'1px solid '+$.bdL,background:'linear-gradient(180deg, #fafbfc, #f5f7fa)',display:'flex',justifyContent:'center'}}>
+                                    <button onClick={()=>setFcstShowAllItems(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'8px 16px',background:'#fff',border:'1.5px solid rgba(59,130,246,.25)',borderRadius:9,fontSize:11.5,fontWeight:800,color:$.blu,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.2,boxShadow:'0 1px 3px rgba(59,130,246,.08)'}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.06), rgba(139,92,246,.03))';e.currentTarget.style.borderColor='rgba(59,130,246,.45)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(59,130,246,.15)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(59,130,246,.25)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(59,130,246,.08)';}}>
                                       {fcstShowAllItems?(
-                                        <><ChevronLeft size={12} style={{transform:'rotate(90deg)'}}/>İlk 10'a Geri Dön</>
+                                        <><HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4} style={{transform:'rotate(180deg)'}}/>İlk 10'a Geri Dön</>
                                       ):(
-                                        <><ChevronDown size={12}/>+ {hiddenCount} itemid daha göster (toplam {sortedItems.length})</>
+                                        <><HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4}/>+ {hiddenCount} itemid daha göster <span style={{fontWeight:600,color:$.t3,fontFamily:$.mo,fontSize:10.5}}>(toplam {sortedItems.length})</span></>
                                       )}
                                     </button>
                                   </div>
@@ -4291,7 +4398,7 @@ export default function App(){
                       )}
 
                       {/* ═══════════════════════════════════════════════════════════ */}
-                      {/* ─── 🎯 SENARYO SİMÜLASYONU DRAWER (right-slide / mobile bottom-sheet) ─── */}
+                      {/* ─── 🎯 SENARYO SİMÜLASYONU DRAWER (PREMIUM REDESIGN) ─── */}
                       {/* ═══════════════════════════════════════════════════════════ */}
                       {fcstShowScenarios&&(()=>{
                         const isMobile=window.innerWidth<768;
@@ -4302,219 +4409,256 @@ export default function App(){
                         const reset=()=>setFcstScenario(DEFAULT_SCENARIO);
                         const close=()=>setFcstShowScenarios(false);
                         const scActive=fcstScenarioResult&&fcstScenarioResult.isActive;
-                        // Volume snap noktaları
                         const volSnaps=[-0.5,-0.25,0,0.25,0.5];
                         const seasonalSnaps=[-3,-2,-1,0,1,2,3];
-                        // Backcast hesaplaması (canlı)
                         const backcast=fcstScenarioResult?.backcastInfo;
                         return(
                           <>
-                            {/* Backdrop */}
-                            <div onClick={close} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.35)',zIndex:9998,animation:'scnFade .2s ease-out'}}/>
+                            {/* Backdrop — premium with subtle blur */}
+                            <div onClick={close} style={{position:'fixed',inset:0,background:'rgba(15,23,42,.42)',backdropFilter:'blur(2px)',WebkitBackdropFilter:'blur(2px)',zIndex:9998,animation:'scnFade .25s ease-out'}}/>
                             <style>{`
                               @keyframes scnFade{0%{opacity:0}100%{opacity:1}}
                               @keyframes scnSlideR{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
                               @keyframes scnSlideU{0%{transform:translateY(100%)}100%{transform:translateY(0)}}
+                              @keyframes scnCascade{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+                              .scn-cascade-item{animation:scnCascade .35s cubic-bezier(.16,1,.3,1) both}
+                              /* Custom slider thumb — orange gradient with glow */
+                              .scn-slider{appearance:none;-webkit-appearance:none;width:100%;height:7px;border-radius:4px;background:linear-gradient(90deg, rgba(245,166,35,.18), rgba(245,166,35,.30), rgba(245,166,35,.18));outline:none;cursor:pointer;}
+                              .scn-slider::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg, #f5a623 0%, #ea580c 100%);box-shadow:0 2px 8px rgba(245,166,35,.45), 0 1px 3px rgba(245,166,35,.30), inset 0 1px 0 rgba(255,255,255,.30);border:2px solid #fff;cursor:pointer;transition:transform .15s, box-shadow .15s;}
+                              .scn-slider::-webkit-slider-thumb:hover{transform:scale(1.15);box-shadow:0 4px 14px rgba(245,166,35,.55), 0 2px 5px rgba(245,166,35,.40), inset 0 1px 0 rgba(255,255,255,.30);}
+                              .scn-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg, #f5a623, #ea580c);box-shadow:0 2px 8px rgba(245,166,35,.45);border:2px solid #fff;cursor:pointer;}
                             `}</style>
                             {/* Drawer panel */}
                             <div style={{
                               position:'fixed',
                               ...(isMobile?{
                                 left:0,right:0,bottom:0,
-                                maxHeight:'82vh',
-                                borderTopLeftRadius:18,
-                                borderTopRightRadius:18,
-                                animation:'scnSlideU .3s cubic-bezier(.16,1,.3,1)',
+                                maxHeight:'85vh',
+                                borderTopLeftRadius:24,
+                                borderTopRightRadius:24,
+                                animation:'scnSlideU .35s cubic-bezier(.16,1,.3,1)',
                               }:{
                                 top:0,right:0,
-                                width:400,
+                                width:460,
                                 height:'100vh',
-                                animation:'scnSlideR .3s cubic-bezier(.16,1,.3,1)',
+                                animation:'scnSlideR .35s cubic-bezier(.16,1,.3,1)',
                               }),
                               background:$.bg2,
                               borderLeft:isMobile?'none':'1px solid '+$.bdL,
-                              boxShadow:isMobile?'0 -10px 40px rgba(0,0,0,.18)':'-8px 0 30px rgba(0,0,0,.12)',
+                              boxShadow:isMobile?'0 -12px 48px rgba(0,0,0,.20)':'-12px 0 36px rgba(0,0,0,.14)',
                               zIndex:9999,
                               display:'flex',
                               flexDirection:'column',
                             }}>
-                              {/* Header */}
-                              <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,background:'linear-gradient(135deg,rgba(245,166,35,.06),rgba(59,130,246,.04))'}}>
+                              {/* Üst gradient şerit */}
+                              <div style={{height:3,background:'linear-gradient(90deg, #f5a623 0%, #ea580c 100%)',flexShrink:0}}/>
+                              {/* Header (premium glassmorphism) */}
+                              <div style={{padding:'18px 22px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,background:'linear-gradient(135deg, rgba(245,166,35,.08) 0%, rgba(59,130,246,.04) 50%, rgba(139,92,246,.03) 100%)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',position:'relative',flexShrink:0}}>
                                 {isMobile&&(
-                                  <div style={{position:'absolute',top:8,left:'50%',transform:'translateX(-50%)',width:36,height:4,borderRadius:2,background:$.bdL}}/>
+                                  <div style={{position:'absolute',top:6,left:'50%',transform:'translateX(-50%)',width:42,height:4,borderRadius:2,background:'rgba(0,0,0,.10)'}}/>
                                 )}
-                                <Target size={18} color="#f5a623"/>
+                                <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:38,height:38,borderRadius:11,background:'linear-gradient(135deg, #f5a623 0%, #ea580c 100%)',color:'#fff',boxShadow:'0 4px 14px rgba(245,166,35,.32), 0 1px 3px rgba(245,166,35,.20), inset 0 1px 0 rgba(255,255,255,.25)',flexShrink:0}}>
+                                  <HugeiconsIcon icon={Target02Icon} size={19} strokeWidth={2.2}/>
+                                </div>
                                 <div style={{flex:1,minWidth:0}}>
-                                  <div style={{fontSize:14,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Senaryo Simülasyonu</div>
-                                  <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1}}>What-if analizi · canlı tahmin değişimi</div>
+                                  <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.3,lineHeight:1.2}}>Senaryo Simülasyonu</div>
+                                  <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:2}}>What-if analizi · canlı tahmin değişimi</div>
                                 </div>
                                 {scActive&&(
-                                  <span style={{padding:'3px 9px',borderRadius:6,background:fcstScenarioResult.deltaPct>=0?$.grnB:$.redB,color:fcstScenarioResult.deltaPct>=0?'#0d6e4f':$.red,fontSize:11,fontWeight:800,fontFamily:$.mo}}>{fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%</span>
+                                  <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'5px 11px',borderRadius:8,background:fcstScenarioResult.deltaPct>=0?'linear-gradient(135deg, #0d6e4f, #2dd4a0)':'linear-gradient(135deg, #be123c, #e5484d)',color:'#fff',fontSize:12,fontWeight:900,fontFamily:$.mo,boxShadow:fcstScenarioResult.deltaPct>=0?'0 2px 8px rgba(13,110,79,.30)':'0 2px 8px rgba(229,72,77,.30)',letterSpacing:.3,fontVariantNumeric:'tabular-nums'}}>
+                                    <HugeiconsIcon icon={FlashIcon} size={11} strokeWidth={2.5}/>
+                                    {fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
+                                  </span>
                                 )}
-                                <button onClick={close} style={{display:'flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:8,background:'transparent',border:'1px solid '+$.bdL,color:$.t3,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background=$.bg;e.currentTarget.style.color=$.t1;}} onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=$.t3;}}>
-                                  <X size={14}/>
+                                <button onClick={close} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:32,height:32,borderRadius:9,background:'rgba(255,255,255,.85)',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)',border:'1px solid '+$.bdL,color:$.t3,cursor:'pointer',transition:'all .18s',flexShrink:0,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}} onMouseEnter={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color=$.t1;e.currentTarget.style.borderColor=$.bd;e.currentTarget.style.transform='rotate(90deg)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.85)';e.currentTarget.style.color=$.t3;e.currentTarget.style.borderColor=$.bdL;e.currentTarget.style.transform='rotate(0deg)';}}>
+                                  <HugeiconsIcon icon={Cancel01Icon} size={15} strokeWidth={2.2}/>
                                 </button>
                               </div>
 
-                              {/* Body — scrollable */}
-                              <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:18}}>
+                              {/* Body — scrollable, cascade entrance */}
+                              <div style={{flex:1,overflowY:'auto',padding:'22px 22px 4px',display:'flex',flexDirection:'column',gap:20}}>
 
                                 {/* Senaryo özet kartı (eğer aktifse) */}
                                 {scActive&&(
-                                  <div style={{padding:'12px 14px',borderRadius:10,background:'linear-gradient(135deg,rgba(245,166,35,.08),rgba(245,166,35,.02))',border:'1px solid rgba(245,166,35,.25)'}}>
-                                    <div style={{fontSize:10,fontWeight:800,color:'#92400e',textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Senaryo Etkisi</div>
-                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:10,flexWrap:'wrap'}}>
-                                      <div>
-                                        <div style={{fontSize:10,color:$.t3,fontWeight:600}}>Baseline {fcstResult.horizon} ay</div>
-                                        <div style={{fontSize:14,fontWeight:700,color:$.t2,fontFamily:$.mo}}>{fmtTon(fcstScenarioResult.baselineTotal)}</div>
+                                  <div className="scn-cascade-item" style={{animationDelay:'0ms',padding:'14px 16px',borderRadius:13,background:'linear-gradient(135deg, rgba(245,166,35,.10) 0%, rgba(245,166,35,.02) 100%)',border:'1px solid rgba(245,166,35,.28)',boxShadow:'0 1px 3px rgba(245,166,35,.06)'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:9}}>
+                                      <HugeiconsIcon icon={FlashIcon} size={12} color="#92400e" strokeWidth={2.4}/>
+                                      <span style={{fontSize:10,fontWeight:800,color:'#92400e',textTransform:'uppercase',letterSpacing:.6}}>Senaryo Etkisi</span>
+                                    </div>
+                                    <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                                      <div style={{flex:1,minWidth:90}}>
+                                        <div style={{fontSize:9.5,color:$.t3,fontWeight:700,textTransform:'uppercase',letterSpacing:.5}}>Baseline</div>
+                                        <div style={{fontSize:14,fontWeight:800,color:$.t2,fontFamily:$.mo,fontVariantNumeric:'tabular-nums',marginTop:2}}>{fmtTon(fcstScenarioResult.baselineTotal)}</div>
                                       </div>
-                                      <div style={{fontSize:18,color:'#f5a623'}}>→</div>
-                                      <div>
-                                        <div style={{fontSize:10,color:$.t3,fontWeight:600}}>Senaryo</div>
-                                        <div style={{fontSize:14,fontWeight:800,color:'#92400e',fontFamily:$.mo}}>{fmtTon(fcstScenarioResult.adjustedTotal)}</div>
+                                      <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:24,height:24,borderRadius:6,background:'rgba(245,166,35,.18)',color:'#ea580c'}}>
+                                        <HugeiconsIcon icon={ArrowUpRight01Icon} size={13} strokeWidth={2.4}/>
                                       </div>
-                                      <div style={{fontSize:13,fontWeight:800,color:fcstScenarioResult.deltaPct>=0?'#0d6e4f':$.red,fontFamily:$.mo,padding:'4px 10px',borderRadius:6,background:fcstScenarioResult.deltaPct>=0?$.grnB:$.redB}}>
+                                      <div style={{flex:1,minWidth:90}}>
+                                        <div style={{fontSize:9.5,color:'#92400e',fontWeight:700,textTransform:'uppercase',letterSpacing:.5}}>Senaryo</div>
+                                        <div style={{fontSize:14,fontWeight:800,color:'#92400e',fontFamily:$.mo,fontVariantNumeric:'tabular-nums',marginTop:2}}>{fmtTon(fcstScenarioResult.adjustedTotal)}</div>
+                                      </div>
+                                      <span style={{fontSize:13,fontWeight:900,color:'#fff',fontFamily:$.mo,padding:'5px 11px',borderRadius:7,background:fcstScenarioResult.deltaPct>=0?'linear-gradient(135deg, #0d6e4f, #2dd4a0)':'linear-gradient(135deg, #be123c, #e5484d)',boxShadow:fcstScenarioResult.deltaPct>=0?'0 2px 6px rgba(13,110,79,.30)':'0 2px 6px rgba(229,72,77,.30)',fontVariantNumeric:'tabular-nums'}}>
                                         Δ {fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
-                                      </div>
+                                      </span>
                                     </div>
                                   </div>
                                 )}
 
                                 {/* 1. Volume slider */}
-                                <div>
-                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-                                    <TrendingUp size={13} color={$.blu}/>
-                                    <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Talep Hacmi</span>
-                                    <span style={{marginLeft:'auto',fontSize:12,fontFamily:$.mo,fontWeight:800,color:sc.volumeMult===1?$.t3:'#92400e',padding:'2px 8px',borderRadius:5,background:sc.volumeMult===1?$.bg:'rgba(245,166,35,.10)'}}>{sc.volumeMult>=1?'+':''}{((sc.volumeMult-1)*100).toFixed(0)}%</span>
-                                  </div>
-                                  <div style={{padding:'4px 0'}}>
-                                    <input type="range" min={-0.5} max={0.5} step={0.05} value={sc.volumeMult-1} onChange={e=>upd({volumeMult:1+(+e.target.value)})} style={{width:'100%',accentColor:'#f5a623',height:6}}/>
-                                    <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:9.5,fontFamily:$.mo,color:$.t3,fontWeight:600}}>
-                                      {volSnaps.map(s=>(
-                                        <button key={s} onClick={()=>upd({volumeMult:1+s})} style={{background:'none',border:'none',padding:'2px 4px',cursor:'pointer',color:Math.abs(sc.volumeMult-1-s)<0.01?'#92400e':$.t3,fontWeight:Math.abs(sc.volumeMult-1-s)<0.01?800:600,fontFamily:$.mo,fontSize:9.5}}>{s>=0?'+':''}{(s*100).toFixed(0)}%</button>
-                                      ))}
+                                <div className="scn-cascade-item" style={{animationDelay:'80ms'}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:10}}>
+                                    <div style={{width:24,height:24,borderRadius:7,background:$.bluB,color:$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                      <HugeiconsIcon icon={AnalyticsUpIcon} size={13} strokeWidth={2}/>
                                     </div>
+                                    <span style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Talep Hacmi</span>
+                                    <span style={{marginLeft:'auto',fontSize:12,fontFamily:$.mo,fontWeight:900,color:sc.volumeMult===1?$.t3:'#fff',padding:'3px 10px',borderRadius:7,background:sc.volumeMult===1?$.bg:'linear-gradient(135deg, #f5a623, #ea580c)',boxShadow:sc.volumeMult===1?'none':'0 2px 6px rgba(245,166,35,.25)',letterSpacing:.3,fontVariantNumeric:'tabular-nums'}}>{sc.volumeMult>=1?'+':''}{((sc.volumeMult-1)*100).toFixed(0)}%</span>
                                   </div>
-                                  <div style={{fontSize:10.5,color:$.t3,marginTop:4,lineHeight:1.4}}>Toplam talep yükselme/düşme oranı. Tarımsal trade'de pazar değişikliği veya ekonomik şok modellemesi için.</div>
+                                  <input className="scn-slider" type="range" min={-0.5} max={0.5} step={0.05} value={sc.volumeMult-1} onChange={e=>upd({volumeMult:1+(+e.target.value)})}/>
+                                  <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:10,fontFamily:$.mo,fontWeight:700}}>
+                                    {volSnaps.map(s=>{
+                                      const isActive=Math.abs(sc.volumeMult-1-s)<0.01;
+                                      return(
+                                        <button key={s} onClick={()=>upd({volumeMult:1+s})} style={{background:isActive?'linear-gradient(135deg, rgba(245,166,35,.15), rgba(234,88,12,.10))':'transparent',border:isActive?'1px solid rgba(245,166,35,.35)':'1px solid transparent',padding:'3px 8px',borderRadius:6,cursor:'pointer',color:isActive?'#92400e':$.t3,fontWeight:isActive?900:600,fontFamily:$.mo,fontSize:10,transition:'all .15s'}}>{s>=0?'+':''}{(s*100).toFixed(0)}%</button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.5}}>Toplam talep yükselme/düşme oranı. Tarımsal trade'de pazar değişikliği veya ekonomik şok modellemesi için.</div>
                                 </div>
 
                                 {/* 2. Mevsim shift */}
-                                <div>
-                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-                                    <Clock size={13} color={$.blu}/>
-                                    <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Mevsim Kayması</span>
-                                    <span style={{marginLeft:'auto',fontSize:12,fontFamily:$.mo,fontWeight:800,color:sc.seasonalShift===0?$.t3:'#92400e',padding:'2px 8px',borderRadius:5,background:sc.seasonalShift===0?$.bg:'rgba(245,166,35,.10)'}}>{sc.seasonalShift>0?'+':''}{sc.seasonalShift} ay</span>
-                                  </div>
-                                  <div style={{padding:'4px 0'}}>
-                                    <input type="range" min={-3} max={3} step={1} value={sc.seasonalShift} onChange={e=>upd({seasonalShift:+e.target.value})} style={{width:'100%',accentColor:'#f5a623',height:6}}/>
-                                    <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:9.5,fontFamily:$.mo,color:$.t3,fontWeight:600}}>
-                                      {seasonalSnaps.map(s=>(
-                                        <button key={s} onClick={()=>upd({seasonalShift:s})} style={{background:'none',border:'none',padding:'2px 4px',cursor:'pointer',color:sc.seasonalShift===s?'#92400e':$.t3,fontWeight:sc.seasonalShift===s?800:600,fontFamily:$.mo,fontSize:9.5}}>{s>=0?'+':''}{s}</button>
-                                      ))}
+                                <div className="scn-cascade-item" style={{animationDelay:'160ms'}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:10}}>
+                                    <div style={{width:24,height:24,borderRadius:7,background:$.bluB,color:$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                      <HugeiconsIcon icon={Clock01Icon} size={13} strokeWidth={2}/>
                                     </div>
+                                    <span style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Mevsim Kayması</span>
+                                    <span style={{marginLeft:'auto',fontSize:12,fontFamily:$.mo,fontWeight:900,color:sc.seasonalShift===0?$.t3:'#fff',padding:'3px 10px',borderRadius:7,background:sc.seasonalShift===0?$.bg:'linear-gradient(135deg, #f5a623, #ea580c)',boxShadow:sc.seasonalShift===0?'none':'0 2px 6px rgba(245,166,35,.25)',letterSpacing:.3}}>{sc.seasonalShift>0?'+':''}{sc.seasonalShift} ay</span>
                                   </div>
-                                  <div style={{fontSize:10.5,color:$.t3,marginTop:4,lineHeight:1.4}}>Ramazan/hasat ay erken (-) veya geç (+) gelirse pikleri kaydır. Negatif: mevsim erken; pozitif: geç.</div>
+                                  <input className="scn-slider" type="range" min={-3} max={3} step={1} value={sc.seasonalShift} onChange={e=>upd({seasonalShift:+e.target.value})}/>
+                                  <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:10,fontFamily:$.mo,fontWeight:700}}>
+                                    {seasonalSnaps.map(s=>{
+                                      const isActive=sc.seasonalShift===s;
+                                      return(
+                                        <button key={s} onClick={()=>upd({seasonalShift:s})} style={{background:isActive?'linear-gradient(135deg, rgba(245,166,35,.15), rgba(234,88,12,.10))':'transparent',border:isActive?'1px solid rgba(245,166,35,.35)':'1px solid transparent',padding:'3px 8px',borderRadius:6,cursor:'pointer',color:isActive?'#92400e':$.t3,fontWeight:isActive?900:600,fontFamily:$.mo,fontSize:10,transition:'all .15s'}}>{s>=0?'+':''}{s}</button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.5}}>Ramazan/hasat ay erken (-) veya geç (+) gelirse pikleri kaydır. Negatif: mevsim erken; pozitif: geç.</div>
                                 </div>
 
                                 {/* 3. Müşteri kaybı */}
                                 {topDests.length>0&&(
-                                  <div>
-                                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-                                      <Building2 size={13} color={$.blu}/>
-                                      <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Müşteri Kayıp Senaryosu</span>
-                                      {sc.lostCustomers.length>0&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:'#92400e',padding:'2px 8px',borderRadius:5,background:'rgba(245,166,35,.10)'}}>{sc.lostCustomers.length} kaybedildi</span>}
+                                  <div className="scn-cascade-item" style={{animationDelay:'240ms'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:10}}>
+                                      <div style={{width:24,height:24,borderRadius:7,background:$.purB,color:$.pur,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                        <HugeiconsIcon icon={DeliveryTruck01Icon} size={13} strokeWidth={2}/>
+                                      </div>
+                                      <span style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Müşteri Kayıp Senaryosu</span>
+                                      {sc.lostCustomers.length>0&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:900,color:'#fff',padding:'3px 10px',borderRadius:7,background:'linear-gradient(135deg, #be123c, #e5484d)',boxShadow:'0 2px 6px rgba(229,72,77,.25)',letterSpacing:.3}}>{sc.lostCustomers.length} kaybedildi</span>}
                                     </div>
-                                    <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                                    <div style={{display:'flex',flexDirection:'column',gap:6}}>
                                       {topDests.map(d=>{
                                         const checked=sc.lostCustomers.includes(d.name);
                                         return(
-                                          <label key={d.name} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:7,background:checked?'rgba(229,72,77,.06)':'#fafbfc',border:'1px solid '+(checked?'rgba(229,72,77,.25)':$.bdL),cursor:'pointer',transition:'all .12s'}}>
+                                          <label key={d.name} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:9,background:checked?'linear-gradient(135deg, rgba(229,72,77,.08), rgba(229,72,77,.02))':'#fafbfc',border:'1.5px solid '+(checked?'rgba(229,72,77,.30)':$.bdL),cursor:'pointer',transition:'all .15s',boxShadow:checked?'0 0 0 3px rgba(229,72,77,.06)':'none'}}>
                                             <input type="checkbox" checked={checked} onChange={e=>{
                                               if(e.target.checked)upd({lostCustomers:[...sc.lostCustomers,d.name]});
                                               else upd({lostCustomers:sc.lostCustomers.filter(x=>x!==d.name)});
-                                            }} style={{accentColor:'#f5a623',width:14,height:14}}/>
-                                            <span style={{flex:1,fontSize:11,fontWeight:600,color:checked?$.red:$.t2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.name}</span>
-                                            <span style={{fontSize:10.5,fontFamily:$.mo,fontWeight:700,color:$.t3}}>%{d.pct.toFixed(1)}</span>
+                                            }} style={{accentColor:'#e5484d',width:15,height:15,cursor:'pointer',flexShrink:0}}/>
+                                            <span style={{flex:1,fontSize:11.5,fontWeight:checked?700:600,color:checked?$.red:$.t2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.name}</span>
+                                            <span style={{fontSize:11,fontFamily:$.mo,fontWeight:800,color:checked?$.red:$.t3,padding:'2px 7px',borderRadius:5,background:checked?'rgba(229,72,77,.10)':$.bg,fontVariantNumeric:'tabular-nums'}}>%{d.pct.toFixed(1)}</span>
                                           </label>
                                         );
                                       })}
                                     </div>
-                                    <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.4}}>İşaretli müşterilerin son 12 ay payı tahminin tümünden pro-rata düşülür.</div>
+                                    <div style={{fontSize:10.5,color:$.t3,marginTop:8,lineHeight:1.5}}>İşaretli müşterilerin son 12 ay payı tahminin tümünden pro-rata düşülür.</div>
                                   </div>
                                 )}
 
                                 {/* 4. Origin (grup şirketi) kaybı */}
                                 {topComps.length>0&&(
-                                  <div>
-                                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-                                      <Globe size={13} color={$.blu}/>
-                                      <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Origin / Grup Şirketi Kaybı</span>
-                                      {sc.lostOrigins.length>0&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:'#92400e',padding:'2px 8px',borderRadius:5,background:'rgba(245,166,35,.10)'}}>{sc.lostOrigins.length} kapatıldı</span>}
+                                  <div className="scn-cascade-item" style={{animationDelay:'320ms'}}>
+                                    <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:10}}>
+                                      <div style={{width:24,height:24,borderRadius:7,background:$.acL,color:$.ac,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                        <HugeiconsIcon icon={FactoryIcon} size={13} strokeWidth={2}/>
+                                      </div>
+                                      <span style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Origin / Grup Şirketi Kaybı</span>
+                                      {sc.lostOrigins.length>0&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:900,color:'#fff',padding:'3px 10px',borderRadius:7,background:'linear-gradient(135deg, #be123c, #e5484d)',boxShadow:'0 2px 6px rgba(229,72,77,.25)',letterSpacing:.3}}>{sc.lostOrigins.length} kapatıldı</span>}
                                     </div>
-                                    <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                                    <div style={{display:'flex',flexDirection:'column',gap:6}}>
                                       {topComps.map(c=>{
                                         const checked=sc.lostOrigins.includes(c.name);
                                         return(
-                                          <label key={c.name} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:7,background:checked?'rgba(229,72,77,.06)':'#fafbfc',border:'1px solid '+(checked?'rgba(229,72,77,.25)':$.bdL),cursor:'pointer',transition:'all .12s'}}>
+                                          <label key={c.name} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:9,background:checked?'linear-gradient(135deg, rgba(229,72,77,.08), rgba(229,72,77,.02))':'#fafbfc',border:'1.5px solid '+(checked?'rgba(229,72,77,.30)':$.bdL),cursor:'pointer',transition:'all .15s',boxShadow:checked?'0 0 0 3px rgba(229,72,77,.06)':'none'}}>
                                             <input type="checkbox" checked={checked} onChange={e=>{
                                               if(e.target.checked)upd({lostOrigins:[...sc.lostOrigins,c.name]});
                                               else upd({lostOrigins:sc.lostOrigins.filter(x=>x!==c.name)});
-                                            }} style={{accentColor:'#f5a623',width:14,height:14}}/>
-                                            <span style={{flex:1,fontSize:11,fontFamily:$.mo,fontWeight:700,color:checked?$.red:$.t2}}>{c.name}</span>
-                                            <span style={{fontSize:10.5,fontFamily:$.mo,fontWeight:700,color:$.t3}}>%{c.pct.toFixed(1)}</span>
+                                            }} style={{accentColor:'#e5484d',width:15,height:15,cursor:'pointer',flexShrink:0}}/>
+                                            <span style={{flex:1,fontSize:11.5,fontFamily:$.mo,fontWeight:800,color:checked?$.red:$.t2,letterSpacing:-.1}}>{c.name}</span>
+                                            <span style={{fontSize:11,fontFamily:$.mo,fontWeight:800,color:checked?$.red:$.t3,padding:'2px 7px',borderRadius:5,background:checked?'rgba(229,72,77,.10)':$.bg,fontVariantNumeric:'tabular-nums'}}>%{c.pct.toFixed(1)}</span>
                                           </label>
                                         );
                                       })}
                                     </div>
-                                    <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.4}}>Şirket çalışmazsa (üretim durduğunda) o şirketin payı tahminden düşürülür.</div>
+                                    <div style={{fontSize:10.5,color:$.t3,marginTop:8,lineHeight:1.5}}>Şirket çalışmazsa (üretim durduğunda) o şirketin payı tahminden düşürülür.</div>
                                   </div>
                                 )}
 
                                 {/* 5. Monte Carlo toggle */}
-                                <div>
-                                  <label style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:8,background:sc.showMC?'rgba(139,92,246,.06)':'#fafbfc',border:'1px solid '+(sc.showMC?'rgba(139,92,246,.25)':$.bdL),cursor:'pointer',transition:'all .12s'}}>
-                                    <input type="checkbox" checked={sc.showMC} onChange={e=>upd({showMC:e.target.checked})} style={{accentColor:$.pur,width:14,height:14}}/>
+                                <div className="scn-cascade-item" style={{animationDelay:'400ms'}}>
+                                  <label style={{display:'flex',alignItems:'flex-start',gap:11,padding:'13px 14px',borderRadius:11,background:sc.showMC?'linear-gradient(135deg, rgba(139,92,246,.08), rgba(139,92,246,.02))':'#fafbfc',border:'1.5px solid '+(sc.showMC?'rgba(139,92,246,.30)':$.bdL),cursor:'pointer',transition:'all .15s',boxShadow:sc.showMC?'0 0 0 3px rgba(139,92,246,.06)':'none'}}>
+                                    <input type="checkbox" checked={sc.showMC} onChange={e=>upd({showMC:e.target.checked})} style={{accentColor:$.pur,width:15,height:15,marginTop:2,cursor:'pointer',flexShrink:0}}/>
                                     <div style={{flex:1}}>
-                                      <div style={{fontSize:12,fontWeight:700,color:sc.showMC?$.pur:$.t1,display:'flex',alignItems:'center',gap:6}}>
-                                        <Activity size={12}/>Monte Carlo P10/P90 Bandı
+                                      <div style={{fontSize:12.5,fontWeight:800,color:sc.showMC?$.pur:$.t1,display:'flex',alignItems:'center',gap:7,letterSpacing:-.1}}>
+                                        <div style={{width:22,height:22,borderRadius:6,background:sc.showMC?'rgba(139,92,246,.15)':$.bg,color:$.pur,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                          <HugeiconsIcon icon={Activity03Icon} size={12} strokeWidth={2}/>
+                                        </div>
+                                        Monte Carlo P10/P90 Bandı
                                       </div>
-                                      <div style={{fontSize:10.5,color:$.t3,fontWeight:500,marginTop:2,lineHeight:1.4}}>200 simülasyon ile gerçek belirsizlik aralığı (residual bootstrap). Hesap +1-2 sn sürer.</div>
+                                      <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:4,lineHeight:1.5}}>200 simülasyon ile gerçek belirsizlik aralığı (residual bootstrap). Hesap +1-2 sn sürer.</div>
                                     </div>
                                   </label>
                                 </div>
 
                                 {/* 6. Hedef backcast */}
-                                <div>
-                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-                                    <Target size={13} color={$.blu}/>
-                                    <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Hedef Backcast</span>
+                                <div className="scn-cascade-item" style={{animationDelay:'480ms'}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:10}}>
+                                    <div style={{width:24,height:24,borderRadius:7,background:$.acL,color:$.ac,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
+                                      <HugeiconsIcon icon={Target02Icon} size={13} strokeWidth={2}/>
+                                    </div>
+                                    <span style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Hedef Backcast</span>
                                   </div>
-                                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                                    <input type="number" placeholder={`${horizon} ay sonra hedef ton`} value={sc.targetVolume||''} onChange={e=>upd({targetVolume:e.target.value?+e.target.value:null})} style={{flex:1,padding:'7px 10px',fontSize:12,fontFamily:$.mo,fontWeight:700,border:'1px solid '+$.bdL,borderRadius:7,background:$.bg2,color:$.t1,outline:'none'}}/>
-                                    <span style={{fontSize:11,color:$.t3,fontWeight:600}}>ton</span>
+                                  <div style={{display:'flex',gap:8,alignItems:'center',padding:'10px 12px',borderRadius:10,background:'#fafbfc',border:'1.5px solid '+$.bdL,transition:'border-color .15s'}} onFocusCapture={e=>{e.currentTarget.style.borderColor='rgba(13,110,79,.40)';}} onBlurCapture={e=>{e.currentTarget.style.borderColor=$.bdL;}}>
+                                    <HugeiconsIcon icon={Target02Icon} size={14} color={$.ac} strokeWidth={2}/>
+                                    <input type="number" placeholder={`${horizon} ay sonra hedef ton`} value={sc.targetVolume||''} onChange={e=>upd({targetVolume:e.target.value?+e.target.value:null})} style={{flex:1,padding:'5px 4px',fontSize:13,fontFamily:$.mo,fontWeight:800,border:'none',background:'transparent',color:$.t1,outline:'none',fontVariantNumeric:'tabular-nums'}}/>
+                                    <span style={{fontSize:11,color:$.t3,fontWeight:700,letterSpacing:.3,textTransform:'uppercase'}}>ton</span>
                                   </div>
                                   {backcast&&backcast.factor!=null&&(
-                                    <div style={{marginTop:8,padding:'8px 10px',borderRadius:7,background:backcast.feasibilityScore==='easy'?$.grnB:backcast.feasibilityScore==='moderate'?$.bluB:backcast.feasibilityScore==='hard'?$.orgB:$.redB}}>
-                                      <div style={{fontSize:10,fontWeight:800,color:backcast.feasibilityScore==='easy'?'#0d6e4f':backcast.feasibilityScore==='moderate'?$.blu:backcast.feasibilityScore==='hard'?'#92400e':$.red,letterSpacing:.4,textTransform:'uppercase',marginBottom:3}}>
-                                        Fizibilite: {backcast.feasibilityScore==='easy'?'Kolay':backcast.feasibilityScore==='moderate'?'Orta':backcast.feasibilityScore==='hard'?'Zor':'Gerçekçi Değil'}
+                                    <div style={{marginTop:10,padding:'12px 14px',borderRadius:11,background:backcast.feasibilityScore==='easy'?'linear-gradient(135deg, rgba(45,212,160,.12), rgba(13,110,79,.04))':backcast.feasibilityScore==='moderate'?'linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.04))':backcast.feasibilityScore==='hard'?'linear-gradient(135deg, rgba(245,166,35,.12), rgba(234,88,12,.04))':'linear-gradient(135deg, rgba(229,72,77,.12), rgba(229,72,77,.04))',border:'1.5px solid '+(backcast.feasibilityScore==='easy'?'rgba(13,110,79,.25)':backcast.feasibilityScore==='moderate'?'rgba(59,130,246,.25)':backcast.feasibilityScore==='hard'?'rgba(245,166,35,.30)':'rgba(229,72,77,.30)')}}>
+                                      <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                                        <HugeiconsIcon icon={backcast.feasibilityScore==='easy'?Activity03Icon:backcast.feasibilityScore==='moderate'?ChartLineData01Icon:backcast.feasibilityScore==='hard'?Alert02Icon:Alert02Icon} size={12} color={backcast.feasibilityScore==='easy'?'#0d6e4f':backcast.feasibilityScore==='moderate'?$.blu:backcast.feasibilityScore==='hard'?'#92400e':$.red} strokeWidth={2.4}/>
+                                        <span style={{fontSize:10,fontWeight:900,color:backcast.feasibilityScore==='easy'?'#0d6e4f':backcast.feasibilityScore==='moderate'?$.blu:backcast.feasibilityScore==='hard'?'#92400e':$.red,letterSpacing:.6,textTransform:'uppercase'}}>
+                                          Fizibilite: {backcast.feasibilityScore==='easy'?'Kolay':backcast.feasibilityScore==='moderate'?'Orta':backcast.feasibilityScore==='hard'?'Zor':'Gerçekçi Değil'}
+                                        </span>
                                       </div>
-                                      <div style={{fontSize:11,color:$.t1,fontWeight:600,lineHeight:1.5}}>
-                                        Baseline: <strong style={{fontFamily:$.mo}}>{fmtTon(backcast.baselineTotal)}</strong> · Hedef: <strong style={{fontFamily:$.mo}}>{fmtTon(backcast.targetTotal)}</strong>
-                                        {backcast.requiredAvgGrowth!=null&&<><br/>Yıllık büyüme gereksinimi: <strong style={{fontFamily:$.mo,color:backcast.requiredAvgGrowth>=0?'#0d6e4f':$.red}}>{backcast.requiredAvgGrowth>=0?'+':''}{backcast.requiredAvgGrowth.toFixed(1)}%</strong></>}
+                                      <div style={{fontSize:11.5,color:$.t1,fontWeight:600,lineHeight:1.6}}>
+                                        Baseline: <strong style={{fontFamily:$.mo,fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{fmtTon(backcast.baselineTotal)}</strong> · Hedef: <strong style={{fontFamily:$.mo,fontWeight:800,fontVariantNumeric:'tabular-nums'}}>{fmtTon(backcast.targetTotal)}</strong>
+                                        {backcast.requiredAvgGrowth!=null&&<><br/>Yıllık büyüme gereksinimi: <strong style={{fontFamily:$.mo,fontWeight:900,color:backcast.requiredAvgGrowth>=0?'#0d6e4f':$.red,fontVariantNumeric:'tabular-nums'}}>{backcast.requiredAvgGrowth>=0?'+':''}{backcast.requiredAvgGrowth.toFixed(1)}%</strong></>}
                                       </div>
                                     </div>
                                   )}
-                                  <div style={{fontSize:10.5,color:$.t3,marginTop:4,lineHeight:1.4}}>"X ay sonra Y ton hedef" → mevcut sezonsal şekli koruyarak aylık dağılım hesaplanır.</div>
+                                  <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.5}}>"X ay sonra Y ton hedef" → mevcut sezonsal şekli koruyarak aylık dağılım hesaplanır.</div>
                                 </div>
+                                <div style={{height:8}}/>
                               </div>
 
-                              {/* Footer */}
-                              <div style={{padding:'12px 20px',borderTop:'1px solid '+$.bdL,display:'flex',gap:8,background:'#fafbfc'}}>
-                                <button onClick={reset} disabled={!scActive} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'9px 14px',background:'#fff',border:'1px solid '+$.bdL,borderRadius:8,fontSize:12,fontWeight:700,color:scActive?$.t2:$.t3,cursor:scActive?'pointer':'not-allowed',opacity:scActive?1:.5,transition:'all .15s'}}>
-                                  <RotateCcw size={12}/>Sıfırla
+                              {/* Footer (sticky glass) */}
+                              <div style={{padding:'14px 22px',borderTop:'1px solid '+$.bdL,display:'flex',gap:10,background:'rgba(255,255,255,.85)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',flexShrink:0,boxShadow:'0 -2px 8px rgba(0,0,0,.04)'}}>
+                                <button onClick={reset} disabled={!scActive} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 16px',background:scActive?'#fff':'#fafbfc',border:'1.5px solid '+(scActive?'rgba(13,110,79,.30)':$.bdL),borderRadius:10,fontSize:12.5,fontWeight:800,color:scActive?$.ac:$.t3,cursor:scActive?'pointer':'not-allowed',opacity:scActive?1:.5,transition:'all .2s ease-out',letterSpacing:.2,boxShadow:scActive?'0 1px 3px rgba(13,110,79,.06)':'none'}} onMouseEnter={e=>{if(scActive){e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.03))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(scActive){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';e.currentTarget.style.transform='translateY(0)';}}}>
+                                  <HugeiconsIcon icon={RefreshIcon} size={13} strokeWidth={2.2}/>Sıfırla
                                 </button>
-                                <button onClick={close} style={{flex:1,padding:'9px 14px',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:'#fff',cursor:'pointer',boxShadow:'0 2px 6px rgba(13,110,79,.2)',transition:'all .15s'}}>
-                                  Kapat
+                                <button onClick={close} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 16px',background:'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 100%)',border:'none',borderRadius:10,fontSize:12.5,fontWeight:800,color:'#fff',cursor:'pointer',boxShadow:'0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)',transition:'all .2s ease-out',letterSpacing:.2}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 18px rgba(13,110,79,.36), 0 2px 5px rgba(13,110,79,.24)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)';}}>
+                                  <HugeiconsIcon icon={Cancel01Icon} size={13} strokeWidth={2.2}/>Kapat
                                 </button>
                               </div>
                             </div>
