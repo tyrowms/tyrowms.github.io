@@ -19,7 +19,8 @@ import {
   BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon, AiAudioIcon,
   AiBrain04Icon, CloudDownloadIcon, AiBrain03Icon,
   // Phase 5 — Polish
-  Pdf02Icon, UserAccountIcon, User03Icon, UserGroup02Icon, AiIdeaIcon,
+  Pdf02Icon, Download04Icon, ChartUpIcon, ChartDownIcon, TrendingUpDownIcon,
+  UserAccountIcon, User03Icon, UserGroup02Icon, AiIdeaIcon,
   CalendarAnalysisIcon, ChartScatterIcon, CheckmarkBadge02Icon, ChartIncreaseIcon,
   Flowchart02Icon, MagicWand02Icon, Hexagon01Icon, LineIcon,
   ChartHistogramIcon, ArrowReloadVerticalIcon, ChartAverageIcon,
@@ -3299,9 +3300,10 @@ export default function App(){
               };
               // ─── PDF Export (Phase 5) — window.print pattern (Stok Raporu reuse) ───
               const exportPDF=()=>{
-                if(!fcstResult||!fit)return;
+                if(!fcstResult||!fit){alert('Önce hesaplama yapın.');return;}
                 const w=window.open('','_blank');
-                if(!w)return;
+                if(!w){alert('Popup engelli — lütfen bu site için popup izin verin.');return;}
+                try{
                 const isAnaXl=fcstResult.filterScope==='ana';
                 const fetchedCodesXl=fcstResult.traderCodes||[fcstResult.traderCode];
                 const codesArr=fcstResult.displayCodes||fetchedCodesXl;
@@ -3383,28 +3385,29 @@ export default function App(){
                 w.document.write('<div class="ftr"><div class="ftr-l"><div class="ftr-brand">TTECH Business Solutions</div><div class="ftr-sub">TYRO Stock Management Agent · Satış Tahmin Modülü · '+activeModelLbl+'</div></div><div class="ftr-r"><div class="ftr-ts">Rapor: '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'</div><div class="ftr-cr">© '+new Date().getFullYear()+' Tiryaki Agro · Tüm hakları saklıdır</div></div></div>');
                 w.document.write('</body></html>');
                 w.document.close();
-                setTimeout(()=>{try{w.focus();w.print();}catch(_){}},400);
+                setTimeout(()=>{try{w.focus();w.print();}catch(_){}},600);
+                }catch(err){
+                  console.error('[exportPDF] hata:',err);
+                  try{w.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;color:#dc2626"><h2>PDF oluşturulamadı</h2><p>Hata: '+(err?.message||String(err))+'</p><p>Lütfen tarayıcı konsolunu kontrol edip Cenk\'e bildirin.</p></body></html>');w.document.close();}catch(_){}
+                  alert('PDF oluşturulamadı: '+(err?.message||String(err)));
+                }
               };
               return(
                 <div>
-                  {/* ─── Filtre Paneli (Premium Aurora-Emerald) ─── */}
+                  {/* ─── Filtre Paneli (Premium Aurora-Emerald) — header bloğu kaldırıldı, direkt input row'undan başlıyor ─── */}
                   {/* overflow:visible — combobox dropdown'ları kart sınırına çarpmasın */}
                   <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,position:'relative'}}>
-                    {/* Üst gradient şerit — Aurora→Emerald (border-radius ile yuvarlak köşeli) */}
-                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 35%, #3b82f6 70%, #8b5cf6 100%)',borderTopLeftRadius:13,borderTopRightRadius:13}}/>
-                    <div style={{padding:'16px 20px 14px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.025), rgba(59,130,246,.015))'}}>
-                      <div style={{width:34,height:34,borderRadius:10,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 3px 8px rgba(13,110,79,.22)'}}>
-                        <HugeiconsIcon icon={FilterIcon} size={17} strokeWidth={2}/>
+                    {/* Üst gradient şerit — Trader Profile ile aynı (3 stop) */}
+                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',borderTopLeftRadius:13,borderTopRightRadius:13}}/>
+                    {/* Status/error mesajı — input row'unun üstünde sade bar */}
+                    {(fcstStatus||fcstError)&&(
+                      <div style={{padding:'8px 20px',borderBottom:'1px solid '+$.bdL,background:'#fafbfc',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                        {fcstStatus&&<span style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:500}}>{fcstStatus}</span>}
+                        {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:600,padding:'4px 10px',borderRadius:7,background:$.redB,border:'1px solid rgba(229,72,77,.25)',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:5}} onClick={()=>setFcstError('')}>
+                          <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2}/>{fcstError}<HugeiconsIcon icon={Cancel01Icon} size={11} strokeWidth={2.5}/>
+                        </span>}
                       </div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:14,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Satış Tahmini Hesaplama</div>
-                        <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1}}>Trader veya ana trader seçimi · 3-12 ay ileri tahmin</div>
-                      </div>
-                      {fcstStatus&&<span style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:500,padding:'3px 9px',borderRadius:6,background:$.bg}}>{fcstStatus}</span>}
-                      {fcstError&&<span style={{fontSize:11,color:$.red,fontFamily:$.mo,fontWeight:600,padding:'4px 10px',borderRadius:7,background:$.redB,border:'1px solid rgba(229,72,77,.25)',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:5}} onClick={()=>setFcstError('')}>
-                        <HugeiconsIcon icon={Alert02Icon} size={12} strokeWidth={2}/>{fcstError}<HugeiconsIcon icon={Cancel01Icon} size={11} strokeWidth={2.5}/>
-                      </span>}
-                    </div>
+                    )}
                     <div style={{padding:'18px 20px',display:'flex',alignItems:'flex-end',gap:14,flexWrap:'wrap'}}>
                       {/* Ana Trader dropdown */}
                       <div style={{minWidth:240,flex:'1 1 240px'}}>
@@ -3475,7 +3478,7 @@ export default function App(){
                           <HugeiconsIcon icon={Download01Icon} size={14} strokeWidth={2}/>Excel
                         </button>}
                         {fcstResult&&<button onClick={exportPDF} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:13,fontWeight:600,color:'#dc2626',background:'#fff',border:'1.5px solid rgba(220,38,38,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(220,38,38,.06), rgba(239,68,68,.04))';e.currentTarget.style.borderColor='rgba(220,38,38,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(220,38,38,.30)';}}>
-                          <HugeiconsIcon icon={Pdf02Icon} size={14} strokeWidth={2}/>PDF
+                          <HugeiconsIcon icon={Download04Icon} size={14} strokeWidth={2}/>PDF İndir
                         </button>}
                       </div>
                     </div>
@@ -3645,10 +3648,8 @@ export default function App(){
                             {icon:Activity03Icon,iconColor:$.pur,iconBg:$.purB,label:'Aktivite (Süreklilik)',value:(profile.intermittenceIndex*100).toFixed(0)+'%',sub:profile.intermittenceIndex>=.85?'stabil aylık akış':profile.intermittenceIndex>=.6?'düzensiz akış':'lumpy / fasılalı',info:{title:'Aktivite (Intermittence Index)',desc:'Geçmiş veride satış yapılan ayların yüzdesi. 100% her ay satış var demek; düşük değerler fasılalı/sezonluk akış.',detail:'≥85% Stabil aylık akış · 60-85% Düzensiz · <60% Lumpy/opportunistic. Düşük değerlerde Croston modeli otomatik tercih edilir.'}},
                           ].map((s,i)=>(
                             <div key={i} style={{padding:'12px 14px',borderRadius:11,background:'#fafbfc',border:'1px solid '+$.bdL,transition:'all .2s'}} onMouseEnter={e=>{e.currentTarget.style.background='#f6f8fb';e.currentTarget.style.borderColor=$.bd;}} onMouseLeave={e=>{e.currentTarget.style.background='#fafbfc';e.currentTarget.style.borderColor=$.bdL;}}>
-                              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-                                <div style={{width:24,height:24,borderRadius:7,background:s.iconBg,color:s.iconColor,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
-                                  <HugeiconsIcon icon={s.icon} size={13} strokeWidth={2}/>
-                                </div>
+                              <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:8}}>
+                                <HugeiconsIcon icon={s.icon} size={14} strokeWidth={2} color={s.iconColor}/>
                                 <span style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.5,flex:1}}>{s.label}</span>
                                 <InfoTip title={s.info.title} desc={s.info.desc} detail={s.info.detail} formula={s.info.formula} iconSize={10}><span/></InfoTip>
                               </div>
@@ -3664,10 +3665,8 @@ export default function App(){
                             const rankColors=['#fbbf24','#94a3b8','#cd7f32'];  // gold, silver, bronze
                             return(
                               <div style={{padding:'14px 16px',borderRadius:12,background:$.bg2,border:'1px solid '+$.bdL,boxShadow:'0 1px 2px rgba(0,0,0,.03)'}}>
-                                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:11}}>
-                                  <div style={{width:26,height:26,borderRadius:8,background:iconBg,color:iconColor,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>
-                                    <HugeiconsIcon icon={icon} size={14} strokeWidth={2}/>
-                                  </div>
+                                <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:11}}>
+                                  <HugeiconsIcon icon={icon} size={15} strokeWidth={2} color={iconColor}/>
                                   <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5}}>{title}</span>
                                 </div>
                                 {list.length===0?(
@@ -3826,10 +3825,8 @@ export default function App(){
                                       </span>
                                     )}
                                     {/* Header: icon + label + InfoTip */}
-                                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:10,position:'relative',zIndex:1}}>
-                                      <div style={{width:26,height:26,borderRadius:7,background:k.bg,color:k.c,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                                        <HugeiconsIcon icon={k.icon} size={14} strokeWidth={2}/>
-                                      </div>
+                                    <div style={{display:'flex',alignItems:'center',gap:7,marginBottom:10,position:'relative',zIndex:1}}>
+                                      <HugeiconsIcon icon={k.icon} size={15} strokeWidth={2} color={k.c}/>
                                       <span style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.5,flex:1}}>{k.l}</span>
                                       <InfoTip title={k.info.title} desc={k.info.desc} detail={k.info.detail} formula={k.info.formula} placement="bottom" iconSize={10}><span/></InfoTip>
                                     </div>
@@ -4256,12 +4253,10 @@ export default function App(){
                             const confDesc=confidence==='high'?'Tahmin sapması düşük (<%10). Modelin geçmişteki başarısı yüksek; planlama için güvenle kullanılabilir.':confidence==='medium'?'Orta sapma (%10-20). Tahmin yön gösterir ama kesin sayı için ±%20 marj bırakın.':'Yüksek sapma (>%20). Seri çok gürültülü veya yapısal kırılma var. Tahmin sadece referans olarak kullanın.';
                             return(
                               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:10,marginBottom:14}}>
-                                {/* Mevsim Profili — Premium teal header */}
+                                {/* Mevsim Profili — Premium teal header (icon arkaplansız) */}
                                 <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',padding:'16px 18px',transition:'all .25s'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)';}}>
-                                  <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
-                                    <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #14b8a6, #0d9488)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(20,184,166,.25)'}}>
-                                      <HugeiconsIcon icon={CalendarAnalysisIcon} size={15} strokeWidth={2}/>
-                                    </div>
+                                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+                                    <HugeiconsIcon icon={CalendarAnalysisIcon} size={16} strokeWidth={2} color="#14b8a6"/>
                                     <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5,flex:1}}>Mevsim Profili</span>
                                     <InfoTip title="Mevsim Profili" desc="Her takvim ayının tarihsel ortalamasının, genel ortalamaya göre yüzde sapması. Trader'ın hangi aylarda yoğun, hangilerinde düşük çalıştığını gösterir." detail="Pikler agro hasat dönemleri (ayçiçeği yaz, nohut sonbahar) veya tüketici takvimi (Ramazan, bayram) ile ilişkili olabilir." iconSize={10}><span/></InfoTip>
                                   </div>
@@ -4281,18 +4276,16 @@ export default function App(){
                                     <strong style={{color:$.red,fontWeight:700}}>Düşük aylar:</strong> {lowMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3,fontWeight:500}}>(%{lowMonths[0].pct.toFixed(0)} ortalamadan)</span>
                                   </div>
                                 </div>
-                                {/* Trend Analizi — Premium purple header */}
+                                {/* Trend Analizi — Premium purple header (icon arkaplansız) */}
                                 <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',padding:'16px 18px',transition:'all .25s'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)';}}>
-                                  <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
-                                    <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #8b5cf6, #a855f7)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(139,92,246,.25)'}}>
-                                      <HugeiconsIcon icon={ChartIncreaseIcon} size={15} strokeWidth={2}/>
-                                    </div>
+                                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+                                    <HugeiconsIcon icon={ChartIncreaseIcon} size={16} strokeWidth={2} color="#8b5cf6"/>
                                     <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5,flex:1}}>Trend Analizi</span>
                                     <InfoTip title="Trend Yönü ve Gücü" desc="Geçmiş veriye lineer regresyon uygulanarak hesaplanır. R² (determinasyon katsayısı) trend'in serideki varyansı ne kadar açıkladığını gösterir." detail="R² > 0.7 → güçlü trend · 0.3-0.7 → orta · < 0.3 → trend yok/zayıf, mevsimsellik ya da gürültü baskın." formula="R² = SSR / SST" iconSize={10}><span/></InfoTip>
                                   </div>
                                   <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
                                     <div style={{width:50,height:50,borderRadius:12,background:trendDir==='up'?'linear-gradient(135deg, rgba(45,212,160,.15), rgba(13,110,79,.08))':trendDir==='down'?'linear-gradient(135deg, rgba(229,72,77,.15), rgba(229,72,77,.08))':'linear-gradient(135deg, rgba(0,0,0,.05), rgba(0,0,0,.02))',display:'flex',alignItems:'center',justifyContent:'center',color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t3,border:'1.5px solid '+(trendDir==='up'?'rgba(13,110,79,.20)':trendDir==='down'?'rgba(229,72,77,.20)':$.bdL),flexShrink:0}}>
-                                      <HugeiconsIcon icon={trendDir==='up'?ArrowUpRight01Icon:trendDir==='down'?ArrowDownRight01Icon:ChartLineData01Icon} size={22} strokeWidth={2.2}/>
+                                      <HugeiconsIcon icon={trendDir==='up'?ChartUpIcon:trendDir==='down'?ChartDownIcon:TrendingUpDownIcon} size={26} strokeWidth={2}/>
                                     </div>
                                     <div>
                                       <div style={{fontSize:18,fontWeight:800,color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t1,fontFamily:$.mo,letterSpacing:-.3}}>{trendLabel}</div>
@@ -4304,12 +4297,10 @@ export default function App(){
                                   </div>
                                   <div style={{fontSize:10.5,color:$.t3,lineHeight:1.55,fontWeight:500}}>{r2>=0.7?'Modeller bu trader\'da güvenle çalışır.':r2>=0.3?'Trend var ama varyans yüksek; tahmin koridor şeklinde yorumlanmalı.':'Trend belirsiz; mevsim veya gürültü baskın. Seasonal Naive sık kazanabilir.'}</div>
                                 </div>
-                                {/* Tahmin Güveni — Premium cyan header */}
+                                {/* Tahmin Güveni — Premium cyan header (icon arkaplansız) */}
                                 <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',padding:'16px 18px',transition:'all .25s'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)';}}>
-                                  <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
-                                    <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #06b6d4, #0891b2)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(6,182,212,.25)'}}>
-                                      <HugeiconsIcon icon={CheckmarkBadge02Icon} size={15} strokeWidth={2}/>
-                                    </div>
+                                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+                                    <HugeiconsIcon icon={CheckmarkBadge02Icon} size={16} strokeWidth={2} color="#06b6d4"/>
                                     <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5,flex:1}}>Tahmin Güveni</span>
                                     <InfoTip title="Tahmin Güven Seviyesi" desc="Aktif modelin backtest MAPE değerine göre belirlenir. Geçmişte ne kadar başarılıysa, gelecek tahmininin de o kadar güvenilir olması beklenir." detail="High (<%10) · Medium (%10-20) · Low (>%20). Düşük güvende sayıları nokta tahmin değil koridor olarak yorumlayın." iconSize={10}><span/></InfoTip>
                                   </div>
@@ -4384,9 +4375,19 @@ export default function App(){
                                     <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>{fcstShowAllItems?`Top ${sortedItems.length} ürün`:`İlk 10 ürün`} <span style={{fontWeight:500,color:$.t3}}>· tahmin hacmine göre</span></div>
                                   </div>
                                   {fcstResult.itemReconcile&&Math.abs(fcstResult.itemReconcile.scalingFactor-1)>0.02&&(
-                                    <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',display:'inline-flex',alignItems:'center',gap:5,fontSize:10.5,padding:'4px 10px',borderRadius:7,background:'rgba(245,166,35,.10)',color:'#92400e',fontWeight:800,fontFamily:$.mo,border:'1px solid rgba(245,166,35,.25)'}}>
-                                      <HugeiconsIcon icon={Alert02Icon} size={11} strokeWidth={2.2}/>
-                                      Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%
+                                    <span style={{marginLeft:'auto'}}>
+                                      <InfoTip
+                                        title={'Reconcile (Bottom-up Düzeltme)'}
+                                        desc={'Top 30 ürünün tahmin toplamı, trader toplam tahmininden farklı çıktı. Pro-rata scaling ile her ürün tahmini bu farkı kapatacak şekilde ölçeklendirildi.'}
+                                        detail={'Scaling factor: '+fcstResult.itemReconcile.scalingFactor.toFixed(3)+' (≈ '+((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)+'%). Σ itemid forecasts × factor = trader total. Uzun kuyruk (top 30 dışı) ürünler ve modellerin bağımsız sapması bu farkı yaratır.'}
+                                        placement="bottom"
+                                        iconSize={11}
+                                      >
+                                        <span style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:10.5,padding:'4px 10px',borderRadius:7,background:'rgba(245,166,35,.10)',color:'#92400e',fontWeight:800,fontFamily:$.mo,border:'1px solid rgba(245,166,35,.25)',cursor:'help'}}>
+                                          <HugeiconsIcon icon={Alert02Icon} size={11} strokeWidth={2.2}/>
+                                          Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%
+                                        </span>
+                                      </InfoTip>
                                     </span>
                                   )}
                                 </div>
@@ -4582,8 +4583,12 @@ export default function App(){
                                 );
                               })}
                             </div>
-                            <div style={{padding:'10px 18px 14px',borderTop:'1px solid '+$.bdL,fontSize:10.5,color:$.t3,lineHeight:1.5,background:'#fafbfc'}}>
-                              <strong>MAPE</strong> = Mean Absolute Percentage Error. Son {Math.min(6,Math.floor(histKeys.length/6))} ay tutulup geri kalan tarihçe ile model eğitildi, sonra saklanan aylar tahmin edildi ve gerçek değerle kıyaslandı. <strong>%0-10</strong> mükemmel · <strong>%10-20</strong> kabul edilebilir · <strong>%20+</strong> seri tahmin edilemez kadar gürültülü.
+                            <div style={{padding:'14px 18px 16px',borderTop:'1px solid '+$.bdL,fontSize:12,color:$.t2,lineHeight:1.65,background:'linear-gradient(180deg, #fafbfc, #f5f7fa)',display:'flex',alignItems:'flex-start',gap:10}}>
+                              <HugeiconsIcon icon={InformationCircleIcon} size={16} strokeWidth={2} color={$.blu} style={{flexShrink:0,marginTop:1}}/>
+                              <div>
+                                <div style={{fontWeight:800,color:$.t1,fontSize:12.5,marginBottom:4,letterSpacing:-.1}}>MAPE Nedir?</div>
+                                <div><strong style={{color:$.t1,fontWeight:700}}>Mean Absolute Percentage Error</strong> — modelin geçmiş veride yaptığı tahminlerin gerçek değerlerden ortalama yüzde sapması. Son <strong style={{color:$.t1}}>{Math.min(6,Math.floor(histKeys.length/6))} ay</strong> tutulup geri kalan tarihçe ile model eğitildi, sonra saklanan aylar tahmin edilip gerçek değerle kıyaslandı. <strong style={{color:'#0d6e4f'}}>%0-10 mükemmel</strong> · <strong style={{color:'#92400e'}}>%10-20 kabul edilebilir</strong> · <strong style={{color:$.red}}>%20+ gürültülü/güvensiz</strong>.</div>
+                              </div>
                             </div>
                           </div>
                         </>);
