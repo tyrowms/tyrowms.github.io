@@ -3157,8 +3157,28 @@ export default function App(){
                     const traderInfo=!isMulti?lookupList.find(t=>t.code===resultTraderCodes[0]):null;
                     const scopeLabel=isAnaScope?'Ana Trader':'Trader';
                     const headerName=isMulti?`${resultTraderCodes.length} ${scopeLabel} Birleşik`:(traderInfo?.name||resultTraderCodes[0]);
-                    const subCountSuffix=isAnaScope&&fcstResult.resolvedSubCount?` — ${fcstResult.resolvedSubCount} alt trader satışı dahil`:'';
-                    const headerSub=isMulti?resultTraderCodes.map(c=>lookupList.find(t=>t.code===c)?.label||c).join(' · ')+subCountSuffix:`${resultTraderCodes[0]}${isAnaScope?' (Ana Trader'+subCountSuffix+')':' · '+profile.mainGroup}`;
+                    const hasSubInfo=isAnaScope&&Array.isArray(fcstResult.subTraders)&&fcstResult.subTraders.length>0;
+                    // Tooltip için title: kod + isim listesi
+                    const subTitleAttr=hasSubInfo?fcstResult.subTraders.map(st=>`${st.code} — ${st.name}`).join('\n'):'';
+                    // Hyperlink span: "N alt trader satışı dahil" — hover'da rich tooltip
+                    const subLink=hasSubInfo?(
+                      <span className="fcst-sublink" style={{position:'relative',display:'inline-block',cursor:'help',color:$.blu,fontWeight:700,borderBottom:'1px dotted '+$.blu,paddingBottom:0}} title={subTitleAttr}>
+                        {fcstResult.resolvedSubCount} alt trader satışı dahil
+                        <span className="fcst-subtip" style={{position:'absolute',top:'calc(100% + 6px)',left:0,minWidth:240,maxWidth:380,maxHeight:280,overflowY:'auto',background:'#1f2937',color:'#fff',borderRadius:8,padding:'10px 12px',fontSize:11,fontFamily:'system-ui',fontWeight:500,boxShadow:'0 6px 20px rgba(0,0,0,.25)',zIndex:50,whiteSpace:'normal',pointerEvents:'none',opacity:0,visibility:'hidden',transition:'opacity .15s, visibility .15s'}}>
+                          <div style={{fontSize:9,fontWeight:800,letterSpacing:.6,textTransform:'uppercase',opacity:.7,marginBottom:6,paddingBottom:6,borderBottom:'1px solid rgba(255,255,255,.15)'}}>Dahil edilen alt trader{fcstResult.subTraders.length>1?'lar':''} ({fcstResult.subTraders.length})</div>
+                          <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                            {fcstResult.subTraders.map(st=>(
+                              <div key={st.code} style={{display:'flex',gap:8,alignItems:'baseline'}}>
+                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#7dd3fc',whiteSpace:'nowrap',minWidth:64}}>{st.code}</span>
+                                <span style={{fontWeight:600,color:'#e5e7eb',wordBreak:'break-word'}}>{st.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </span>
+                      </span>
+                    ):null;
+                    // Subtitle prefix metni (tooltip dışındaki kısım)
+                    const subPrefix=isMulti?resultTraderCodes.map(c=>lookupList.find(t=>t.code===c)?.label||c).join(' · '):`${resultTraderCodes[0]}${isAnaScope?' (Ana Trader)':' · '+profile.mainGroup}`;
                     const headerInitials=isMulti?String(resultTraderCodes.length):(traderInfo?.name||resultTraderCodes[0]).split(' ').map(s=>s[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR');
                     return(<>
                       {/* ─── Trader Profili ─── */}
@@ -3166,27 +3186,17 @@ export default function App(){
                         <div style={{padding:'14px 18px',background:'linear-gradient(135deg,rgba(13,110,79,.04),rgba(59,130,246,.04))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
                           <div style={{width:42,height:42,borderRadius:11,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:isMulti?16:14,letterSpacing:.5,boxShadow:'0 3px 8px rgba(13,110,79,.2)'}}>{headerInitials}</div>
                           <div style={{flex:1,minWidth:0}}>
+                            <style>{`.fcst-sublink:hover .fcst-subtip{opacity:1!important;visibility:visible!important}`}</style>
                             <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.2}}>{headerName}</div>
-                            <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={headerSub}>{headerSub}</div>
+                            <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1,whiteSpace:'nowrap',overflow:'visible'}}>
+                              <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{subPrefix}</span>
+                              {subLink&&(<><span> — </span>{subLink}</>)}
+                            </div>
                           </div>
                           <div style={{padding:'5px 11px',borderRadius:8,background:profile.intermittenceIndex>=.85?$.grnB:profile.intermittenceIndex>=.6?$.orgB:$.redB,fontSize:11,fontWeight:700,color:profile.intermittenceIndex>=.85?'#0d6e4f':profile.intermittenceIndex>=.6?'#92400e':$.red}}>
                             {profile.character}
                           </div>
                         </div>
-                        {/* Ana scope: dahil edilen alt trader chip'leri */}
-                        {isAnaScope&&Array.isArray(fcstResult.subTraders)&&fcstResult.subTraders.length>0&&(
-                          <div style={{padding:'10px 18px',background:'rgba(59,130,246,.03)',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'flex-start',gap:8,flexWrap:'wrap'}}>
-                            <div style={{fontSize:10,fontWeight:800,color:$.t3,letterSpacing:.5,textTransform:'uppercase',padding:'4px 0',marginRight:4,whiteSpace:'nowrap'}}>Dahil edilen alt trader{fcstResult.subTraders.length>1?'lar':''} ({fcstResult.subTraders.length}):</div>
-                            <div style={{display:'flex',flexWrap:'wrap',gap:6,flex:1,minWidth:0}}>
-                              {fcstResult.subTraders.map(st=>(
-                                <div key={st.code} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'3px 9px',borderRadius:14,background:'#fff',border:'1px solid '+$.bdL,fontSize:11,boxShadow:'0 1px 2px rgba(0,0,0,.03)'}}>
-                                  <span style={{fontFamily:$.mo,fontWeight:700,color:$.blu,fontSize:10}}>{st.code}</span>
-                                  <span style={{color:$.t2,fontWeight:600}}>{st.name}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
                         <div style={{padding:'14px 18px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14}}>
                           <div>
                             <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
