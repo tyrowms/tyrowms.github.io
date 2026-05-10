@@ -598,6 +598,7 @@ export default function App(){
   const [fcstStepData,setFcstStepData]=useState({});  // her aşamadan veri (rows count, model results vs.)
   const [fcstHoverIdx,setFcstHoverIdx]=useState(null);  // grafikte hover edilen ay indexi
   const [fcstHoverModel,setFcstHoverModel]=useState(null);  // modeli üzerinde hover (id)
+  const [fcstSubTip,setFcstSubTip]=useState(null);  // {x,y} alt trader tooltip pozisyonu (position:fixed)
   const [fcstChartW,setFcstChartW]=useState(1200);  // gerçek container genişliği (responsive, no stretch)
   const fcstChartRef=useRef(null);
   useEffect(()=>{
@@ -3158,23 +3159,21 @@ export default function App(){
                     const scopeLabel=isAnaScope?'Ana Trader':'Trader';
                     const headerName=isMulti?`${resultTraderCodes.length} ${scopeLabel} Birleşik`:(traderInfo?.name||resultTraderCodes[0]);
                     const hasSubInfo=isAnaScope&&Array.isArray(fcstResult.subTraders)&&fcstResult.subTraders.length>0;
-                    // Tooltip için title: kod + isim listesi
-                    const subTitleAttr=hasSubInfo?fcstResult.subTraders.map(st=>`${st.code} — ${st.name}`).join('\n'):'';
-                    // Hyperlink span: "N alt trader satışı dahil" — hover'da rich tooltip
+                    // Hyperlink span: "N alt trader satışı dahil"
+                    // Tooltip position:fixed (state-driven) ki overflow:hidden ata kart kırpmasın.
+                    // Native title attr KULLANMIYORUZ — duplicate tooltip oluyordu.
+                    const showSubTip=(e)=>{
+                      const r=e.currentTarget.getBoundingClientRect();
+                      const tipW=320;
+                      // Soldan tipW kadar yer yoksa sağa hizala
+                      let x=r.left;
+                      if(x+tipW>window.innerWidth-12)x=Math.max(12,window.innerWidth-tipW-12);
+                      setFcstSubTip({x,y:r.bottom+6});
+                    };
+                    const hideSubTip=()=>setFcstSubTip(null);
                     const subLink=hasSubInfo?(
-                      <span className="fcst-sublink" style={{position:'relative',display:'inline-block',cursor:'help',color:$.blu,fontWeight:700,borderBottom:'1px dotted '+$.blu,paddingBottom:0}} title={subTitleAttr}>
+                      <span style={{display:'inline-block',cursor:'help',color:$.blu,fontWeight:700,borderBottom:'1px dotted '+$.blu}} onMouseEnter={showSubTip} onMouseLeave={hideSubTip}>
                         {fcstResult.resolvedSubCount} alt trader satışı dahil
-                        <span className="fcst-subtip" style={{position:'absolute',top:'calc(100% + 6px)',left:0,minWidth:240,maxWidth:380,maxHeight:280,overflowY:'auto',background:'#1f2937',color:'#fff',borderRadius:8,padding:'10px 12px',fontSize:11,fontFamily:'system-ui',fontWeight:500,boxShadow:'0 6px 20px rgba(0,0,0,.25)',zIndex:50,whiteSpace:'normal',pointerEvents:'none',opacity:0,visibility:'hidden',transition:'opacity .15s, visibility .15s'}}>
-                          <div style={{fontSize:9,fontWeight:800,letterSpacing:.6,textTransform:'uppercase',opacity:.7,marginBottom:6,paddingBottom:6,borderBottom:'1px solid rgba(255,255,255,.15)'}}>Dahil edilen alt trader{fcstResult.subTraders.length>1?'lar':''} ({fcstResult.subTraders.length})</div>
-                          <div style={{display:'flex',flexDirection:'column',gap:5}}>
-                            {fcstResult.subTraders.map(st=>(
-                              <div key={st.code} style={{display:'flex',gap:8,alignItems:'baseline'}}>
-                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#7dd3fc',whiteSpace:'nowrap',minWidth:64}}>{st.code}</span>
-                                <span style={{fontWeight:600,color:'#e5e7eb',wordBreak:'break-word'}}>{st.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </span>
                       </span>
                     ):null;
                     // Subtitle prefix metni (tooltip dışındaki kısım)
@@ -3186,7 +3185,6 @@ export default function App(){
                         <div style={{padding:'14px 18px',background:'linear-gradient(135deg,rgba(13,110,79,.04),rgba(59,130,246,.04))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
                           <div style={{width:42,height:42,borderRadius:11,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:isMulti?16:14,letterSpacing:.5,boxShadow:'0 3px 8px rgba(13,110,79,.2)'}}>{headerInitials}</div>
                           <div style={{flex:1,minWidth:0}}>
-                            <style>{`.fcst-sublink:hover .fcst-subtip{opacity:1!important;visibility:visible!important}`}</style>
                             <div style={{fontSize:15,fontWeight:800,color:$.t1,letterSpacing:-.2}}>{headerName}</div>
                             <div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:1,whiteSpace:'nowrap',overflow:'visible'}}>
                               <span style={{overflow:'hidden',textOverflow:'ellipsis'}}>{subPrefix}</span>
@@ -3735,6 +3733,20 @@ export default function App(){
                           </div>
                         </>);
                       })()}
+                      {/* ─── Alt Trader Hover Tooltip (position:fixed — overflow:hidden ata kartlardan kurtulur) ─── */}
+                      {fcstSubTip&&hasSubInfo&&(
+                        <div style={{position:'fixed',left:fcstSubTip.x,top:fcstSubTip.y,minWidth:240,maxWidth:320,maxHeight:320,overflowY:'auto',background:'#1f2937',color:'#fff',borderRadius:8,padding:'10px 12px',fontSize:11,fontWeight:500,boxShadow:'0 8px 24px rgba(0,0,0,.3)',zIndex:9999,pointerEvents:'none'}}>
+                          <div style={{fontSize:9,fontWeight:800,letterSpacing:.6,textTransform:'uppercase',opacity:.7,marginBottom:6,paddingBottom:6,borderBottom:'1px solid rgba(255,255,255,.15)'}}>Dahil edilen alt trader{fcstResult.subTraders.length>1?'lar':''} ({fcstResult.subTraders.length})</div>
+                          <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                            {fcstResult.subTraders.map(st=>(
+                              <div key={st.code} style={{display:'flex',gap:8,alignItems:'baseline'}}>
+                                <span style={{fontFamily:$.mo,fontSize:10,fontWeight:700,color:'#7dd3fc',whiteSpace:'nowrap',minWidth:64}}>{st.code}</span>
+                                <span style={{fontWeight:600,color:'#e5e7eb',wordBreak:'break-word'}}>{st.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </>);
                   })()}
                 </div>
