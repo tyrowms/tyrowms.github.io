@@ -3877,64 +3877,86 @@ export default function App(){
                                       {isItemView&&<span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:5,background:'rgba(255,255,255,.25)',backdropFilter:'blur(4px)',color:'#fff',fontSize:10,fontWeight:800,fontFamily:$.mo,marginLeft:2,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{activeItem?.pid}</span>}
                                       <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.2} style={{opacity:.85,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
                                     </button>
-                                    {fcstShowViewMenu&&(
+                                    {fcstShowViewMenu&&(()=>{
+                                      // Trader scope bilgisi (outer fcstResult IIFE'sindeki headerName/displayCodes/lookupList)
+                                      const tCount=displayCodes.length;
+                                      const tLabel=tCount===1?(traderInfo?.name||displayCodes[0]):`${tCount} ${isAnaScope?'Ana Trader':'Trader'} Birleşik`;
+                                      const tCode=tCount===1?displayCodes[0]:`${tCount} kod`;
+                                      return(
                                       <>
                                         <div style={{position:'fixed',inset:0,zIndex:39}} onClick={()=>setFcstShowViewMenu(false)}/>
-                                        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,minWidth:380,maxWidth:460,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:13,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:40,overflow:'hidden'}}>
+                                        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:420,maxWidth:'calc(100vw - 24px)',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:13,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:40,overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:'min(640px, calc(100vh - 100px))'}}>
                                           {/* Üst gradient şerit */}
-                                          <div style={{height:3,background:'linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6)'}}/>
-                                          {/* Header — başlık + kapat */}
-                                          <div style={{padding:'12px 14px',background:'linear-gradient(135deg, rgba(59,130,246,.05), rgba(99,102,241,.02))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:9}}>
-                                            <div style={{width:26,height:26,borderRadius:7,background:'linear-gradient(135deg, #3b82f6, #6366f1)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 5px rgba(59,130,246,.20)'}}>
-                                              <HugeiconsIcon icon={FilterEditIcon} size={13} strokeWidth={2}/>
-                                            </div>
+                                          <div style={{height:3,background:'linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6)',flexShrink:0}}/>
+                                          {/* Header (sabit) */}
+                                          <div style={{padding:'13px 16px',background:'linear-gradient(135deg, rgba(59,130,246,.05), rgba(99,102,241,.02))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+                                            <HugeiconsIcon icon={FilterEditIcon} size={16} strokeWidth={2} color={$.blu}/>
                                             <div style={{flex:1,minWidth:0}}>
-                                              <div style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Gelişmiş Filtre</div>
+                                              <div style={{fontSize:13,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Gelişmiş Filtre</div>
                                               <div style={{fontSize:10.5,color:$.t3,fontWeight:600,marginTop:1}}>Görüntüleme kapsamını seçin</div>
                                             </div>
                                           </div>
-                                          {/* Trader Toplamı — büyük prominent en üst seçenek */}
-                                          <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'14px 16px',display:'flex',alignItems:'center',gap:11,cursor:'pointer',borderBottom:'1px solid '+$.bdL,background:!isItemView?'linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.05))':'#fafbfc',transition:'background .15s',position:'relative'}} onMouseEnter={e=>{if(isItemView)e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.05), rgba(139,92,246,.02))';}} onMouseLeave={e=>{if(isItemView)e.currentTarget.style.background='#fafbfc';}}>
-                                            {!isItemView&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg, #3b82f6, #6366f1)'}}/>}
-                                            <div style={{width:36,height:36,borderRadius:9,background:!isItemView?'linear-gradient(135deg, #3b82f6, #6366f1)':'rgba(59,130,246,.10)',color:!isItemView?'#fff':$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:!isItemView?'0 2px 6px rgba(59,130,246,.25)':'none',transition:'all .15s'}}>
-                                              <HugeiconsIcon icon={ChartBarLineIcon} size={17} strokeWidth={2}/>
+
+                                          {/* TRADER bölümü (sabit, fixed üst) */}
+                                          <div style={{padding:'14px 16px 12px',borderBottom:'1px solid '+$.bdL,flexShrink:0,background:$.bg2}}>
+                                            <div style={{fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
+                                              <HugeiconsIcon icon={UserGroup02Icon} size={11} color={$.t3} strokeWidth={2}/>
+                                              Trader Kapsamı
                                             </div>
-                                            <div style={{flex:1,minWidth:0}}>
-                                              <div style={{fontSize:13.5,fontWeight:800,color:!isItemView?$.blu:$.t1,letterSpacing:-.1}}>Trader Toplamı</div>
-                                              <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1}}>Tüm ürünlerin birleşik tahmini</div>
+                                            <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'12px 13px',display:'flex',alignItems:'center',gap:11,cursor:'pointer',borderRadius:10,background:!isItemView?'linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.04))':'#fafbfc',border:'1.5px solid '+(!isItemView?'rgba(59,130,246,.30)':$.bdL),transition:'all .15s',position:'relative'}} onMouseEnter={e=>{if(isItemView){e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.05), rgba(139,92,246,.02))';e.currentTarget.style.borderColor='rgba(59,130,246,.20)';}}} onMouseLeave={e=>{if(isItemView){e.currentTarget.style.background='#fafbfc';e.currentTarget.style.borderColor=$.bdL;}}}>
+                                              <div style={{width:34,height:34,borderRadius:9,background:!isItemView?'linear-gradient(135deg, #3b82f6, #6366f1)':'rgba(59,130,246,.10)',color:!isItemView?'#fff':$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:!isItemView?'0 2px 6px rgba(59,130,246,.25)':'none',transition:'all .15s',flexShrink:0}}>
+                                                <HugeiconsIcon icon={UserAccountIcon} size={17} strokeWidth={1.8}/>
+                                              </div>
+                                              <div style={{flex:1,minWidth:0}}>
+                                                <div style={{fontSize:13,fontWeight:800,color:!isItemView?$.blu:$.t1,letterSpacing:-.1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={tLabel}>{tLabel}</div>
+                                                <div style={{fontSize:10.5,color:$.t3,fontWeight:600,marginTop:2,fontFamily:$.mo,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={tCode}>{tCode} · tüm ürünlerin birleşik tahmini</div>
+                                              </div>
+                                              {!isItemView&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9.5,fontWeight:800,color:'#fff',padding:'3px 9px',borderRadius:5,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',letterSpacing:.5,boxShadow:'0 1px 3px rgba(13,110,79,.20)',flexShrink:0}}>● AKTİF</span>}
                                             </div>
-                                            {!isItemView&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9.5,fontWeight:800,color:'#fff',padding:'3px 9px',borderRadius:5,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',letterSpacing:.5,boxShadow:'0 1px 3px rgba(13,110,79,.20)'}}>● AKTİF</span>}
                                           </div>
-                                          {/* Search */}
-                                          <div style={{padding:'10px 12px',background:'#fafbfc',borderBottom:'1px solid '+$.bdL}}>
-                                            <div style={{position:'relative'}}>
-                                              <HugeiconsIcon icon={EyeIcon} size={12} color={$.t3} strokeWidth={2} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
-                                              <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Ürün kodu ara…" autoFocus style={{width:'100%',padding:'8px 11px 8px 30px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:8,background:$.bg2,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600}}/>
-                                            </div>
-                                          </div>
-                                          {/* Itemid list — tek seçim (multi-select sonraki sürümde) */}
-                                          <div style={{maxHeight:340,overflowY:'auto'}}>
-                                            <div style={{padding:'8px 14px',fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,background:'#fafbfc',display:'flex',alignItems:'center',gap:5,borderBottom:'1px solid '+$.bdL}}>
+
+                                          {/* ÜRÜN bölümü (sabit header + scrollable list) */}
+                                          <div style={{padding:'14px 16px 10px',flexShrink:0,background:$.bg2}}>
+                                            <div style={{fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
                                               <HugeiconsIcon icon={PackageIcon} size={11} color={$.t3} strokeWidth={2}/>
-                                              Tek Ürün Seç <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· Top {showCount} (hacme göre)</span>
+                                              Tek Ürün <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· Top {showCount} (hacme göre)</span>
                                             </div>
+                                            <div style={{position:'relative'}}>
+                                              <HugeiconsIcon icon={EyeIcon} size={12} color={$.t3} strokeWidth={2} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
+                                              <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Ürün kodu ara…" autoFocus style={{width:'100%',padding:'9px 12px 9px 30px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:8,background:$.bg,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600,boxSizing:'border-box'}} onFocus={e=>{e.currentTarget.style.borderColor='rgba(59,130,246,.40)';e.currentTarget.style.background=$.bg2;}} onBlur={e=>{e.currentTarget.style.borderColor=$.bdL;e.currentTarget.style.background=$.bg;}}/>
+                                            </div>
+                                          </div>
+
+                                          {/* Itemid scrollable list — tek scroll alanı, kitlenmesin */}
+                                          <div style={{flex:1,minHeight:0,overflowY:'auto',overscrollBehavior:'contain'}} onWheel={e=>{e.stopPropagation();}}>
                                             {filtered.slice(0,30).map(it=>{
                                               const sel=fcstChartView===it.pid;
                                               return(
-                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'10px 14px',display:'flex',alignItems:'center',gap:9,cursor:'pointer',background:sel?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s',position:'relative'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'10px 16px',display:'flex',alignItems:'center',gap:10,cursor:'pointer',background:sel?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s',position:'relative'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
                                                   {sel&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg, #3b82f6, #6366f1)'}}/>}
                                                   <div style={{width:7,height:7,borderRadius:'50%',background:sel?'linear-gradient(135deg, #3b82f6, #6366f1)':'#cbd5e1',boxShadow:sel?'0 0 0 3px rgba(59,130,246,.15)':'none',flexShrink:0,transition:'all .15s'}}/>
-                                                  <span style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:sel?$.blu:$.t1,minWidth:130,overflow:'hidden',textOverflow:'ellipsis'}}>{it.pid}</span>
-                                                  <span style={{marginLeft:'auto',fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,fontVariantNumeric:'tabular-nums'}}>{fmtTon(it.last12)}</span>
-                                                  {!it.isStable&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:800,letterSpacing:.4}}><HugeiconsIcon icon={Alert02Icon} size={9} strokeWidth={2.5}/>DÜZENSİZ</span>}
+                                                  <span style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:sel?$.blu:$.t1,flex:1,minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{it.pid}</span>
+                                                  <span style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,fontVariantNumeric:'tabular-nums',flexShrink:0}}>{fmtTon(it.last12)}</span>
+                                                  {!it.isStable&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:800,letterSpacing:.4,flexShrink:0}}><HugeiconsIcon icon={Alert02Icon} size={9} strokeWidth={2.5}/>DÜZENSİZ</span>}
                                                 </div>
                                               );
                                             })}
-                                            {filtered.length===0&&<div style={{padding:'18px 14px',fontSize:11,color:$.t3,textAlign:'center',fontStyle:'italic'}}>Eşleşme yok</div>}
+                                            {filtered.length===0&&<div style={{padding:'24px 16px',fontSize:11,color:$.t3,textAlign:'center',fontStyle:'italic'}}>Eşleşme yok</div>}
+                                          </div>
+
+                                          {/* Footer — Filtreyi Temizle + Kapat */}
+                                          <div style={{padding:'10px 14px',borderTop:'1px solid '+$.bdL,background:'linear-gradient(180deg, #fafbfc, #f5f7fa)',display:'flex',gap:8,flexShrink:0}}>
+                                            <button onClick={()=>{setFcstChartView('total');setFcstViewSearch('');setFcstShowViewMenu(false);}} disabled={!isItemView&&!fcstViewSearch} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 12px',background:isItemView||fcstViewSearch?'#fff':'#fafbfc',border:'1.5px solid '+(isItemView||fcstViewSearch?'rgba(229,72,77,.30)':$.bdL),borderRadius:8,fontSize:12,fontWeight:600,color:isItemView||fcstViewSearch?$.red:$.t3,cursor:isItemView||fcstViewSearch?'pointer':'not-allowed',opacity:isItemView||fcstViewSearch?1:.5,transition:'all .15s',letterSpacing:.1}} onMouseEnter={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.background='rgba(229,72,77,.06)';e.currentTarget.style.borderColor='rgba(229,72,77,.50)';}}} onMouseLeave={e=>{if(!e.currentTarget.disabled){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(229,72,77,.30)';}}}>
+                                              <HugeiconsIcon icon={RefreshIcon} size={13} strokeWidth={1.8}/>Filtreyi Temizle
+                                            </button>
+                                            <button onClick={()=>setFcstShowViewMenu(false)} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:6,padding:'8px 12px',background:'linear-gradient(135deg, #3b82f6, #6366f1)',border:'none',borderRadius:8,fontSize:12,fontWeight:600,color:'#fff',cursor:'pointer',boxShadow:'0 2px 6px rgba(59,130,246,.20)',transition:'all .15s',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 4px 12px rgba(59,130,246,.30)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 6px rgba(59,130,246,.20)';}}>
+                                              <HugeiconsIcon icon={Cancel01Icon} size={13} strokeWidth={1.8}/>Kapat
+                                            </button>
                                           </div>
                                         </div>
                                       </>
-                                    )}
+                                      );
+                                    })()}
                                   </div>
                                 );
                               })()}
