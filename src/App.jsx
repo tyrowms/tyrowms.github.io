@@ -605,6 +605,7 @@ export default function App(){
   const [fcstShowViewMenu,setFcstShowViewMenu]=useState(false);  // Görünüm dropdown açık mı
   const [fcstItemSortCol,setFcstItemSortCol]=useState('hAhead');  // ürün tablosu sort sütunu
   const [fcstItemSortDir,setFcstItemSortDir]=useState(-1);  // -1 desc, 1 asc
+  const [fcstShowAllItems,setFcstShowAllItems]=useState(false);  // ürün tablosu top 10 vs hepsi
   const [fcstChartW,setFcstChartW]=useState(1200);  // gerçek container genişliği (responsive, no stretch)
   const fcstChartRef=useRef(null);
   useEffect(()=>{
@@ -3400,128 +3401,6 @@ export default function App(){
                         </div>
                       </div>
 
-                      {/* ─── Ürün Bazlı Tahmin Tablosu (Top 30 itemid + uzun kuyruk) ─── */}
-                      {fcstResult.itemForecasts&&fcstResult.itemForecasts.length>0&&(()=>{
-                        // Sort
-                        const sortedItems=[...fcstResult.itemForecasts].sort((a,b)=>{
-                          const dir=fcstItemSortDir;
-                          const col=fcstItemSortCol;
-                          let av,bv;
-                          if(col==='pid'){av=a.pid;bv=b.pid;return av.localeCompare(bv)*dir;}
-                          if(col==='last12'){av=a.last12||0;bv=b.last12||0;}
-                          else if(col==='hAhead'){av=a.hAheadAdjusted??a.hAhead;bv=b.hAheadAdjusted??b.hAhead;
-                            if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;}
-                          else if(col==='yoy'){
-                            const ay=a.last12>0&&(a.hAheadAdjusted??a.hAhead)!=null?(((a.hAheadAdjusted??a.hAhead)-a.last12*horizon/12)/(a.last12*horizon/12)*100):null;
-                            const by=b.last12>0&&(b.hAheadAdjusted??b.hAhead)!=null?(((b.hAheadAdjusted??b.hAhead)-b.last12*horizon/12)/(b.last12*horizon/12)*100):null;
-                            if(ay==null&&by==null)return 0;if(ay==null)return 1;if(by==null)return -1;
-                            av=ay;bv=by;
-                          } else if(col==='mape'){
-                            av=a.fit?.results?.find(r=>r.id===a.fit?.bestId)?.mape;
-                            bv=b.fit?.results?.find(r=>r.id===b.fit?.bestId)?.mape;
-                            if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;
-                          }
-                          return ((av||0)-(bv||0))*dir;
-                        });
-                        const sortClick=(col)=>{
-                          if(fcstItemSortCol===col)setFcstItemSortDir(d=>d*-1);
-                          else{setFcstItemSortCol(col);setFcstItemSortDir(-1);}
-                        };
-                        const sortIcon=(col)=>fcstItemSortCol===col?<ArrowUpDown size={9} style={{marginLeft:3,verticalAlign:'middle',color:$.blu}}/>:null;
-                        const tail=fcstResult.itemLongTail;
-                        // Mini sparkline helper
-                        const sparkline=(qtyArr,fcArr)=>{
-                          const all=[...(qtyArr||[]),...(fcArr||[])];
-                          if(all.length<2)return null;
-                          const max=Math.max(...all,1);
-                          const w=80,h=22;
-                          const histLen=qtyArr?.length||0;
-                          const xStep=w/(all.length-1);
-                          const pts=all.map((v,i)=>`${(i*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`).join(' ');
-                          const histPts=qtyArr?qtyArr.map((v,i)=>`${(i*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`).join(' '):'';
-                          const fcStartX=histLen>0?(histLen-1)*xStep:0;
-                          const fcPts=fcArr?[`${fcStartX.toFixed(1)},${(h-(qtyArr[histLen-1]/max)*h).toFixed(1)}`,...fcArr.map((v,i)=>`${((histLen+i)*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`)].join(' '):'';
-                          return(
-                            <svg width={w} height={h} style={{display:'block'}}>
-                              {histPts&&<polyline points={histPts} fill="none" stroke={$.blu} strokeWidth={1.4}/>}
-                              {fcPts&&<polyline points={fcPts} fill="none" stroke="#0d6e4f" strokeWidth={1.4} strokeDasharray="2,2"/>}
-                            </svg>
-                          );
-                        };
-                        return(
-                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
-                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',background:'linear-gradient(135deg,rgba(45,212,160,.04),rgba(59,130,246,.03))'}}>
-                              <Package size={15} color={$.ac}/>
-                              <span style={{fontSize:13,fontWeight:800,color:$.t1}}>Ürün Bazlı Tahmin</span>
-                              <span style={{fontSize:11,color:$.t3,fontWeight:500}}>Top {sortedItems.length} itemid · forecast hacmine göre sıralı</span>
-                              {fcstResult.itemReconcile&&Math.abs(fcstResult.itemReconcile.scalingFactor-1)>0.02&&(
-                                <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',fontSize:10,padding:'3px 9px',borderRadius:6,background:$.orgB,color:'#92400e',fontWeight:700,fontFamily:$.mo}}>Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%</span>
-                              )}
-                            </div>
-                            <div style={{overflowX:'auto'}}>
-                              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-                                <thead>
-                                  <tr style={{background:'#fafbfc',borderBottom:'2px solid '+$.bdL}}>
-                                    <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:36}}>#</th>
-                                    <th onClick={()=>sortClick('pid')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Itemid{sortIcon('pid')}</th>
-                                    <th onClick={()=>sortClick('last12')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Son 12 Ay{sortIcon('last12')}</th>
-                                    <th onClick={()=>sortClick('hAhead')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Tahmin {horizon} Ay{sortIcon('hAhead')}</th>
-                                    <th onClick={()=>sortClick('yoy')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>YoY %{sortIcon('yoy')}</th>
-                                    <th onClick={()=>sortClick('mape')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Best Model{sortIcon('mape')}</th>
-                                    <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:90}}>Trend</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {sortedItems.map((it,idx)=>{
-                                    const sel=fcstChartView===it.pid;
-                                    const last12=it.last12||0;
-                                    const hAhead=it.hAheadAdjusted??it.hAhead;
-                                    const yoy=last12>0&&hAhead!=null?((hAhead-last12*horizon/12)/(last12*horizon/12)*100):null;
-                                    const bestModel=it.fit&&it.fit.bestId?FORECAST_MODELS.find(m=>m.id===it.fit.bestId):null;
-                                    const mape=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.mape;
-                                    const fc=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.forecast?.point;
-                                    return(
-                                      <tr key={it.pid} onClick={()=>setFcstChartView(it.pid)} style={{borderBottom:'1px solid '+$.bdL,cursor:'pointer',background:sel?$.bluB:'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
-                                        <td style={{padding:'8px 10px',textAlign:'center',color:$.t3,fontFamily:$.mo,fontSize:11,fontWeight:600}}>{idx+1}</td>
-                                        <td style={{padding:'8px 10px'}}>
-                                          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:sel?$.blu:$.t1}}>{it.pid}</span>
-                                            {!it.isStable&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:700,letterSpacing:.3,textTransform:'uppercase'}}>Düzensiz</span>}
-                                            {sel&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.bluB,color:$.blu,fontWeight:700,letterSpacing:.3}}>● aktif</span>}
-                                          </div>
-                                        </td>
-                                        <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(last12)}</td>
-                                        <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:hAhead!=null?$.t1:$.t3}}>{hAhead!=null?fmtTon(hAhead):'—'}</td>
-                                        <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:yoy==null?$.t3:yoy>=0?'#0d6e4f':$.red}}>{yoy!=null?(yoy>=0?'+':'')+yoy.toFixed(1)+'%':'—'}</td>
-                                        <td style={{padding:'8px 10px',textAlign:'left'}}>
-                                          {bestModel?(
-                                            <div style={{display:'flex',alignItems:'center',gap:5}}>
-                                              <span style={{fontSize:11,fontWeight:600,color:$.t2}}>{bestModel.label}</span>
-                                              {mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,fontWeight:700,padding:'2px 6px',borderRadius:4,background:mape<10?$.grnB:mape<20?$.orgB:$.redB,color:mape<10?'#0d6e4f':mape<20?'#92400e':$.red}}>{mape.toFixed(1)}%</span>}
-                                            </div>
-                                          ):<span style={{color:$.t3,fontStyle:'italic',fontSize:11}}>—</span>}
-                                        </td>
-                                        <td style={{padding:'8px 10px',textAlign:'center'}}>
-                                          {it.qty&&it.qty.length>0&&fc&&fc.length>0?sparkline(it.qty.slice(-12),fc):<span style={{color:$.t3,fontSize:11}}>—</span>}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                  {tail&&tail.count>0&&(
-                                    <tr style={{borderBottom:'1px solid '+$.bdL,background:'#fafbfc'}}>
-                                      <td colSpan={2} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:600}}>+ Uzun kuyruk: {tail.count} itemid (top 30 dışı)</td>
-                                      <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{fmtTon(tail.last12||0)}</td>
-                                      <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{tail.estimatedHAhead!=null?fmtTon(tail.estimatedHAhead):'—'}</td>
-                                      <td colSpan={3} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11}}>{tail.count>0?'MA-3 ortalaması (toplu)':''}</td>
-                                    </tr>
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
                       {/* ─── Model Sekmeleri (skipped gizli, MAPE düşükten yükseğe sıralı) ─── */}
                       {/* Itemid view aktifken sekmelerin yerine breadcrumb + geri butonu */}
                       {isItemView?(
@@ -3985,6 +3864,141 @@ export default function App(){
                                   <div style={{fontSize:11,color:$.t2,lineHeight:1.55}}>{confDesc}</div>
                                   {mape!=null&&<div style={{fontSize:10.5,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:8,paddingTop:8,borderTop:'1px solid '+$.bdL}}>Backtest MAPE: <strong style={{color:confColor}}>{mape.toFixed(1)}%</strong></div>}
                                 </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* ─── Ürün Bazlı Tahmin Tablosu (Top 10 default + "Daha fazla göster") ─── */}
+                          {fcstResult.itemForecasts&&fcstResult.itemForecasts.length>0&&(()=>{
+                            // Sort
+                            const sortedItems=[...fcstResult.itemForecasts].sort((a,b)=>{
+                              const dir=fcstItemSortDir;
+                              const col=fcstItemSortCol;
+                              let av,bv;
+                              if(col==='pid'){av=a.pid;bv=b.pid;return av.localeCompare(bv)*dir;}
+                              if(col==='last12'){av=a.last12||0;bv=b.last12||0;}
+                              else if(col==='hAhead'){av=a.hAheadAdjusted??a.hAhead;bv=b.hAheadAdjusted??b.hAhead;
+                                if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;}
+                              else if(col==='yoy'){
+                                const ay=a.last12>0&&(a.hAheadAdjusted??a.hAhead)!=null?(((a.hAheadAdjusted??a.hAhead)-a.last12*horizon/12)/(a.last12*horizon/12)*100):null;
+                                const by=b.last12>0&&(b.hAheadAdjusted??b.hAhead)!=null?(((b.hAheadAdjusted??b.hAhead)-b.last12*horizon/12)/(b.last12*horizon/12)*100):null;
+                                if(ay==null&&by==null)return 0;if(ay==null)return 1;if(by==null)return -1;
+                                av=ay;bv=by;
+                              } else if(col==='mape'){
+                                av=a.fit?.results?.find(r=>r.id===a.fit?.bestId)?.mape;
+                                bv=b.fit?.results?.find(r=>r.id===b.fit?.bestId)?.mape;
+                                if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;
+                              }
+                              return ((av||0)-(bv||0))*dir;
+                            });
+                            const sortClick=(col)=>{
+                              if(fcstItemSortCol===col)setFcstItemSortDir(d=>d*-1);
+                              else{setFcstItemSortCol(col);setFcstItemSortDir(-1);}
+                            };
+                            const sortIcon=(col)=>fcstItemSortCol===col?<ArrowUpDown size={9} style={{marginLeft:3,verticalAlign:'middle',color:$.blu}}/>:null;
+                            const tail=fcstResult.itemLongTail;
+                            // Top 10 default — kullanıcı "Daha fazla göster"e basana kadar sade tut
+                            const visibleItems=fcstShowAllItems?sortedItems:sortedItems.slice(0,10);
+                            const hiddenCount=sortedItems.length-visibleItems.length;
+                            const sparkline=(qtyArr,fcArr)=>{
+                              const all=[...(qtyArr||[]),...(fcArr||[])];
+                              if(all.length<2)return null;
+                              const max=Math.max(...all,1);
+                              const w=80,h=22;
+                              const histLen=qtyArr?.length||0;
+                              const xStep=w/(all.length-1);
+                              const histPts=qtyArr?qtyArr.map((v,i)=>`${(i*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`).join(' '):'';
+                              const fcStartX=histLen>0?(histLen-1)*xStep:0;
+                              const fcPts=fcArr?[`${fcStartX.toFixed(1)},${(h-(qtyArr[histLen-1]/max)*h).toFixed(1)}`,...fcArr.map((v,i)=>`${((histLen+i)*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`)].join(' '):'';
+                              return(
+                                <svg width={w} height={h} style={{display:'block'}}>
+                                  {histPts&&<polyline points={histPts} fill="none" stroke={$.blu} strokeWidth={1.4}/>}
+                                  {fcPts&&<polyline points={fcPts} fill="none" stroke="#0d6e4f" strokeWidth={1.4} strokeDasharray="2,2"/>}
+                                </svg>
+                              );
+                            };
+                            return(
+                              <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
+                                <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',background:'linear-gradient(135deg,rgba(45,212,160,.04),rgba(59,130,246,.03))'}}>
+                                  <Package size={15} color={$.ac}/>
+                                  <span style={{fontSize:13,fontWeight:800,color:$.t1}}>Ürün Bazlı Tahmin</span>
+                                  <span style={{fontSize:11,color:$.t3,fontWeight:500}}>{fcstShowAllItems?`Top ${sortedItems.length}`:`İlk 10`} itemid · forecast hacmine göre sıralı</span>
+                                  {fcstResult.itemReconcile&&Math.abs(fcstResult.itemReconcile.scalingFactor-1)>0.02&&(
+                                    <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',fontSize:10,padding:'3px 9px',borderRadius:6,background:$.orgB,color:'#92400e',fontWeight:700,fontFamily:$.mo}}>Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%</span>
+                                  )}
+                                </div>
+                                <div style={{overflowX:'auto'}}>
+                                  <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                                    <thead>
+                                      <tr style={{background:'#fafbfc',borderBottom:'2px solid '+$.bdL}}>
+                                        <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:36}}>#</th>
+                                        <th onClick={()=>sortClick('pid')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Itemid{sortIcon('pid')}</th>
+                                        <th onClick={()=>sortClick('last12')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Son 12 Ay{sortIcon('last12')}</th>
+                                        <th onClick={()=>sortClick('hAhead')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Tahmin {horizon} Ay{sortIcon('hAhead')}</th>
+                                        <th onClick={()=>sortClick('yoy')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>YoY %{sortIcon('yoy')}</th>
+                                        <th onClick={()=>sortClick('mape')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Best Model{sortIcon('mape')}</th>
+                                        <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:90}}>Trend</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {visibleItems.map((it,idx)=>{
+                                        const sel=fcstChartView===it.pid;
+                                        const last12=it.last12||0;
+                                        const hAhead=it.hAheadAdjusted??it.hAhead;
+                                        const yoy=last12>0&&hAhead!=null?((hAhead-last12*horizon/12)/(last12*horizon/12)*100):null;
+                                        const bestModel=it.fit&&it.fit.bestId?FORECAST_MODELS.find(m=>m.id===it.fit.bestId):null;
+                                        const mape=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.mape;
+                                        const fc=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.forecast?.point;
+                                        return(
+                                          <tr key={it.pid} onClick={()=>setFcstChartView(it.pid)} style={{borderBottom:'1px solid '+$.bdL,cursor:'pointer',background:sel?$.bluB:'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                            <td style={{padding:'8px 10px',textAlign:'center',color:$.t3,fontFamily:$.mo,fontSize:11,fontWeight:600}}>{idx+1}</td>
+                                            <td style={{padding:'8px 10px'}}>
+                                              <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                                                <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:sel?$.blu:$.t1}}>{it.pid}</span>
+                                                {!it.isStable&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:700,letterSpacing:.3,textTransform:'uppercase'}}>Düzensiz</span>}
+                                                {sel&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.bluB,color:$.blu,fontWeight:700,letterSpacing:.3}}>● aktif</span>}
+                                              </div>
+                                            </td>
+                                            <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(last12)}</td>
+                                            <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:hAhead!=null?$.t1:$.t3}}>{hAhead!=null?fmtTon(hAhead):'—'}</td>
+                                            <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:yoy==null?$.t3:yoy>=0?'#0d6e4f':$.red}}>{yoy!=null?(yoy>=0?'+':'')+yoy.toFixed(1)+'%':'—'}</td>
+                                            <td style={{padding:'8px 10px',textAlign:'left'}}>
+                                              {bestModel?(
+                                                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                                                  <span style={{fontSize:11,fontWeight:600,color:$.t2}}>{bestModel.label}</span>
+                                                  {mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,fontWeight:700,padding:'2px 6px',borderRadius:4,background:mape<10?$.grnB:mape<20?$.orgB:$.redB,color:mape<10?'#0d6e4f':mape<20?'#92400e':$.red}}>{mape.toFixed(1)}%</span>}
+                                                </div>
+                                              ):<span style={{color:$.t3,fontStyle:'italic',fontSize:11}}>—</span>}
+                                            </td>
+                                            <td style={{padding:'8px 10px',textAlign:'center'}}>
+                                              {it.qty&&it.qty.length>0&&fc&&fc.length>0?sparkline(it.qty.slice(-12),fc):<span style={{color:$.t3,fontSize:11}}>—</span>}
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                      {tail&&tail.count>0&&fcstShowAllItems&&(
+                                        <tr style={{borderBottom:'1px solid '+$.bdL,background:'#fafbfc'}}>
+                                          <td colSpan={2} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:600}}>+ Uzun kuyruk: {tail.count} itemid (top 30 dışı)</td>
+                                          <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{fmtTon(tail.last12||0)}</td>
+                                          <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{tail.estimatedHAhead!=null?fmtTon(tail.estimatedHAhead):'—'}</td>
+                                          <td colSpan={3} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11}}>{tail.count>0?'MA-3 ortalaması (toplu)':''}</td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                {/* Daha fazla göster / daha az göster toggle */}
+                                {sortedItems.length>10&&(
+                                  <div style={{padding:'10px 14px',borderTop:'1px solid '+$.bdL,background:'#fafbfc',display:'flex',justifyContent:'center'}}>
+                                    <button onClick={()=>setFcstShowAllItems(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',background:'#fff',border:'1px solid '+$.bdL,borderRadius:8,fontSize:11.5,fontWeight:700,color:$.blu,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background=$.bluB;e.currentTarget.style.borderColor='rgba(59,130,246,.30)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor=$.bdL;}}>
+                                      {fcstShowAllItems?(
+                                        <><ChevronLeft size={12} style={{transform:'rotate(90deg)'}}/>İlk 10'a Geri Dön</>
+                                      ):(
+                                        <><ChevronDown size={12}/>+ {hiddenCount} itemid daha göster (toplam {sortedItems.length})</>
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}
