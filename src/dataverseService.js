@@ -181,10 +181,14 @@ const HISTORICAL_SALES_VARIANTS = [
 ].filter(Boolean);
 let HISTORICAL_RESOLVED_ENTITY = null;  // ilk başarılı fetch'te kilitlenir
 
-// Rapor tarihi geçici olarak 2026-05-02'ye sabitlendi
-// Normale dönmek için aşağıdaki bloğu yorum satırı yapıp orijinal $orderby/$top sorgusunu aç
-export async function fetchLatestReportDate(/* token */) {
-  return '2026-05-02';
+// Fetch latest report date — $orderby desc, take top 1 (en güncel snapshot tarihi)
+export async function fetchLatestReportDate(token) {
+  const url = `${API_BASE}?$orderby=${DATE_FIELD} desc&$top=1`;
+  const data = await dvFetch(url, token);
+  if (!data.value || data.value.length === 0) throw new Error('Entity boş — rapor verisi bulunamadı');
+  const rawDate = data.value[0][DATE_FIELD];
+  if (!rawDate) throw new Error('Rapor tarihi alanı boş');
+  return rawDate;
 }
 
 // Convert raw Dataverse date to YYYY-MM-DD for OData filter
