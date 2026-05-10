@@ -3674,11 +3674,8 @@ export default function App(){
                           .ai-step{animation:stepFade .3s ease-out both}
                         `}</style>
                         <div style={{position:'relative',display:'flex',flexDirection:'column',alignItems:'center',marginBottom:20}}>
-                          <div style={{width:84,height:84,borderRadius:24,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(13,110,79,.25)',animation:'aiBrain 2s ease-in-out infinite',marginBottom:14}}>
-                            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
-                              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
-                            </svg>
+                          <div style={{width:84,height:84,borderRadius:24,background:'linear-gradient(135deg,#2dd4a0,#3b82f6,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 8px 24px rgba(13,110,79,.25)',animation:'aiBrain 2s ease-in-out infinite',marginBottom:14,color:'#fff'}}>
+                            <HugeiconsIcon icon={AiBrain03Icon} size={44} strokeWidth={1.6}/>
                           </div>
                           <div style={{fontSize:17,fontWeight:800,color:$.t1,letterSpacing:-.3,marginBottom:4}}>
                             TYRO AI Tahmin Motoru
