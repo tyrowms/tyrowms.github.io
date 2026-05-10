@@ -3304,6 +3304,8 @@ export default function App(){
                 const w=window.open('','_blank');
                 if(!w){alert('Popup engelli — lütfen bu site için popup izin verin.');return;}
                 try{
+                // profile fcstResult IIFE içinde tanımlı; exportPDF outer scope'ta — yeniden al
+                const profile=fcstResult.profile||{topCompanies:[],topProducts:[],topDestinations:[]};
                 const isAnaXl=fcstResult.filterScope==='ana';
                 const fetchedCodesXl=fcstResult.traderCodes||[fcstResult.traderCode];
                 const codesArr=fcstResult.displayCodes||fetchedCodesXl;
