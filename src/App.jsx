@@ -3399,8 +3399,8 @@ export default function App(){
                   {/* ─── Filtre Paneli (Premium Aurora-Emerald) — header bloğu kaldırıldı, direkt input row'undan başlıyor ─── */}
                   {/* overflow:visible — combobox dropdown'ları kart sınırına çarpmasın */}
                   <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:16,position:'relative'}}>
-                    {/* Üst gradient şerit — Trader Profile ile aynı (3 stop) */}
-                    <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',borderTopLeftRadius:13,borderTopRightRadius:13}}/>
+                    {/* Üst gradient şerit — kartın 1px border'ını yutarak köşelere mükemmel oturur (Trader Profile akıcılığı) */}
+                    <div style={{position:'absolute',top:-1,left:-1,right:-1,height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',borderTopLeftRadius:14,borderTopRightRadius:14,pointerEvents:'none',zIndex:1}}/>
                     {/* Status/error mesajı — input row'unun üstünde sade bar */}
                     {(fcstStatus||fcstError)&&(
                       <div style={{padding:'8px 20px',borderBottom:'1px solid '+$.bdL,background:'#fafbfc',display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
