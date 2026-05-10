@@ -1516,9 +1516,9 @@ export default function App(){
               <SlidersHorizontal size={14}/>
               {gFilterCount>0&&<span style={{fontSize:9,fontWeight:700,color:'#fff',background:$.ac,padding:'1px 5px',borderRadius:7}}>{gFilterCount}</span>}
             </button>
-            </div>
+            </div>}
             {/* Mobile filter dropdown */}
-            {showGFilter&&<div style={{marginBottom:8,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',borderRadius:14,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 8px 24px rgba(0,0,0,.1)',padding:'14px 16px'}}>
+            {pg!=='fcst'&&pg!=='set'&&showGFilter&&<div style={{marginBottom:8,background:'rgba(255,255,255,.96)',backdropFilter:'blur(20px)',borderRadius:14,border:'1px solid rgba(0,0,0,.08)',boxShadow:'0 8px 24px rgba(0,0,0,.1)',padding:'14px 16px'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
                 <span style={{fontSize:13,fontWeight:700,color:$.t1}}>Gelişmiş Filtre</span>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -3618,7 +3618,7 @@ export default function App(){
                           <HugeiconsIcon icon={Download01Icon} size={14} strokeWidth={2}/>Excel
                         </button>}
                         {fcstResult&&<button onClick={exportPDF} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:13,fontWeight:600,color:'#dc2626',background:'#fff',border:'1.5px solid rgba(220,38,38,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(220,38,38,.06), rgba(239,68,68,.04))';e.currentTarget.style.borderColor='rgba(220,38,38,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(220,38,38,.30)';}}>
-                          <HugeiconsIcon icon={Download04Icon} size={14} strokeWidth={2}/>PDF
+                          <HugeiconsIcon icon={CloudDownloadIcon} size={14} strokeWidth={2}/>PDF
                         </button>}
                       </div>
                     </div>
