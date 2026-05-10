@@ -6,6 +6,7 @@ const LoginGlobe = lazy(() => import('./LoginGlobe'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend, fetchHistoricalSalesByTrader, fetchHistoricalAggregatesByTrader, fetchTraderNames, fetchTraderDirectory, getDataverseToken } from './dataverseService';
 import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
 import { aggregateMonthly, aggregateFromServer, mapToSeries, selectBestFit, buildTraderProfile, buildTraderProfileFromAggregates, FORECAST_MODELS, sum as sumArr, aggregateByItemid, forecastItemidBatch, reconcileItemForecasts, classifySeries } from './salesForecast';
+import { applyScenario, isBaseline, DEFAULT_SCENARIO } from './salesSimulation';
 
 const INIT=[];
 const DEMO=INIT;
@@ -606,6 +607,11 @@ export default function App(){
   const [fcstItemSortCol,setFcstItemSortCol]=useState('hAhead');  // ürün tablosu sort sütunu
   const [fcstItemSortDir,setFcstItemSortDir]=useState(-1);  // -1 desc, 1 asc
   const [fcstShowAllItems,setFcstShowAllItems]=useState(false);  // ürün tablosu top 10 vs hepsi
+  // ─── Phase 3 Commit 2: Senaryo Simülasyon state'leri ───
+  const [fcstShowScenarios,setFcstShowScenarios]=useState(false);  // drawer açık mı
+  const [fcstScenario,setFcstScenario]=useState(DEFAULT_SCENARIO);  // aktif senaryo parametreleri
+  const [fcstScenarioResult,setFcstScenarioResult]=useState(null);  // applyScenario sonucu (canlı hesap)
+  const fcstScenarioDebounceRef=useRef(null);  // 300ms debounce timer
   const [fcstChartW,setFcstChartW]=useState(1200);  // gerçek container genişliği (responsive, no stretch)
   const fcstChartRef=useRef(null);
   useEffect(()=>{
@@ -616,6 +622,52 @@ export default function App(){
     ro.observe(fcstChartRef.current);
     return()=>ro.disconnect();
   },[fcstResult,pg]);
+
+  // ─── Phase 3 Commit 2: Senaryo değişiminde 300ms debounce ile yeniden hesapla ───
+  useEffect(()=>{
+    if(!fcstResult){
+      setFcstScenarioResult(null);
+      return;
+    }
+    // Senaryo baseline ise (hiç değişiklik yok) result'ı temizle — chart overlay'i de gider
+    if(isBaseline(fcstScenario)){
+      setFcstScenarioResult(null);
+      return;
+    }
+    // Debounce
+    if(fcstScenarioDebounceRef.current)clearTimeout(fcstScenarioDebounceRef.current);
+    fcstScenarioDebounceRef.current=setTimeout(()=>{
+      try{
+        // Aktif baseline forecast: chart view'a göre
+        const isItem=fcstChartView!=='total'&&fcstResult.itemForecasts;
+        const activeItem=isItem?fcstResult.itemForecasts.find(x=>x.pid===fcstChartView):null;
+        const fit=activeItem?activeItem.fit:(fcstMetric==='value'?fcstResult.fitValue:fcstResult.fitQty);
+        const baselineFc=fit?.results?.find(r=>r.id===fit.bestId)?.forecast;
+        if(!baselineFc){setFcstScenarioResult(null);return;}
+        const baseSeries=activeItem?activeItem.qty:(fcstMetric==='value'?fcstResult.series.value:fcstResult.series.qty);
+        const profile=fcstResult.profile;
+        const horizon=fcstResult.horizon||fcstHorizon;
+        // Monte Carlo için modelFn — best fit modeli
+        const mcModelFn=fcstScenario.showMC?(s,h)=>{
+          // Hızlı bir model — best fit'i tekrar çağırmak yerine Holt-Winters'i kullan (en stabil)
+          // Ama selectBestFit en doğru, performansa karşı koymak için baseFn kullan
+          return selectBestFit(s,h)?.results?.find(r=>r.id===selectBestFit(s,h).bestId)?.forecast;
+        }:null;
+        const result=applyScenario(baselineFc,fit,profile,fcstScenario,baseSeries,horizon,{
+          runMC:fcstScenario.showMC,
+          mcModelFn,
+          mcSeries:baseSeries,
+          mcH:horizon,
+          mcNSim:200,  // browser performans için sınırlı
+        });
+        setFcstScenarioResult(result);
+      }catch(e){
+        console.warn('[Scenario] applyScenario failed:',e);
+        setFcstScenarioResult(null);
+      }
+    },300);
+    return()=>{if(fcstScenarioDebounceRef.current)clearTimeout(fcstScenarioDebounceRef.current);};
+  },[fcstScenario,fcstResult,fcstChartView,fcstMetric,fcstHorizon]);
 
   const loadFcstTraderList=useCallback(async()=>{
     if(!msalAccount||(fcstTraderList.length>0&&fcstAnaTraderList.length>0)||fcstTraderListLoading)return;
@@ -3129,6 +3181,58 @@ export default function App(){
                     }
                     X.utils.book_append_sheet(wb,ws4,'Itemid × Ay');
                   }
+                  // ─── Sheet 5 — Senaryo (eğer aktif) ───
+                  if(fcstScenarioResult&&fcstScenarioResult.isActive&&fcstScenarioResult.adjustedForecast?.point){
+                    const adj=fcstScenarioResult.adjustedForecast.point;
+                    const baseline=fcstScenarioResult.baselineForecast?.point||[];
+                    const mc=fcstScenarioResult.mcBands;
+                    const scRows=[['Ay','Baseline','Senaryo','Δ %','MC P10','MC P50','MC P90']];
+                    forecastKeys.forEach((k,i)=>{
+                      const b=baseline[i];
+                      const s=adj[i];
+                      const delta=b!=null&&b>0&&s!=null?((s-b)/b*100):null;
+                      scRows.push([
+                        k,
+                        b!=null?Math.round(b):null,
+                        s!=null?Math.round(s):null,
+                        delta!=null?+delta.toFixed(2):null,
+                        mc?.p10?.[i]!=null?Math.round(mc.p10[i]):null,
+                        mc?.p50?.[i]!=null?Math.round(mc.p50[i]):null,
+                        mc?.p90?.[i]!=null?Math.round(mc.p90[i]):null,
+                      ]);
+                    });
+                    // Senaryo özet bilgisi (üst satırlar)
+                    const compInfo=[];
+                    const comp=fcstScenarioResult.components||{};
+                    if(comp.volume)compInfo.push(`Volume ${comp.volume.delta>=0?'+':''}${(comp.volume.delta*100).toFixed(0)}%`);
+                    if(comp.seasonal)compInfo.push(`Mevsim ${comp.seasonal.shift>=0?'+':''}${comp.seasonal.shift} ay`);
+                    if(comp.customer)compInfo.push(`Müşteri kayıp: ${comp.customer.lost.join(', ')}`);
+                    if(comp.origin)compInfo.push(`Origin kayıp: ${comp.origin.lost.join(', ')}`);
+                    if(comp.backcast)compInfo.push(`Hedef: ${fmt(comp.backcast.targetTotal)} ton`);
+                    const summaryHdr=[
+                      ['Senaryo Özeti'],
+                      ['Aktif parametreler',compInfo.length>0?compInfo.join(' · '):'Sadece MC'],
+                      ['Baseline toplam',Math.round(fcstScenarioResult.baselineTotal||0)],
+                      ['Senaryo toplam',Math.round(fcstScenarioResult.adjustedTotal||0)],
+                      ['Toplam Δ %',+(fcstScenarioResult.deltaPct||0).toFixed(2)],
+                      [],
+                    ];
+                    const allRows=[...summaryHdr,...scRows];
+                    const ws5=X.utils.aoa_to_sheet(allRows);
+                    ws5['!cols']=[{wch:12},{wch:14},{wch:14},{wch:10},{wch:14},{wch:14},{wch:14}];
+                    // Numeric format (ay satırlarındaki sütunlar)
+                    const dataStart=summaryHdr.length+1;
+                    for(let r=dataStart;r<allRows.length;r++){
+                      for(let c=1;c<=6;c++){
+                        const ref=X.utils.encode_cell({r,c});
+                        if(ws5[ref]&&typeof ws5[ref].v==='number'){
+                          ws5[ref].t='n';
+                          ws5[ref].z=c===3?'0.00"%"':'#,##0';
+                        }
+                      }
+                    }
+                    X.utils.book_append_sheet(wb,ws5,'Senaryo');
+                  }
                   const viewSuffix=fcstChartView!=='total'?`_${fcstChartView.replace(/[^A-Z0-9_-]/gi,'_').slice(0,30)}`:'';
                   X.writeFile(wb,`TYRO_SatisTahmini_${codesArr.length===1?codesArr[0]:codesArr.length+'trader'}${viewSuffix}_${new Date().toISOString().slice(0,10)}.xlsx`);
                 };
@@ -3498,23 +3602,42 @@ export default function App(){
                               </div>
                             </div>
                           )}
-                          {/* Özet kartlar — hover'da terim açıklaması */}
-                          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginBottom:14}}>
-                            {[
-                              {l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),c:$.blu,bg:$.bluB,info:{title:'Aylık Ortalama Tahmin',desc:`Önümüzdeki ${horizon} ayın tahmin değerlerinin aritmetik ortalaması. Trader'ın tipik aylık kapasitesini gösterir.`,detail:'Toplam tahmin / horizon. Tek seferlik aşırı değerler ortalamaya yansır — uç değerler için medyan daha güvenilir olabilir.'}},
-                              {l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),c:'#0d6e4f',bg:$.grnB,info:{title:`${horizon} Ay Toplam Tahmin`,desc:`Önümüzdeki ${horizon} ay boyunca beklenen toplam ${fcstMetric==='value'?'satış değeri':'satış miktarı'}. Modelin kümülatif öngörüsü.`,detail:`Tahmin noktalarının toplamı. Mevsimsel pikleri ve trend'i içerir. Stok/kontrat planlama için referans.`}},
-                              {l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bdL:trendPct>=0?$.grnB:$.redB,info:{title:'Trend Değişim Oranı',desc:'Tahmin dönemi toplamının, son 12 ayın aynı süreye eşitlenmiş değerine göre yüzde değişimi.',detail:'Pozitif değer büyüme, negatif daralma sinyalidir. Mevsimsel düzeltme yapmaz — yıl üstü kıyaslamadır.',formula:'(tahmin_topl × 12/horizon) / son12 × 100 - 100'}},
-                              {l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bdL:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB,info:{title:'Backtest MAPE (Hata Oranı)',desc:'Mean Absolute Percentage Error — modelin geçmiş veride yaptığı tahminlerin gerçek değerlerden ortalama yüzde sapması.',detail:'%0-10 mükemmel · %10-20 kabul edilebilir · %20+ gürültülü/güvensiz. Düşük MAPE daha güvenilir tahmin.',formula:'mean(|gerçek - tahmin| / gerçek) × 100'}},
-                            ].map((k,i)=>(
-                              <div key={i} style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'14px 16px',boxShadow:$.sh}}>
-                                <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                                  {k.l}
-                                  <InfoTip title={k.info.title} desc={k.info.desc} detail={k.info.detail} formula={k.info.formula} placement="bottom" iconSize={10}><span/></InfoTip>
-                                </div>
-                                <div style={{fontSize:18,fontWeight:800,color:k.c,fontFamily:$.mo}}>{k.v}</div>
+                          {/* Özet kartlar — hover'da terim açıklaması; senaryo aktifse Δ rozet */}
+                          {(()=>{
+                            const scActive=fcstScenarioResult&&fcstScenarioResult.isActive;
+                            const scAdjPts=scActive?fcstScenarioResult.adjustedForecast?.point:null;
+                            const scTotal=scAdjPts?sumArr(scAdjPts):null;
+                            const scAvg=scTotal!=null?scTotal/horizon:null;
+                            const cards=[
+                              {l:'Aylık Ortalama Tahmin',v:fmtMetric(monthlyAvg),scV:scAvg!=null?fmtMetric(scAvg):null,scDelta:scAvg!=null&&monthlyAvg>0?((scAvg-monthlyAvg)/monthlyAvg*100):null,c:$.blu,bg:$.bluB,info:{title:'Aylık Ortalama Tahmin',desc:`Önümüzdeki ${horizon} ayın tahmin değerlerinin aritmetik ortalaması. Trader'ın tipik aylık kapasitesini gösterir.`,detail:'Toplam tahmin / horizon. Tek seferlik aşırı değerler ortalamaya yansır — uç değerler için medyan daha güvenilir olabilir.'}},
+                              {l:`${horizon} Ay Toplam Tahmin`,v:fmtMetric(fcTotal),scV:scTotal!=null?fmtMetric(scTotal):null,scDelta:scTotal!=null&&fcTotal>0?((scTotal-fcTotal)/fcTotal*100):null,c:'#0d6e4f',bg:$.grnB,info:{title:`${horizon} Ay Toplam Tahmin`,desc:`Önümüzdeki ${horizon} ay boyunca beklenen toplam ${fcstMetric==='value'?'satış değeri':'satış miktarı'}. Modelin kümülatif öngörüsü.`,detail:`Tahmin noktalarının toplamı. Mevsimsel pikleri ve trend'i içerir. Stok/kontrat planlama için referans.`}},
+                              {l:'Trend (vs son 12 ay)',v:trendPct!=null?(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%':'—',scV:null,scDelta:null,c:trendPct==null?$.t3:trendPct>=0?'#0d6e4f':$.red,bg:trendPct==null?$.bdL:trendPct>=0?$.grnB:$.redB,info:{title:'Trend Değişim Oranı',desc:'Tahmin dönemi toplamının, son 12 ayın aynı süreye eşitlenmiş değerine göre yüzde değişimi.',detail:'Pozitif değer büyüme, negatif daralma sinyalidir. Mevsimsel düzeltme yapmaz — yıl üstü kıyaslamadır.',formula:'(tahmin_topl × 12/horizon) / son12 × 100 - 100'}},
+                              {l:'Backtest MAPE',v:activeResult.mape!=null?activeResult.mape.toFixed(1)+'%':'—',scV:null,scDelta:null,c:activeResult.mape==null?$.t3:activeResult.mape<10?'#0d6e4f':activeResult.mape<20?$.org:$.red,bg:activeResult.mape==null?$.bdL:activeResult.mape<10?$.grnB:activeResult.mape<20?$.orgB:$.redB,info:{title:'Backtest MAPE (Hata Oranı)',desc:'Mean Absolute Percentage Error — modelin geçmiş veride yaptığı tahminlerin gerçek değerlerden ortalama yüzde sapması.',detail:'%0-10 mükemmel · %10-20 kabul edilebilir · %20+ gürültülü/güvensiz. Düşük MAPE daha güvenilir tahmin.',formula:'mean(|gerçek - tahmin| / gerçek) × 100'}},
+                            ];
+                            return(
+                              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:10,marginBottom:14}}>
+                                {cards.map((k,i)=>(
+                                  <div key={i} style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rM,padding:'14px 16px',boxShadow:$.sh,position:'relative'}}>
+                                    {k.scDelta!=null&&(
+                                      <span title={`Senaryo: ${k.scV}`} style={{position:'absolute',top:8,right:8,fontSize:10,fontFamily:$.mo,fontWeight:800,padding:'2px 7px',borderRadius:5,background:k.scDelta>=0?'rgba(13,110,79,.10)':'rgba(229,72,77,.10)',color:k.scDelta>=0?'#0d6e4f':$.red,border:'1px solid '+(k.scDelta>=0?'rgba(13,110,79,.20)':'rgba(229,72,77,.20)')}}>
+                                        {k.scDelta>=0?'+':''}{k.scDelta.toFixed(1)}%
+                                      </span>
+                                    )}
+                                    <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
+                                      {k.l}
+                                      <InfoTip title={k.info.title} desc={k.info.desc} detail={k.info.detail} formula={k.info.formula} placement="bottom" iconSize={10}><span/></InfoTip>
+                                    </div>
+                                    <div style={{fontSize:18,fontWeight:800,color:k.c,fontFamily:$.mo}}>{k.v}</div>
+                                    {k.scV!=null&&(
+                                      <div style={{fontSize:11,fontWeight:700,color:'#92400e',fontFamily:$.mo,marginTop:3,display:'flex',alignItems:'center',gap:4}}>
+                                        <Target size={10}/>{k.scV}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            );
+                          })()}
 
                           {/* Çizgi grafik */}
                           <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14}}>
@@ -3568,10 +3691,33 @@ export default function App(){
                                   </div>
                                 );
                               })()}
-                              <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:11,color:$.t3,fontWeight:500}}>
+                              {/* ─── Senaryo butonu ─── */}
+                              {(()=>{
+                                const scenarioActive=fcstScenarioResult&&fcstScenarioResult.isActive;
+                                return(
+                                  <button onClick={()=>setFcstShowScenarios(true)} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',fontSize:11,fontWeight:700,color:scenarioActive?'#92400e':$.t2,background:scenarioActive?'linear-gradient(135deg,rgba(245,166,35,.12),rgba(245,166,35,.06))':'#f7f8fa',border:'1px solid '+(scenarioActive?'rgba(245,166,35,.35)':$.bdL),borderRadius:8,cursor:'pointer',transition:'all .15s',marginLeft:8,position:'relative'}}>
+                                    <Target size={12}/>
+                                    <span>Senaryolar</span>
+                                    {scenarioActive&&(
+                                      <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'1px 6px',borderRadius:4,background:'#f5a623',color:'#fff',fontSize:9,fontWeight:800,letterSpacing:.4,marginLeft:2}}>
+                                        AKTİF · {fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })()}
+                              <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:11,color:$.t3,fontWeight:500,flexWrap:'wrap'}}>
                                 <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,background:$.blu,display:'inline-block',borderRadius:1}}/>Geçmiş</span>
                                 <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#0d6e4f 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Tahmin</span>
                                 <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(13,110,79,.18)',display:'inline-block',borderRadius:2}}/>Güven Bandı</span>
+                                {fcstScenarioResult&&fcstScenarioResult.isActive&&(
+                                  <>
+                                    <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#f5a623 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Senaryo</span>
+                                    {fcstScenario.showMC&&fcstScenarioResult.mcBands?.p10&&(
+                                      <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(245,166,35,.18)',display:'inline-block',borderRadius:2}}/>MC P10-P90</span>
+                                    )}
+                                  </>
+                                )}
                               </div>
                             </div>
                             {(()=>{
@@ -3660,6 +3806,37 @@ export default function App(){
                               if(ciIdxs.length>0){
                                 bandPath='M '+ciIdxs.map(i=>`${x(i).toFixed(1)},${y(allFcUp[i]).toFixed(1)}`).join(' L ')+' L '+ciIdxs.slice().reverse().map(i=>`${x(i).toFixed(1)},${y(allFcLow[i]).toFixed(1)}`).join(' L ')+' Z';
                               }
+                              // ─── Senaryo overlay (Phase 3 Commit 2) ───
+                              // adjustedForecast.point[i] = forecast pozisyon i (relative to forecast start)
+                              // Chart üzerinde forecast pozisyonu = histLen, histLen+1, ...
+                              const scActive=fcstScenarioResult&&fcstScenarioResult.isActive;
+                              let scenarioPath='',mcBandPath='';
+                              const scenarioFcVals=new Array(allFcVals.length).fill(null);
+                              if(scActive&&fcstScenarioResult.adjustedForecast?.point){
+                                const sp=fcstScenarioResult.adjustedForecast.point;
+                                for(let i=0;i<sp.length;i++){
+                                  const pos=histLen+i;
+                                  if(pos<scenarioFcVals.length)scenarioFcVals[pos]=sp[i];
+                                }
+                                scenarioPath=buildSmoothPath(scenarioFcVals,x,y);
+                              }
+                              // Monte Carlo band — fcstScenarioResult.mcBands.p10/p90
+                              if(scActive&&fcstScenario.showMC&&fcstScenarioResult.mcBands?.p10&&fcstScenarioResult.mcBands?.p90){
+                                const mc=fcstScenarioResult.mcBands;
+                                const mcLowVals=new Array(allFcVals.length).fill(null);
+                                const mcUpVals=new Array(allFcVals.length).fill(null);
+                                for(let i=0;i<mc.p10.length;i++){
+                                  const pos=histLen+i;
+                                  if(pos<mcLowVals.length){
+                                    mcLowVals[pos]=mc.p10[i];
+                                    mcUpVals[pos]=mc.p90[i];
+                                  }
+                                }
+                                const mcIdxs=mcUpVals.map((v,i)=>v!=null?i:null).filter(i=>i!=null);
+                                if(mcIdxs.length>0){
+                                  mcBandPath='M '+mcIdxs.map(i=>`${x(i).toFixed(1)},${y(mcUpVals[i]).toFixed(1)}`).join(' L ')+' L '+mcIdxs.slice().reverse().map(i=>`${x(i).toFixed(1)},${y(mcLowVals[i]).toFixed(1)}`).join(' L ')+' Z';
+                                }
+                              }
                               const yTicks=6;
                               const ticks=Array.from({length:yTicks+1},(_,i)=>minV+(maxV-minV)*i/yTicks);
                               // Çeyrek key → çeyreğin son ayının kısa adı + yıl ("Mar '24" gibi)
@@ -3734,10 +3911,14 @@ export default function App(){
                                     {histAreaPath&&<path d={histAreaPath} fill="url(#histGrad)" stroke="none"/>}
                                     {/* CI band */}
                                     {bandPath&&<path d={bandPath} fill="url(#ciGrad)" stroke="none"/>}
+                                    {/* Monte Carlo P10-P90 band (senaryo aktif + showMC) */}
+                                    {mcBandPath&&<path d={mcBandPath} fill="rgba(245,166,35,.13)" stroke="none"/>}
                                     {/* History line — premium with gradient + shadow */}
                                     {histPath&&<path d={histPath} fill="none" stroke="url(#histLineGrad)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineShadow)"/>}
                                     {/* Forecast line (dashed) — premium with gradient + shadow */}
                                     {fcPath&&<path d={fcPath} fill="none" stroke="url(#fcLineGrad)" strokeWidth="3" strokeDasharray="7 4" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineShadow)"/>}
+                                    {/* Senaryo line (turuncu kesik) — baseline'ın üstünde */}
+                                    {scenarioPath&&<path d={scenarioPath} fill="none" stroke="#f5a623" strokeWidth="2.8" strokeDasharray="6 3" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineShadow)" opacity=".95"/>}
                                     {/* Vertical separator */}
                                     {histLen>0&&<line x1={x(histLen-1)} y1={padT} x2={x(histLen-1)} y2={H-padB} stroke="#94a3b8" strokeWidth="1.4" strokeDasharray="3 4" opacity=".7"/>}
                                     {histLen>0&&<text x={x(histLen-1)+5} y={padT+12} fontSize="10" fill="#64748b" fontWeight="700" fontFamily="-apple-system,Segoe UI,sans-serif">▶ TAHMİN</text>}
@@ -3745,6 +3926,8 @@ export default function App(){
                                     {allHistVals.map((v,i)=>v!=null&&<circle key={'h'+i} cx={x(i)} cy={y(v)} r={hi===i?5.5:3.2} fill="#3b82f6" stroke="#fff" strokeWidth={hi===i?2.5:1.4}/>)}
                                     {/* Forecast noktaları */}
                                     {allFcVals.map((v,i)=>v!=null&&<circle key={'f'+i} cx={x(i)} cy={y(v)} r={hi===i?5.5:3.5} fill="#0d6e4f" stroke="#fff" strokeWidth={hi===i?2.5:1.5}/>)}
+                                    {/* Senaryo noktaları (turuncu) */}
+                                    {scenarioFcVals.map((v,i)=>v!=null&&<circle key={'s'+i} cx={x(i)} cy={y(v)} r={hi===i?5:3} fill="#f5a623" stroke="#fff" strokeWidth={hi===i?2.5:1.4}/>)}
                                     {/* Hover guide line */}
                                     {hi!=null&&<line x1={x(hi)} y1={padT} x2={x(hi)} y2={H-padB} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 3" opacity=".6"/>}
                                     {/* X labels */}
@@ -4106,6 +4289,238 @@ export default function App(){
                           </div>
                         </div>
                       )}
+
+                      {/* ═══════════════════════════════════════════════════════════ */}
+                      {/* ─── 🎯 SENARYO SİMÜLASYONU DRAWER (right-slide / mobile bottom-sheet) ─── */}
+                      {/* ═══════════════════════════════════════════════════════════ */}
+                      {fcstShowScenarios&&(()=>{
+                        const isMobile=window.innerWidth<768;
+                        const topDests=(profile?.topDestinations||[]).slice(0,5);
+                        const topComps=(profile?.topCompanies||[]).slice(0,5);
+                        const sc=fcstScenario;
+                        const upd=(patch)=>setFcstScenario(s=>({...s,...patch}));
+                        const reset=()=>setFcstScenario(DEFAULT_SCENARIO);
+                        const close=()=>setFcstShowScenarios(false);
+                        const scActive=fcstScenarioResult&&fcstScenarioResult.isActive;
+                        // Volume snap noktaları
+                        const volSnaps=[-0.5,-0.25,0,0.25,0.5];
+                        const seasonalSnaps=[-3,-2,-1,0,1,2,3];
+                        // Backcast hesaplaması (canlı)
+                        const backcast=fcstScenarioResult?.backcastInfo;
+                        return(
+                          <>
+                            {/* Backdrop */}
+                            <div onClick={close} style={{position:'fixed',inset:0,background:'rgba(0,0,0,.35)',zIndex:9998,animation:'scnFade .2s ease-out'}}/>
+                            <style>{`
+                              @keyframes scnFade{0%{opacity:0}100%{opacity:1}}
+                              @keyframes scnSlideR{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
+                              @keyframes scnSlideU{0%{transform:translateY(100%)}100%{transform:translateY(0)}}
+                            `}</style>
+                            {/* Drawer panel */}
+                            <div style={{
+                              position:'fixed',
+                              ...(isMobile?{
+                                left:0,right:0,bottom:0,
+                                maxHeight:'82vh',
+                                borderTopLeftRadius:18,
+                                borderTopRightRadius:18,
+                                animation:'scnSlideU .3s cubic-bezier(.16,1,.3,1)',
+                              }:{
+                                top:0,right:0,
+                                width:400,
+                                height:'100vh',
+                                animation:'scnSlideR .3s cubic-bezier(.16,1,.3,1)',
+                              }),
+                              background:$.bg2,
+                              borderLeft:isMobile?'none':'1px solid '+$.bdL,
+                              boxShadow:isMobile?'0 -10px 40px rgba(0,0,0,.18)':'-8px 0 30px rgba(0,0,0,.12)',
+                              zIndex:9999,
+                              display:'flex',
+                              flexDirection:'column',
+                            }}>
+                              {/* Header */}
+                              <div style={{padding:'16px 20px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,background:'linear-gradient(135deg,rgba(245,166,35,.06),rgba(59,130,246,.04))'}}>
+                                {isMobile&&(
+                                  <div style={{position:'absolute',top:8,left:'50%',transform:'translateX(-50%)',width:36,height:4,borderRadius:2,background:$.bdL}}/>
+                                )}
+                                <Target size={18} color="#f5a623"/>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:14,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Senaryo Simülasyonu</div>
+                                  <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1}}>What-if analizi · canlı tahmin değişimi</div>
+                                </div>
+                                {scActive&&(
+                                  <span style={{padding:'3px 9px',borderRadius:6,background:fcstScenarioResult.deltaPct>=0?$.grnB:$.redB,color:fcstScenarioResult.deltaPct>=0?'#0d6e4f':$.red,fontSize:11,fontWeight:800,fontFamily:$.mo}}>{fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%</span>
+                                )}
+                                <button onClick={close} style={{display:'flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:8,background:'transparent',border:'1px solid '+$.bdL,color:$.t3,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background=$.bg;e.currentTarget.style.color=$.t1;}} onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=$.t3;}}>
+                                  <X size={14}/>
+                                </button>
+                              </div>
+
+                              {/* Body — scrollable */}
+                              <div style={{flex:1,overflowY:'auto',padding:'18px 20px',display:'flex',flexDirection:'column',gap:18}}>
+
+                                {/* Senaryo özet kartı (eğer aktifse) */}
+                                {scActive&&(
+                                  <div style={{padding:'12px 14px',borderRadius:10,background:'linear-gradient(135deg,rgba(245,166,35,.08),rgba(245,166,35,.02))',border:'1px solid rgba(245,166,35,.25)'}}>
+                                    <div style={{fontSize:10,fontWeight:800,color:'#92400e',textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>Senaryo Etkisi</div>
+                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',gap:10,flexWrap:'wrap'}}>
+                                      <div>
+                                        <div style={{fontSize:10,color:$.t3,fontWeight:600}}>Baseline {fcstResult.horizon} ay</div>
+                                        <div style={{fontSize:14,fontWeight:700,color:$.t2,fontFamily:$.mo}}>{fmtTon(fcstScenarioResult.baselineTotal)}</div>
+                                      </div>
+                                      <div style={{fontSize:18,color:'#f5a623'}}>→</div>
+                                      <div>
+                                        <div style={{fontSize:10,color:$.t3,fontWeight:600}}>Senaryo</div>
+                                        <div style={{fontSize:14,fontWeight:800,color:'#92400e',fontFamily:$.mo}}>{fmtTon(fcstScenarioResult.adjustedTotal)}</div>
+                                      </div>
+                                      <div style={{fontSize:13,fontWeight:800,color:fcstScenarioResult.deltaPct>=0?'#0d6e4f':$.red,fontFamily:$.mo,padding:'4px 10px',borderRadius:6,background:fcstScenarioResult.deltaPct>=0?$.grnB:$.redB}}>
+                                        Δ {fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 1. Volume slider */}
+                                <div>
+                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                                    <TrendingUp size={13} color={$.blu}/>
+                                    <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Talep Hacmi</span>
+                                    <span style={{marginLeft:'auto',fontSize:12,fontFamily:$.mo,fontWeight:800,color:sc.volumeMult===1?$.t3:'#92400e',padding:'2px 8px',borderRadius:5,background:sc.volumeMult===1?$.bg:'rgba(245,166,35,.10)'}}>{sc.volumeMult>=1?'+':''}{((sc.volumeMult-1)*100).toFixed(0)}%</span>
+                                  </div>
+                                  <div style={{padding:'4px 0'}}>
+                                    <input type="range" min={-0.5} max={0.5} step={0.05} value={sc.volumeMult-1} onChange={e=>upd({volumeMult:1+(+e.target.value)})} style={{width:'100%',accentColor:'#f5a623',height:6}}/>
+                                    <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:9.5,fontFamily:$.mo,color:$.t3,fontWeight:600}}>
+                                      {volSnaps.map(s=>(
+                                        <button key={s} onClick={()=>upd({volumeMult:1+s})} style={{background:'none',border:'none',padding:'2px 4px',cursor:'pointer',color:Math.abs(sc.volumeMult-1-s)<0.01?'#92400e':$.t3,fontWeight:Math.abs(sc.volumeMult-1-s)<0.01?800:600,fontFamily:$.mo,fontSize:9.5}}>{s>=0?'+':''}{(s*100).toFixed(0)}%</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div style={{fontSize:10.5,color:$.t3,marginTop:4,lineHeight:1.4}}>Toplam talep yükselme/düşme oranı. Tarımsal trade'de pazar değişikliği veya ekonomik şok modellemesi için.</div>
+                                </div>
+
+                                {/* 2. Mevsim shift */}
+                                <div>
+                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                                    <Clock size={13} color={$.blu}/>
+                                    <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Mevsim Kayması</span>
+                                    <span style={{marginLeft:'auto',fontSize:12,fontFamily:$.mo,fontWeight:800,color:sc.seasonalShift===0?$.t3:'#92400e',padding:'2px 8px',borderRadius:5,background:sc.seasonalShift===0?$.bg:'rgba(245,166,35,.10)'}}>{sc.seasonalShift>0?'+':''}{sc.seasonalShift} ay</span>
+                                  </div>
+                                  <div style={{padding:'4px 0'}}>
+                                    <input type="range" min={-3} max={3} step={1} value={sc.seasonalShift} onChange={e=>upd({seasonalShift:+e.target.value})} style={{width:'100%',accentColor:'#f5a623',height:6}}/>
+                                    <div style={{display:'flex',justifyContent:'space-between',marginTop:4,fontSize:9.5,fontFamily:$.mo,color:$.t3,fontWeight:600}}>
+                                      {seasonalSnaps.map(s=>(
+                                        <button key={s} onClick={()=>upd({seasonalShift:s})} style={{background:'none',border:'none',padding:'2px 4px',cursor:'pointer',color:sc.seasonalShift===s?'#92400e':$.t3,fontWeight:sc.seasonalShift===s?800:600,fontFamily:$.mo,fontSize:9.5}}>{s>=0?'+':''}{s}</button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div style={{fontSize:10.5,color:$.t3,marginTop:4,lineHeight:1.4}}>Ramazan/hasat ay erken (-) veya geç (+) gelirse pikleri kaydır. Negatif: mevsim erken; pozitif: geç.</div>
+                                </div>
+
+                                {/* 3. Müşteri kaybı */}
+                                {topDests.length>0&&(
+                                  <div>
+                                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                                      <Building2 size={13} color={$.blu}/>
+                                      <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Müşteri Kayıp Senaryosu</span>
+                                      {sc.lostCustomers.length>0&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:'#92400e',padding:'2px 8px',borderRadius:5,background:'rgba(245,166,35,.10)'}}>{sc.lostCustomers.length} kaybedildi</span>}
+                                    </div>
+                                    <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                                      {topDests.map(d=>{
+                                        const checked=sc.lostCustomers.includes(d.name);
+                                        return(
+                                          <label key={d.name} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:7,background:checked?'rgba(229,72,77,.06)':'#fafbfc',border:'1px solid '+(checked?'rgba(229,72,77,.25)':$.bdL),cursor:'pointer',transition:'all .12s'}}>
+                                            <input type="checkbox" checked={checked} onChange={e=>{
+                                              if(e.target.checked)upd({lostCustomers:[...sc.lostCustomers,d.name]});
+                                              else upd({lostCustomers:sc.lostCustomers.filter(x=>x!==d.name)});
+                                            }} style={{accentColor:'#f5a623',width:14,height:14}}/>
+                                            <span style={{flex:1,fontSize:11,fontWeight:600,color:checked?$.red:$.t2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.name}</span>
+                                            <span style={{fontSize:10.5,fontFamily:$.mo,fontWeight:700,color:$.t3}}>%{d.pct.toFixed(1)}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                    <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.4}}>İşaretli müşterilerin son 12 ay payı tahminin tümünden pro-rata düşülür.</div>
+                                  </div>
+                                )}
+
+                                {/* 4. Origin (grup şirketi) kaybı */}
+                                {topComps.length>0&&(
+                                  <div>
+                                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                                      <Globe size={13} color={$.blu}/>
+                                      <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Origin / Grup Şirketi Kaybı</span>
+                                      {sc.lostOrigins.length>0&&<span style={{marginLeft:'auto',fontSize:11,fontWeight:800,color:'#92400e',padding:'2px 8px',borderRadius:5,background:'rgba(245,166,35,.10)'}}>{sc.lostOrigins.length} kapatıldı</span>}
+                                    </div>
+                                    <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                                      {topComps.map(c=>{
+                                        const checked=sc.lostOrigins.includes(c.name);
+                                        return(
+                                          <label key={c.name} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:7,background:checked?'rgba(229,72,77,.06)':'#fafbfc',border:'1px solid '+(checked?'rgba(229,72,77,.25)':$.bdL),cursor:'pointer',transition:'all .12s'}}>
+                                            <input type="checkbox" checked={checked} onChange={e=>{
+                                              if(e.target.checked)upd({lostOrigins:[...sc.lostOrigins,c.name]});
+                                              else upd({lostOrigins:sc.lostOrigins.filter(x=>x!==c.name)});
+                                            }} style={{accentColor:'#f5a623',width:14,height:14}}/>
+                                            <span style={{flex:1,fontSize:11,fontFamily:$.mo,fontWeight:700,color:checked?$.red:$.t2}}>{c.name}</span>
+                                            <span style={{fontSize:10.5,fontFamily:$.mo,fontWeight:700,color:$.t3}}>%{c.pct.toFixed(1)}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                    <div style={{fontSize:10.5,color:$.t3,marginTop:6,lineHeight:1.4}}>Şirket çalışmazsa (üretim durduğunda) o şirketin payı tahminden düşürülür.</div>
+                                  </div>
+                                )}
+
+                                {/* 5. Monte Carlo toggle */}
+                                <div>
+                                  <label style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:8,background:sc.showMC?'rgba(139,92,246,.06)':'#fafbfc',border:'1px solid '+(sc.showMC?'rgba(139,92,246,.25)':$.bdL),cursor:'pointer',transition:'all .12s'}}>
+                                    <input type="checkbox" checked={sc.showMC} onChange={e=>upd({showMC:e.target.checked})} style={{accentColor:$.pur,width:14,height:14}}/>
+                                    <div style={{flex:1}}>
+                                      <div style={{fontSize:12,fontWeight:700,color:sc.showMC?$.pur:$.t1,display:'flex',alignItems:'center',gap:6}}>
+                                        <Activity size={12}/>Monte Carlo P10/P90 Bandı
+                                      </div>
+                                      <div style={{fontSize:10.5,color:$.t3,fontWeight:500,marginTop:2,lineHeight:1.4}}>200 simülasyon ile gerçek belirsizlik aralığı (residual bootstrap). Hesap +1-2 sn sürer.</div>
+                                    </div>
+                                  </label>
+                                </div>
+
+                                {/* 6. Hedef backcast */}
+                                <div>
+                                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                                    <Target size={13} color={$.blu}/>
+                                    <span style={{fontSize:12,fontWeight:700,color:$.t1}}>Hedef Backcast</span>
+                                  </div>
+                                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                                    <input type="number" placeholder={`${horizon} ay sonra hedef ton`} value={sc.targetVolume||''} onChange={e=>upd({targetVolume:e.target.value?+e.target.value:null})} style={{flex:1,padding:'7px 10px',fontSize:12,fontFamily:$.mo,fontWeight:700,border:'1px solid '+$.bdL,borderRadius:7,background:$.bg2,color:$.t1,outline:'none'}}/>
+                                    <span style={{fontSize:11,color:$.t3,fontWeight:600}}>ton</span>
+                                  </div>
+                                  {backcast&&backcast.factor!=null&&(
+                                    <div style={{marginTop:8,padding:'8px 10px',borderRadius:7,background:backcast.feasibilityScore==='easy'?$.grnB:backcast.feasibilityScore==='moderate'?$.bluB:backcast.feasibilityScore==='hard'?$.orgB:$.redB}}>
+                                      <div style={{fontSize:10,fontWeight:800,color:backcast.feasibilityScore==='easy'?'#0d6e4f':backcast.feasibilityScore==='moderate'?$.blu:backcast.feasibilityScore==='hard'?'#92400e':$.red,letterSpacing:.4,textTransform:'uppercase',marginBottom:3}}>
+                                        Fizibilite: {backcast.feasibilityScore==='easy'?'Kolay':backcast.feasibilityScore==='moderate'?'Orta':backcast.feasibilityScore==='hard'?'Zor':'Gerçekçi Değil'}
+                                      </div>
+                                      <div style={{fontSize:11,color:$.t1,fontWeight:600,lineHeight:1.5}}>
+                                        Baseline: <strong style={{fontFamily:$.mo}}>{fmtTon(backcast.baselineTotal)}</strong> · Hedef: <strong style={{fontFamily:$.mo}}>{fmtTon(backcast.targetTotal)}</strong>
+                                        {backcast.requiredAvgGrowth!=null&&<><br/>Yıllık büyüme gereksinimi: <strong style={{fontFamily:$.mo,color:backcast.requiredAvgGrowth>=0?'#0d6e4f':$.red}}>{backcast.requiredAvgGrowth>=0?'+':''}{backcast.requiredAvgGrowth.toFixed(1)}%</strong></>}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div style={{fontSize:10.5,color:$.t3,marginTop:4,lineHeight:1.4}}>"X ay sonra Y ton hedef" → mevcut sezonsal şekli koruyarak aylık dağılım hesaplanır.</div>
+                                </div>
+                              </div>
+
+                              {/* Footer */}
+                              <div style={{padding:'12px 20px',borderTop:'1px solid '+$.bdL,display:'flex',gap:8,background:'#fafbfc'}}>
+                                <button onClick={reset} disabled={!scActive} style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'9px 14px',background:'#fff',border:'1px solid '+$.bdL,borderRadius:8,fontSize:12,fontWeight:700,color:scActive?$.t2:$.t3,cursor:scActive?'pointer':'not-allowed',opacity:scActive?1:.5,transition:'all .15s'}}>
+                                  <RotateCcw size={12}/>Sıfırla
+                                </button>
+                                <button onClick={close} style={{flex:1,padding:'9px 14px',background:'linear-gradient(135deg,#0d6e4f,#2dd4a0)',border:'none',borderRadius:8,fontSize:12,fontWeight:800,color:'#fff',cursor:'pointer',boxShadow:'0 2px 6px rgba(13,110,79,.2)',transition:'all .15s'}}>
+                                  Kapat
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </>);
                   })()}
                 </div>
