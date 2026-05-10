@@ -658,19 +658,32 @@ export default function App(){
   const runForecast=useCallback(async()=>{
     const traders=Array.isArray(fcstTrader)?fcstTrader:(fcstTrader?[fcstTrader]:[]);
     const anaTraders=Array.isArray(fcstAnaTrader)?fcstAnaTrader:[];
-    // Hangi mod: trader seçimi → trader; ana trader seçimi → maintrader
+    // Mod: trader seçimi varsa direkt trader; sadece ana trader varsa o ana trader'a bağlı
+    // alt trader'ları directory'den bul ve onların kodlarını mserp_trader filter'ında kullan.
     const useAnaTrader=traders.length===0&&anaTraders.length>0;
-    const fetchCodes=useAnaTrader?anaTraders:traders;
+    let fetchCodes;
+    if(useAnaTrader){
+      // Directory'den maintraderid'i seçili ana trader'lara eşit olan tüm trader'ları topla
+      const subCodes=fcstTraderList.filter(t=>anaTraders.includes(t.maintraderid)).map(t=>t.code);
+      if(subCodes.length===0){
+        setFcstError('Seçili ana trader(lar)a bağlı aktif alt trader bulunamadı.');
+        return;
+      }
+      fetchCodes=subCodes;
+    }else{
+      fetchCodes=traders;
+    }
     if(fetchCodes.length===0||!msalAccount||fcstLoading)return;
     setFcstLoading(true);setFcstError('');setFcstStatus('');
     setFcstStep(1);setFcstStepData({});
     setFcstResult(null);  // önceki sonucu temizle ki yeni hesaplama belli olsun
     const wait=ms=>new Promise(r=>setTimeout(r,ms));
     try{
-      // Cache key: filtre alanı (trader/maintrader) + sıralı kodlar
+      // Cache key: scope + sıralı resolved alt trader kodları
       const filterField=useAnaTrader?'main':'trd';
-      // v5: aggregate response parsing fix + cache invalidation
-      const cacheKey=`tyrowms_fcst_v5_${filterField}_${[...fetchCodes].sort().join('+')}`;
+      // v6: ana trader artık alt trader resolve ile mserp_trader filtresine düşer
+      const anaSig=useAnaTrader?[...anaTraders].sort().join('+'):'';
+      const cacheKey=`tyrowms_fcst_v6_${filterField}_${useAnaTrader?'ana_'+anaSig:[...fetchCodes].sort().join('+')}`;
       let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0,fetchMode='aggregate';
       try{
         const cached=localStorage.getItem(cacheKey);
@@ -683,11 +696,10 @@ export default function App(){
         }
       }catch(_){}
       if(!aggMap){
-        // Önce aggregate path dene — Hasata gibi 80K+ satırlı trader'lar için 25-30sn → 3-5sn
+        // Her zaman mserp_trader üzerinden fetch — ana trader scope'u client'ta resolve edildi
         try{
           const agg=await fetchHistoricalAggregatesByTrader(msalAccount,fetchCodes,{
-            filterField:useAnaTrader?'mserp_maintrader':'mserp_trader',
-            onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'aggregate',scope:useAnaTrader?'ana':'trader'}})),
+            onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'aggregate',scope:useAnaTrader?'ana':'trader',resolvedSubCount:fetchCodes.length}})),
           });
           aggMap=aggregateFromServer(agg.monthly);
           profile=buildTraderProfileFromAggregates(aggMap,agg.products,agg.accounts,agg.companies,gGrp);
@@ -700,7 +712,6 @@ export default function App(){
           setFcstStepData(d=>({...d,fetched:{loaded:0,total:null,fromCache:false,mode:'raw',scope:useAnaTrader?'ana':'trader',aggError:aggErr.message||String(aggErr)}}));
           // Fallback: raw fetch (mevcut akış, tutar discovery dahil)
           const fetchRes=await fetchHistoricalSalesByTrader(msalAccount,fetchCodes,{
-            filterField:useAnaTrader?'mserp_maintrader':'mserp_trader',
             onProgress:(loaded,total)=>setFcstStepData(d=>({...d,fetched:{loaded,total,fromCache:false,mode:'raw',scope:useAnaTrader?'ana':'trader'}})),
           });
           recordCount=fetchRes.records.length;
@@ -737,7 +748,10 @@ export default function App(){
       setFcstStepData(d=>({...d,bestFit:{id:fitQty.bestId,mape:fitQty.results.find(r=>r.id===fitQty.bestId)?.mape}}));
       await wait(200);
       setFcstStep(6);
-      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:fetchCodes.length===1?fetchCodes[0]:fetchCodes.join('+'),traderCodes:fetchCodes,filterScope:useAnaTrader?'ana':'trader',horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
+      // displayCodes: kullanıcının seçtiği orijinal kodlar (header için).
+      // traderCodes: gerçekten fetch edilen kodlar (ana trader scope'ta resolved alt trader'lar).
+      const displayCodes=useAnaTrader?anaTraders:fetchCodes;
+      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:displayCodes.length===1?displayCodes[0]:displayCodes.join('+'),traderCodes:fetchCodes,displayCodes,resolvedSubCount:fetchCodes.length,filterScope:useAnaTrader?'ana':'trader',horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
       setFcstActiveModel(null);
       await wait(300);
       setFcstStep(0);
@@ -2903,15 +2917,17 @@ export default function App(){
                 if(!fcstResult||!fit)return;
                 const doIt=()=>{
                   const X=window.XLSX;
-                  const codesArr=fcstResult.traderCodes||[fcstResult.traderCode];
                   const isAnaXl=fcstResult.filterScope==='ana';
+                  const fetchedCodesXl=fcstResult.traderCodes||[fcstResult.traderCode];
+                  const codesArr=fcstResult.displayCodes||fetchedCodesXl;
                   const lookupListXl=isAnaXl?fcstAnaTraderList:fcstTraderList;
                   const tName=codesArr.length===1?(lookupListXl.find(t=>t.code===codesArr[0])?.name||codesArr[0]):`${codesArr.length} ${isAnaXl?'ana trader':'trader'} birleşik`;
+                  const subCountXl=isAnaXl&&fcstResult.resolvedSubCount?` (${fcstResult.resolvedSubCount} alt trader)`:'';
                   const metricLbl=fcstMetric==='value'?'Tutar (USD)':'Miktar (kg)';
                   // Sheet 1 — Özet
                   const summary=[
                     ['Satış Tahmini Raporu'],
-                    [isAnaXl?'Ana Trader':'Trader',codesArr.length===1?`${codesArr[0]} : ${tName}`:`${codesArr.length} ${isAnaXl?'ana trader':'trader'}: ${codesArr.join(', ')}`],
+                    [isAnaXl?'Ana Trader':'Trader',(codesArr.length===1?`${codesArr[0]} : ${tName}`:`${codesArr.length} ${isAnaXl?'ana trader':'trader'}: ${codesArr.join(', ')}`)+subCountXl],
                     ['Grup Şirketi',fcstResult.profile?.mainGroup||'-'],
                     ['Karakter',fcstResult.profile?.character||'-'],
                     ['Metrik',metricLbl],
@@ -3047,7 +3063,12 @@ export default function App(){
                     const traderInfo=scopeCodes.length===1?scopeList.find(t=>t.code===scopeCodes[0]):null;
                     const fetchModeLabel=sd.fetched?.mode==='aggregate'?'Aggregate':sd.fetched?.mode==='raw'?'Raw fallback':'';
                     const steps=[
-                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(sd.fetched.fromCache?`Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi (${fetchModeLabel.toLowerCase()||'agg'})`:sd.fetched.mode==='aggregate'?`UAT aggregate (yıl-bazlı): ${sd.fetched.loaded||0} / ${sd.fetched.total||16} query`:`UAT raw fallback${sd.fetched.aggError?' ('+sd.fetched.aggError.slice(0,40)+'...)':''}: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`):'Dataverse historical sales sorgulanıyor'},
+                      {n:1,l:'Satış Geçmişi Çekiliyor',d:sd.fetched?(()=>{
+                        const subPrefix=sd.fetched.scope==='ana'&&sd.fetched.resolvedSubCount?`${sd.fetched.resolvedSubCount} alt trader → `:'';
+                        if(sd.fetched.fromCache)return `Cache'den ${sd.fetched.count?.toLocaleString('tr-TR')||0} kayıt yüklendi (${fetchModeLabel.toLowerCase()||'agg'})`;
+                        if(sd.fetched.mode==='aggregate')return `${subPrefix}UAT aggregate (yıl-bazlı): ${sd.fetched.loaded||0} / ${sd.fetched.total||16} query`;
+                        return `${subPrefix}UAT raw fallback${sd.fetched.aggError?' ('+sd.fetched.aggError.slice(0,40)+'...)':''}: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`;
+                      })():(useAnaScope?`${selectedAnaTraders.length} ana trader → alt traderları çözümleniyor, Dataverse historical sales sorgulanıyor`:'Dataverse historical sales sorgulanıyor')},
                       {n:2,l:'Aylık Aggregate',d:sd.aggregate?`${sd.aggregate.records?.toLocaleString('tr-TR')||0} satır → ${sd.aggregate.months} aylık seriye dönüştürüldü`:'Satırlar yıl-ay bazında toplanıyor'},
                       {n:3,l:'Tahmin Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'8 model paralel hazırlanıyor (HW, Theta, Holt\'s Linear, STL+ETS, Outlier STL+ETS, Seasonal Naive, Croston, MA-3)'},
                       {n:4,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
@@ -3116,14 +3137,20 @@ export default function App(){
                   {/* ─── Result ─── */}
                   {fcstResult&&(()=>{
                     const profile=fcstResult.profile;
-                    const resultTraderCodes=fcstResult.traderCodes||[fcstResult.traderCode];
-                    const isMulti=resultTraderCodes.length>1;
                     const isAnaScope=fcstResult.filterScope==='ana';
+                    // Header için: ana scope'ta kullanıcının seçtiği ana trader kodları (displayCodes),
+                    // trader scope'ta seçilen trader kodları (traderCodes). traderCodes ana scope'ta
+                    // resolve edilmiş alt trader listesini tutuyor — UI'da göstermiyoruz.
+                    const fetchedCodes=fcstResult.traderCodes||[fcstResult.traderCode];
+                    const displayCodes=fcstResult.displayCodes||fetchedCodes;
+                    const resultTraderCodes=displayCodes;
+                    const isMulti=resultTraderCodes.length>1;
                     const lookupList=isAnaScope?fcstAnaTraderList:fcstTraderList;
                     const traderInfo=!isMulti?lookupList.find(t=>t.code===resultTraderCodes[0]):null;
                     const scopeLabel=isAnaScope?'Ana Trader':'Trader';
                     const headerName=isMulti?`${resultTraderCodes.length} ${scopeLabel} Birleşik`:(traderInfo?.name||resultTraderCodes[0]);
-                    const headerSub=isMulti?resultTraderCodes.map(c=>lookupList.find(t=>t.code===c)?.label||c).join(' · '):`${resultTraderCodes[0]}${isAnaScope?' (Ana Trader — alt trader satışları dahil)':' · '+profile.mainGroup}`;
+                    const subCountSuffix=isAnaScope&&fcstResult.resolvedSubCount?` — ${fcstResult.resolvedSubCount} alt trader satışı dahil`:'';
+                    const headerSub=isMulti?resultTraderCodes.map(c=>lookupList.find(t=>t.code===c)?.label||c).join(' · ')+subCountSuffix:`${resultTraderCodes[0]}${isAnaScope?' (Ana Trader'+subCountSuffix+')':' · '+profile.mainGroup}`;
                     const headerInitials=isMulti?String(resultTraderCodes.length):(traderInfo?.name||resultTraderCodes[0]).split(' ').map(s=>s[0]).slice(0,2).join('').toLocaleUpperCase('tr-TR');
                     return(<>
                       {/* ─── Trader Profili ─── */}
