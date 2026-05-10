@@ -863,3 +863,253 @@ export const FORECAST_MODELS = [
     formula: 'ŷ_{t+h} = (y_{t-2} + y_{t-1} + y_t) / 3',
   },
 ];
+
+// ════════════════════════════════════════════════════════════════
+// Phase 3 — Trader + Itemid Hiyerarşi
+// ════════════════════════════════════════════════════════════════
+
+// ─────────────── Hyndman-Boylan ADI/CV² seri sınıflandırma ───────
+// ADI = Average Demand Interval (sıfır-olmayan dönemler arası ortalama mesafe)
+// CV² = (std/mean)² sıfır-olmayan değerlerde
+// type: smooth (ADI<1.32, CV²<0.49) | erratic (ADI<1.32, CV²>=0.49)
+//       intermittent (ADI>=1.32, CV²<0.49) | lumpy (ADI>=1.32, CV²>=0.49)
+export function classifySeries(series) {
+  const n = series.length;
+  if (n === 0) return { adi: Infinity, cv2: 0, type: 'lumpy', forecastable: false, score: 0, recommendedModels: [] };
+
+  const nonZero = series.filter(x => x > 0);
+  const monthsWithSales = nonZero.length;
+  const adi = monthsWithSales > 0 ? n / monthsWithSales : Infinity;
+  const m = mean(nonZero);
+  const sd = std(nonZero);
+  const cv2 = m > 0 ? (sd / m) ** 2 : 0;
+
+  let type;
+  if (adi < 1.32 && cv2 < 0.49) type = 'smooth';
+  else if (adi < 1.32 && cv2 >= 0.49) type = 'erratic';
+  else if (adi >= 1.32 && cv2 < 0.49) type = 'intermittent';
+  else type = 'lumpy';
+
+  // Forecastable: yeterli uzunluk + yeterli sıklık + makul varyans
+  const forecastable = (n >= 18) && (monthsWithSales >= Math.min(12, Math.floor(n / 2))) && (cv2 < 4);
+
+  // Skor: 1 - (cv²/4 cap'li) × (1 / (1 + (adi-1)*0.5))
+  const cv2Norm = Math.min(1, cv2 / 4);
+  const adiNorm = 1 / (1 + Math.max(0, adi - 1) * 0.5);
+  const score = Math.max(0, Math.min(1, (1 - cv2Norm) * adiNorm));
+
+  let recommendedModels;
+  if (type === 'smooth') recommendedModels = ['hw', 'theta', 'stl', 'holtLin'];
+  else if (type === 'erratic') recommendedModels = ['stlOut', 'theta', 'ma3'];
+  else if (type === 'intermittent') recommendedModels = ['croston', 'snaive', 'ma3'];
+  else recommendedModels = ['croston', 'ma3', 'snaive'];
+
+  return { adi, cv2, type, forecastable, score, monthsWithSales, recommendedModels };
+}
+
+// ─────────────── Itemid×month server response → seri map ─────────
+// itemmonthRows: [{pid, ym, qty, yy} | parse-friendly variants]
+// Dönüş: Map<pid, { keys: [...sorted YYYY-MM...], qty: [...], totalQty: number }>
+export function aggregateByItemid(itemmonthRows) {
+  const itemMap = new Map();  // pid → { tempMap: Map<key, qty>, totalQty }
+  const debugFirst = itemmonthRows && itemmonthRows[0];
+  if (debugFirst) {
+    try { console.log('[aggregateByItemid] first row keys:', Object.keys(debugFirst).slice(0, 12)); } catch (_) {}
+  }
+
+  for (const row of (itemmonthRows || [])) {
+    if (!row) continue;
+    const pid = String(row.pid || row['pid@OData.Community.Display.V1.FormattedValue'] || row.mserp_productid || '').trim();
+    if (!pid) continue;
+    const qty = Number(row.qty || 0);
+    if (!Number.isFinite(qty)) continue;
+
+    // ay bilgisi: ym (sayı 1-12) + yy (yıl), ya da ym/ymRaw tarih string
+    let key = null;
+    if (row.yy != null && row.ym != null && Number.isFinite(+row.ym) && +row.ym >= 1 && +row.ym <= 12) {
+      const yy = +row.yy;
+      const mm = +row.ym;
+      key = `${yy}-${String(mm).padStart(2, '0')}`;
+    } else {
+      const ymRaw = row.ymRaw || row.ym;
+      if (typeof ymRaw === 'string') {
+        const d = new Date(ymRaw);
+        if (!isNaN(d)) key = ymKey(d);
+      }
+    }
+    if (!key) continue;
+
+    if (!itemMap.has(pid)) itemMap.set(pid, { tempMap: new Map(), totalQty: 0 });
+    const entry = itemMap.get(pid);
+    entry.tempMap.set(key, (entry.tempMap.get(key) || 0) + qty);
+    entry.totalQty += qty;
+  }
+
+  // tempMap → keys+qty array (boşluklar 0 ile dolu)
+  const result = new Map();
+  for (const [pid, entry] of itemMap) {
+    const keys = [...entry.tempMap.keys()].sort();
+    if (keys.length === 0) continue;
+    const filled = [];
+    let cur = keys[0];
+    const last = keys[keys.length - 1];
+    while (cur && cur <= last) { filled.push(cur); cur = addMonths(cur, 1); }
+    const qty = filled.map(k => entry.tempMap.get(k) || 0);
+    result.set(pid, { keys: filled, qty, totalQty: entry.totalQty });
+  }
+  return result;
+}
+
+// ─────────────── Top-N Itemid Forecast Batch ─────────────────────
+// itemSeriesMap: Map<pid, {keys, qty, totalQty}>
+// h: horizon (3/6/12)
+// opts: { topN=30, onProgress, yieldEvery=5 }
+// Return: { items: [...], longTail: {...} }
+export async function forecastItemidBatch(itemSeriesMap, h, opts = {}) {
+  const topN = opts.topN || 30;
+  const yieldEvery = opts.yieldEvery || 5;
+  const onProgress = opts.onProgress;
+
+  // Tüm itemid'leri totalQty'ye göre sırala
+  const allItems = [...itemSeriesMap.entries()].map(([pid, s]) => ({ pid, ...s }));
+  allItems.sort((a, b) => b.totalQty - a.totalQty);
+
+  const topItems = allItems.slice(0, topN);
+  const tailItems = allItems.slice(topN);
+
+  const items = [];
+  let processedIdx = 0;
+
+  for (const it of topItems) {
+    processedIdx++;
+    if (onProgress) onProgress(processedIdx, topItems.length, it.pid);
+
+    const cls = classifySeries(it.qty);
+    let fit = null;
+    let isStable = cls.forecastable;
+
+    if (isStable) {
+      try {
+        fit = selectBestFit(it.qty, h);
+      } catch (e) {
+        isStable = false;
+        fit = null;
+      }
+    }
+
+    // Son 12 ay & forecast h ay toplamları
+    const last12 = sum(it.qty.slice(-12));
+    let hAhead = null;
+    if (fit && fit.bestId) {
+      const best = fit.results.find(r => r.id === fit.bestId);
+      if (best?.forecast?.point) hAhead = sum(best.forecast.point);
+    }
+
+    items.push({
+      pid: it.pid,
+      keys: it.keys,
+      qty: it.qty,
+      totalQty: it.totalQty,
+      classification: cls,
+      isStable,
+      fit,
+      last12,
+      hAhead,
+    });
+
+    // Her N itemid'de UI yield (event loop bloklamamak için)
+    if (processedIdx % yieldEvery === 0) {
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  // Uzun kuyruk: ham özet (tek tek forecast yok)
+  const longTail = {
+    count: tailItems.length,
+    totalQty: tailItems.reduce((s, x) => s + x.totalQty, 0),
+    last12: tailItems.reduce((s, x) => s + sum(x.qty.slice(-12)), 0),
+    // Basit moving avg ile toplam tail forecast tahmini
+    estimatedHAhead: null,
+  };
+  if (tailItems.length > 0) {
+    // Tail toplamını ay bazında topla → tek bir tail-aggregate serisi → MA3
+    const tailMonthMap = new Map();
+    for (const t of tailItems) {
+      for (let i = 0; i < t.keys.length; i++) {
+        const k = t.keys[i];
+        tailMonthMap.set(k, (tailMonthMap.get(k) || 0) + t.qty[i]);
+      }
+    }
+    const tailKeys = [...tailMonthMap.keys()].sort();
+    if (tailKeys.length >= 3) {
+      const tailQty = tailKeys.map(k => tailMonthMap.get(k));
+      try {
+        const tailFc = forecastMovingAverage(tailQty, h, 3);
+        longTail.estimatedHAhead = sum(tailFc.point);
+      } catch (_) {}
+    }
+  }
+
+  return { items, longTail, totalScanned: allItems.length };
+}
+
+// ─────────────── Bottom-up Reconciliation (Proportional) ─────────
+// Σ(itemid forecasts) ≠ trader-total olduğunda, itemid forecast'larını
+// pro-rata scale et: scaling factor = traderTotal / itemSum
+export function reconcileItemForecasts(traderTotalForecast, itemForecasts) {
+  if (!traderTotalForecast?.point || !Array.isArray(itemForecasts)) {
+    return { items: itemForecasts || [], scalingFactor: 1, residualGap: 0 };
+  }
+  const traderTotal = sum(traderTotalForecast.point);
+  let itemSum = 0;
+  for (const it of itemForecasts) {
+    if (it.hAhead != null) itemSum += it.hAhead;
+  }
+  if (itemSum <= 0) return { items: itemForecasts, scalingFactor: 1, residualGap: traderTotal };
+
+  const sf = traderTotal / itemSum;
+  const residualGap = traderTotal - itemSum;
+  const items = itemForecasts.map(it => {
+    if (it.hAhead == null || !it.fit) return { ...it, hAheadAdjusted: it.hAhead, scalingFactor: 1 };
+    return {
+      ...it,
+      hAheadAdjusted: it.hAhead * sf,
+      scalingFactor: sf,
+    };
+  });
+  return { items, scalingFactor: sf, residualGap };
+}
+
+// ─────────────── Excel-friendly itemid × ay matrisi ──────────────
+// items: forecastItemidBatch().items
+// h: horizon
+// mode: 'forecast' (sadece tahmin ay'ları) | 'history' (sadece geçmiş) | 'both'
+export function buildItemMonthMatrix(items, h, mode = 'forecast') {
+  const rows = [];
+  const monthSet = new Set();
+
+  for (const it of items) {
+    const byMonth = {};
+    if (mode === 'history' || mode === 'both') {
+      for (let i = 0; i < it.keys.length; i++) {
+        byMonth[it.keys[i]] = it.qty[i];
+        monthSet.add(it.keys[i]);
+      }
+    }
+    if ((mode === 'forecast' || mode === 'both') && it.fit && it.fit.bestId) {
+      const best = it.fit.results.find(r => r.id === it.fit.bestId);
+      if (best?.forecast?.point && it.keys.length > 0) {
+        const lastKey = it.keys[it.keys.length - 1];
+        for (let i = 0; i < h && i < best.forecast.point.length; i++) {
+          const fkey = addMonths(lastKey, i + 1);
+          byMonth[fkey] = best.forecast.point[i];
+          monthSet.add(fkey);
+        }
+      }
+    }
+    rows.push({ pid: it.pid, byMonth, total: it.last12, hAhead: it.hAhead });
+  }
+
+  const months = [...monthSet].sort();
+  return { rows, months };
+}

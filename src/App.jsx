@@ -1,11 +1,11 @@
 import { useState, useMemo, useRef, useEffect, useCallback, lazy, Suspense } from "react";
-import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye, MoreHorizontal, SlidersHorizontal, RotateCcw } from "lucide-react";
+import { Package, Clock, MapPin, BarChart3, TrendingUp, Building2, Database, Layers, ArrowUpDown, ChevronRight, ChevronDown, Search, Plus, Trash2, Pencil, Upload, CheckCircle2, ChevronLeft, FileBarChart, Settings, Download, Globe, Palette, Info, Activity, LogOut, X, Briefcase, AlertTriangle, Zap, Target, ShieldAlert, Eye, MoreHorizontal, SlidersHorizontal, RotateCcw } from "lucide-react";
 const TurkeyMap3D = lazy(() => import('./TurkeyMap3D'));
 const WorldMap3D = lazy(() => import('./WorldMap3D'));
 const LoginGlobe = lazy(() => import('./LoginGlobe'));
 import { MSAL_ENABLED, initMsal, loginRedirect, logout, fetchErpData, fetchKPITrend, fetchHistoricalSalesByTrader, fetchHistoricalAggregatesByTrader, fetchTraderNames, fetchTraderDirectory, getDataverseToken } from './dataverseService';
 import { buildDataContext, askGemini, testGeminiKey } from './geminiService';
-import { aggregateMonthly, aggregateFromServer, mapToSeries, selectBestFit, buildTraderProfile, buildTraderProfileFromAggregates, FORECAST_MODELS, sum as sumArr } from './salesForecast';
+import { aggregateMonthly, aggregateFromServer, mapToSeries, selectBestFit, buildTraderProfile, buildTraderProfileFromAggregates, FORECAST_MODELS, sum as sumArr, aggregateByItemid, forecastItemidBatch, reconcileItemForecasts, classifySeries } from './salesForecast';
 
 const INIT=[];
 const DEMO=INIT;
@@ -599,6 +599,12 @@ export default function App(){
   const [fcstHoverIdx,setFcstHoverIdx]=useState(null);  // grafikte hover edilen ay indexi
   const [fcstHoverModel,setFcstHoverModel]=useState(null);  // modeli üzerinde hover (id)
   const [fcstSubTip,setFcstSubTip]=useState(null);  // {x,y} alt trader tooltip pozisyonu (position:fixed)
+  // ─── Phase 3: Trader+Itemid Hiyerarşi state'leri ───
+  const [fcstChartView,setFcstChartView]=useState('total');  // 'total' | itemid string
+  const [fcstViewSearch,setFcstViewSearch]=useState('');  // Görünüm combobox arama
+  const [fcstShowViewMenu,setFcstShowViewMenu]=useState(false);  // Görünüm dropdown açık mı
+  const [fcstItemSortCol,setFcstItemSortCol]=useState('hAhead');  // ürün tablosu sort sütunu
+  const [fcstItemSortDir,setFcstItemSortDir]=useState(-1);  // -1 desc, 1 asc
   const [fcstChartW,setFcstChartW]=useState(1200);  // gerçek container genişliği (responsive, no stretch)
   const fcstChartRef=useRef(null);
   useEffect(()=>{
@@ -682,16 +688,18 @@ export default function App(){
     try{
       // Cache key: scope + sıralı resolved alt trader kodları
       const filterField=useAnaTrader?'main':'trd';
-      // v6: ana trader artık alt trader resolve ile mserp_trader filtresine düşer
+      // v7: itemid×month aggregate + per-itemid forecast cache shape
       const anaSig=useAnaTrader?[...anaTraders].sort().join('+'):'';
-      const cacheKey=`tyrowms_fcst_v6_${filterField}_${useAnaTrader?'ana_'+anaSig:[...fetchCodes].sort().join('+')}`;
+      const cacheKey=`tyrowms_fcst_v7_${filterField}_${useAnaTrader?'ana_'+anaSig:[...fetchCodes].sort().join('+')}`;
       let aggMap=null,profile=null,valueAvailable=false,fromCache=false,recordCount=0,fetchMode='aggregate';
+      let itemmonthRows=null;  // raw itemid×month aggregate (server'dan gelen veya cache'den)
       try{
         const cached=localStorage.getItem(cacheKey);
         if(cached){
           const p=JSON.parse(cached);
           if(p&&p.fetchedAt&&Date.now()-p.fetchedAt<86400000){
             aggMap=p.aggMap;profile=p.profile;valueAvailable=p.valueAvailable;recordCount=p.recordCount||0;fromCache=true;fetchMode=p.fetchMode||'aggregate';
+            itemmonthRows=p.itemmonthRows||null;  // v7: itemid raw rows cache
             setFcstStepData(d=>({...d,fetched:{count:recordCount,fromCache:true,mode:fetchMode}}));
           }
         }
@@ -705,6 +713,7 @@ export default function App(){
           aggMap=aggregateFromServer(agg.monthly);
           profile=buildTraderProfileFromAggregates(aggMap,agg.products,agg.accounts,agg.companies,gGrp);
           recordCount=agg.monthly.length;
+          itemmonthRows=agg.itemmonth||[];  // v7: itemid×month raw
           fetchMode='aggregate';
           valueAvailable=false;  // aggregate path tutar getirmez (v1)
         }catch(aggErr){
@@ -720,9 +729,22 @@ export default function App(){
           aggMap=aggregateMonthly(fetchRes.records,{valueField:fetchRes.valueField});
           profile=buildTraderProfile(fetchRes.records,gGrp,aggMap);
           valueAvailable=!!fetchRes.valueField;
+          // Raw fallback için itemid×month manuel kur (her satırdan pid + ay)
+          itemmonthRows=[];
+          for(const r of fetchRes.records){
+            const pid=String(r.mserp_productid||'').trim();
+            const dt=r.mserp_shipdate?new Date(r.mserp_shipdate):null;
+            if(!pid||!dt||isNaN(dt))continue;
+            itemmonthRows.push({pid,yy:dt.getUTCFullYear(),ym:dt.getUTCMonth()+1,qty:Number(r.mserp_quantity)||0});
+          }
         }
         setFcstStep(2);await wait(120);
-        try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable,recordCount,fetchMode}));}catch(_){}
+        try{
+          localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable,recordCount,fetchMode,itemmonthRows}));
+        }catch(_){
+          // localStorage quota dolarsa itemmonthRows olmadan kaydet
+          try{localStorage.setItem(cacheKey,JSON.stringify({fetchedAt:Date.now(),aggMap,profile,valueAvailable,recordCount,fetchMode}));}catch(_){}
+        }
       } else {
         setFcstStep(2);await wait(120);
       }
@@ -738,23 +760,53 @@ export default function App(){
       setFcstStepData(d=>({...d,modelsRunning:'Seasonal Naive'}));await wait(50);
       setFcstStepData(d=>({...d,modelsRunning:'Croston'}));await wait(50);
       setFcstStepData(d=>({...d,modelsRunning:'Moving Avg'}));await wait(50);
-      setFcstStep(4);await wait(140);
+      // Trader-total fits
       const fitQty=selectBestFit(seriesQty.qty,fcstHorizon);
       let fitValue=null;
       if(seriesQty.valueAvailable&&seriesQty.value){
         fitValue=selectBestFit(seriesQty.value,fcstHorizon);
       }
+      // ─── Step 4 (yeni): Ürün bazlı tahminler ───
+      setFcstStep(4);await wait(140);
+      let itemForecasts=[];
+      let itemLongTail=null;
+      let itemReconcile=null;
+      if(itemmonthRows&&itemmonthRows.length>0){
+        try{
+          const itemMap=aggregateByItemid(itemmonthRows);
+          setFcstStepData(d=>({...d,itemBatch:{total:itemMap.size,processed:0}}));
+          const batch=await forecastItemidBatch(itemMap,fcstHorizon,{
+            topN:30,
+            onProgress:(processed,total,pid)=>{
+              setFcstStepData(d=>({...d,itemBatch:{total,processed,currentPid:pid}}));
+            },
+          });
+          itemForecasts=batch.items;
+          itemLongTail=batch.longTail;
+          // Reconciliation: trader-total ile pro-rata scale
+          const traderTotalFc=fitQty?.results?.find(r=>r.id===fitQty.bestId)?.forecast;
+          if(traderTotalFc){
+            const rec=reconcileItemForecasts(traderTotalFc,itemForecasts);
+            itemForecasts=rec.items;
+            itemReconcile={scalingFactor:rec.scalingFactor,residualGap:rec.residualGap};
+          }
+        }catch(itemErr){
+          console.warn('[Forecast] Itemid batch failed:',itemErr);
+          itemForecasts=[];
+        }
+      }
       setFcstStepData(d=>({...d,backtest:{models:fitQty.results.filter(r=>!r.skipped).length}}));
       setFcstStep(5);await wait(150);
       setFcstStepData(d=>({...d,bestFit:{id:fitQty.bestId,mape:fitQty.results.find(r=>r.id===fitQty.bestId)?.mape}}));
-      await wait(200);
-      setFcstStep(6);
+      setFcstStep(6);await wait(200);
+      setFcstStep(7);  // tüm adımlar tamamlandı (loader hide edilmeden önce)
       // displayCodes: kullanıcının seçtiği orijinal kodlar (header için).
       // traderCodes: gerçekten fetch edilen kodlar (ana trader scope'ta resolved alt trader'lar).
       const displayCodes=useAnaTrader?anaTraders:fetchCodes;
       // subTraders: ana scope'ta hangi alt trader'ların dahil olduğunu UI'da göstermek için kod+isim.
       const subTraders=useAnaTrader?fetchCodes.map(c=>{const t=fcstTraderList.find(x=>x.code===c);return{code:c,name:t?.name||c};}):null;
-      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:displayCodes.length===1?displayCodes[0]:displayCodes.join('+'),traderCodes:fetchCodes,displayCodes,resolvedSubCount:fetchCodes.length,subTraders,filterScope:useAnaTrader?'ana':'trader',horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
+      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:displayCodes.length===1?displayCodes[0]:displayCodes.join('+'),traderCodes:fetchCodes,displayCodes,resolvedSubCount:fetchCodes.length,subTraders,filterScope:useAnaTrader?'ana':'trader',horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount,itemForecasts,itemLongTail,itemReconcile});
+      setFcstChartView('total');  // her yeni hesapta trader-total view'a dön
       setFcstActiveModel(null);
       await wait(300);
       setFcstStep(0);
@@ -2880,12 +2932,22 @@ export default function App(){
 
             {/* ===== SATIŞ TAHMİNİ (fcst) ===== */}
             {pg==='fcst'&&(()=>{
-              // Aktif modelin forecast sonucu (best fit veya kullanıcı seçimi)
-              const fit=fcstMetric==='value'?fcstResult?.fitValue:fcstResult?.fitQty;
+              // ─── activeView: 'total' (trader toplamı) | itemid string ───
+              // fcstChartView state'i tüm chart/KPI/tablo render'larını bağlar.
+              // Itemid view'da: o itemid'in seri+fit'i kullanılır; trader-total fit gizlenir,
+              // sekmeler kaybolur, başlık o itemid'i yansıtır.
+              const isItemView=fcstChartView!=='total'&&fcstResult?.itemForecasts;
+              const activeItem=isItemView?fcstResult.itemForecasts.find(x=>x.pid===fcstChartView):null;
+              const activeViewLabel=activeItem?activeItem.pid:'Trader Toplamı';
+              // Trader-total fit (her zaman computed — sekme/karşılaştırma render için)
+              const traderFit=fcstMetric==='value'?fcstResult?.fitValue:fcstResult?.fitQty;
+              // Aktif fit: itemid view'da o itemid'in fit'i; total'da trader fit
+              const fit=activeItem?activeItem.fit:traderFit;
               const activeModelId=fcstActiveModel||fit?.bestId||null;
               const activeResult=fit?.results?.find(r=>r.id===activeModelId);
-              const series=fcstResult?.series;
-              const histArr=series?(fcstMetric==='value'?series.value:series.qty):null;
+              // Aktif seri: itemid view'da {keys,qty} pseudo-series; total'da fcstResult.series
+              const series=activeItem?{keys:activeItem.keys,qty:activeItem.qty,value:null,valueAvailable:false}:fcstResult?.series;
+              const histArr=series?(activeItem?series.qty:(fcstMetric==='value'?series.value:series.qty)):null;
               const histKeys=series?series.keys:[];
               const horizon=fcstResult?.horizon||fcstHorizon;
               // Tahmin aylarının anahtarlarını üret (son tarih + 1, +2, ...)
@@ -2971,7 +3033,103 @@ export default function App(){
                   const wb=X.utils.book_new();
                   X.utils.book_append_sheet(wb,ws1,'Özet');
                   X.utils.book_append_sheet(wb,ws2,'Aylık Detay');
-                  X.writeFile(wb,`TYRO_SatisTahmini_${codesArr.length===1?codesArr[0]:codesArr.length+'trader'}_${new Date().toISOString().slice(0,10)}.xlsx`);
+                  // ─── Sheet 3 — Itemid Forecast Özet (Phase 3) ───
+                  if(fcstResult.itemForecasts&&fcstResult.itemForecasts.length>0){
+                    const itemRows=[['#','Itemid','Son 12 Ay','Tahmin '+horizon+' Ay','YoY %','Best Model','MAPE %','Karakter','Forecast Edilebilir']];
+                    fcstResult.itemForecasts.forEach((it,idx)=>{
+                      const last12=it.last12||0;
+                      const hAhead=it.hAheadAdjusted??it.hAhead;
+                      const yoy=last12>0&&hAhead!=null?((hAhead-last12*horizon/12)/(last12*horizon/12)*100):null;
+                      const bestModel=it.fit&&it.fit.bestId?FORECAST_MODELS.find(m=>m.id===it.fit.bestId):null;
+                      const mape=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.mape;
+                      itemRows.push([
+                        idx+1,
+                        it.pid,
+                        Math.round(last12),
+                        hAhead!=null?Math.round(hAhead):null,
+                        yoy!=null?+yoy.toFixed(2):null,
+                        bestModel?bestModel.label:'—',
+                        mape!=null?+mape.toFixed(2):null,
+                        it.classification?.type||'—',
+                        it.isStable?'Evet':'Hayır',
+                      ]);
+                    });
+                    if(fcstResult.itemLongTail&&fcstResult.itemLongTail.count>0){
+                      const tail=fcstResult.itemLongTail;
+                      itemRows.push([null,`+ Uzun kuyruk (${tail.count} itemid)`,Math.round(tail.last12||0),tail.estimatedHAhead!=null?Math.round(tail.estimatedHAhead):null,null,'MA-3 toplu',null,'—','Toplu']);
+                    }
+                    const ws3=X.utils.aoa_to_sheet(itemRows);
+                    ws3['!cols']=[{wch:5},{wch:32},{wch:14},{wch:14},{wch:10},{wch:18},{wch:10},{wch:14},{wch:18}];
+                    ws3['!freeze']={ySplit:1};
+                    // numeric formatting: cols 2 (Son12), 3 (Tahmin), 4 (YoY), 6 (MAPE)
+                    for(let r=1;r<itemRows.length;r++){
+                      for(let c of [2,3,4,6]){
+                        const ref=X.utils.encode_cell({r,c});
+                        if(ws3[ref]&&typeof ws3[ref].v==='number'){
+                          ws3[ref].t='n';
+                          ws3[ref].z=(c===4||c===6)?'0.00"%"':'#,##0';
+                        }
+                      }
+                    }
+                    X.utils.book_append_sheet(wb,ws3,'Itemid Özet');
+
+                    // ─── Sheet 4 — Itemid × Ay Matrisi (geçmiş 12 + tahmin H ay) ───
+                    // Her satır bir itemid; sütunlar: kod | son12_ay×12 | tahmin_ay×H | toplam
+                    const lastKey=histKeys.length>0?histKeys[histKeys.length-1]:null;
+                    const histTail12Keys=histKeys.slice(-12);  // son 12 ay
+                    const fcKeysAll=[];
+                    if(lastKey){
+                      let cur=lastKey;
+                      for(let i=0;i<horizon;i++){
+                        const d=new Date(Date.UTC(+cur.split('-')[0],+cur.split('-')[1]-1,1));
+                        d.setUTCMonth(d.getUTCMonth()+1);
+                        cur=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+                        fcKeysAll.push(cur);
+                      }
+                    }
+                    const allCols=[...histTail12Keys,...fcKeysAll];
+                    const matrixHdr=['Itemid',...allCols.map(k=>k+(histTail12Keys.includes(k)?' (geçmiş)':' (tahmin)')),'Toplam'];
+                    const matrixRows=[matrixHdr];
+                    for(const it of fcstResult.itemForecasts){
+                      const row=[it.pid];
+                      let total=0;
+                      // historical
+                      for(const k of histTail12Keys){
+                        const idx=it.keys?.indexOf(k);
+                        const v=idx>=0?(it.qty[idx]||0):0;
+                        row.push(Math.round(v));
+                        total+=v;
+                      }
+                      // forecast
+                      const fc=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.forecast?.point;
+                      const sf=it.scalingFactor||1;
+                      for(let i=0;i<horizon;i++){
+                        const v=fc&&fc[i]!=null?fc[i]*sf:null;
+                        row.push(v!=null?Math.round(v):null);
+                        if(v!=null)total+=v;
+                      }
+                      row.push(Math.round(total));
+                      matrixRows.push(row);
+                    }
+                    const ws4=X.utils.aoa_to_sheet(matrixRows);
+                    const colW=[{wch:32}];
+                    for(let i=0;i<allCols.length;i++)colW.push({wch:11});
+                    colW.push({wch:14});
+                    ws4['!cols']=colW;
+                    ws4['!freeze']={ySplit:1,xSplit:1};
+                    for(let r=1;r<matrixRows.length;r++){
+                      for(let c=1;c<matrixRows[0].length;c++){
+                        const ref=X.utils.encode_cell({r,c});
+                        if(ws4[ref]&&typeof ws4[ref].v==='number'){
+                          ws4[ref].t='n';
+                          ws4[ref].z='#,##0';
+                        }
+                      }
+                    }
+                    X.utils.book_append_sheet(wb,ws4,'Itemid × Ay');
+                  }
+                  const viewSuffix=fcstChartView!=='total'?`_${fcstChartView.replace(/[^A-Z0-9_-]/gi,'_').slice(0,30)}`:'';
+                  X.writeFile(wb,`TYRO_SatisTahmini_${codesArr.length===1?codesArr[0]:codesArr.length+'trader'}${viewSuffix}_${new Date().toISOString().slice(0,10)}.xlsx`);
                 };
                 if(window.XLSX)doIt();
                 else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
@@ -3079,9 +3237,10 @@ export default function App(){
                         return `${subPrefix}UAT raw fallback${sd.fetched.aggError?' ('+sd.fetched.aggError.slice(0,40)+'...)':''}: ${sd.fetched.loaded?.toLocaleString('tr-TR')||0}${sd.fetched.total?' / '+sd.fetched.total.toLocaleString('tr-TR'):''} satır`;
                       })():(useAnaScope?`${selectedAnaTraders.length} ana trader → alt traderları çözümleniyor, Dataverse historical sales sorgulanıyor`:'Dataverse historical sales sorgulanıyor')},
                       {n:2,l:'Aylık Aggregate',d:sd.aggregate?`${sd.aggregate.records?.toLocaleString('tr-TR')||0} satır → ${sd.aggregate.months} aylık seriye dönüştürüldü`:'Satırlar yıl-ay bazında toplanıyor'},
-                      {n:3,l:'Tahmin Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'8 model paralel hazırlanıyor (HW, Theta, Holt\'s Linear, STL+ETS, Outlier STL+ETS, Seasonal Naive, Croston, MA-3)'},
-                      {n:4,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
-                      {n:5,l:'Best Fit Seçimi',d:sd.bestFit?`${FORECAST_MODELS.find(m=>m.id===sd.bestFit.id)?.label} kazandı (MAPE ${sd.bestFit.mape?.toFixed(1)}%)`:'En düşük hata oranlı model seçiliyor'},
+                      {n:3,l:'Trader Toplam Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'8 model trader toplamı için paralel hazırlanıyor (HW, Theta, Holt\'s Linear, STL+ETS, Outlier STL+ETS, Seasonal Naive, Croston, MA-3)'},
+                      {n:4,l:'Ürün Bazlı Tahminler',d:sd.itemBatch?(sd.itemBatch.processed>=sd.itemBatch.total?`${sd.itemBatch.total} itemid taraması tamamlandı, top 30 forecast hazır`:`${sd.itemBatch.processed||0} / ${Math.min(30,sd.itemBatch.total||0)} itemid${sd.itemBatch.currentPid?' — '+sd.itemBatch.currentPid:''}`):'En çok satışı olan top 30 itemid için ayrı forecast koşturuluyor'},
+                      {n:5,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
+                      {n:6,l:'Best Fit Seçimi',d:sd.bestFit?`${FORECAST_MODELS.find(m=>m.id===sd.bestFit.id)?.label} kazandı (MAPE ${sd.bestFit.mape?.toFixed(1)}%)`:'En düşük hata oranlı model seçiliyor'},
                     ];
                     return(
                       <div style={{background:'linear-gradient(135deg,rgba(45,212,160,.04),rgba(59,130,246,.04),rgba(139,92,246,.04))',border:'1px solid '+$.bdL,borderRadius:$.rL,padding:'30px 28px',position:'relative',overflow:'hidden'}}>
@@ -3241,7 +3400,145 @@ export default function App(){
                         </div>
                       </div>
 
+                      {/* ─── Ürün Bazlı Tahmin Tablosu (Top 30 itemid + uzun kuyruk) ─── */}
+                      {fcstResult.itemForecasts&&fcstResult.itemForecasts.length>0&&(()=>{
+                        // Sort
+                        const sortedItems=[...fcstResult.itemForecasts].sort((a,b)=>{
+                          const dir=fcstItemSortDir;
+                          const col=fcstItemSortCol;
+                          let av,bv;
+                          if(col==='pid'){av=a.pid;bv=b.pid;return av.localeCompare(bv)*dir;}
+                          if(col==='last12'){av=a.last12||0;bv=b.last12||0;}
+                          else if(col==='hAhead'){av=a.hAheadAdjusted??a.hAhead;bv=b.hAheadAdjusted??b.hAhead;
+                            if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;}
+                          else if(col==='yoy'){
+                            const ay=a.last12>0&&(a.hAheadAdjusted??a.hAhead)!=null?(((a.hAheadAdjusted??a.hAhead)-a.last12*horizon/12)/(a.last12*horizon/12)*100):null;
+                            const by=b.last12>0&&(b.hAheadAdjusted??b.hAhead)!=null?(((b.hAheadAdjusted??b.hAhead)-b.last12*horizon/12)/(b.last12*horizon/12)*100):null;
+                            if(ay==null&&by==null)return 0;if(ay==null)return 1;if(by==null)return -1;
+                            av=ay;bv=by;
+                          } else if(col==='mape'){
+                            av=a.fit?.results?.find(r=>r.id===a.fit?.bestId)?.mape;
+                            bv=b.fit?.results?.find(r=>r.id===b.fit?.bestId)?.mape;
+                            if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;
+                          }
+                          return ((av||0)-(bv||0))*dir;
+                        });
+                        const sortClick=(col)=>{
+                          if(fcstItemSortCol===col)setFcstItemSortDir(d=>d*-1);
+                          else{setFcstItemSortCol(col);setFcstItemSortDir(-1);}
+                        };
+                        const sortIcon=(col)=>fcstItemSortCol===col?<ArrowUpDown size={9} style={{marginLeft:3,verticalAlign:'middle',color:$.blu}}/>:null;
+                        const tail=fcstResult.itemLongTail;
+                        // Mini sparkline helper
+                        const sparkline=(qtyArr,fcArr)=>{
+                          const all=[...(qtyArr||[]),...(fcArr||[])];
+                          if(all.length<2)return null;
+                          const max=Math.max(...all,1);
+                          const w=80,h=22;
+                          const histLen=qtyArr?.length||0;
+                          const xStep=w/(all.length-1);
+                          const pts=all.map((v,i)=>`${(i*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`).join(' ');
+                          const histPts=qtyArr?qtyArr.map((v,i)=>`${(i*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`).join(' '):'';
+                          const fcStartX=histLen>0?(histLen-1)*xStep:0;
+                          const fcPts=fcArr?[`${fcStartX.toFixed(1)},${(h-(qtyArr[histLen-1]/max)*h).toFixed(1)}`,...fcArr.map((v,i)=>`${((histLen+i)*xStep).toFixed(1)},${(h-(v/max)*h).toFixed(1)}`)].join(' '):'';
+                          return(
+                            <svg width={w} height={h} style={{display:'block'}}>
+                              {histPts&&<polyline points={histPts} fill="none" stroke={$.blu} strokeWidth={1.4}/>}
+                              {fcPts&&<polyline points={fcPts} fill="none" stroke="#0d6e4f" strokeWidth={1.4} strokeDasharray="2,2"/>}
+                            </svg>
+                          );
+                        };
+                        return(
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
+                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',background:'linear-gradient(135deg,rgba(45,212,160,.04),rgba(59,130,246,.03))'}}>
+                              <Package size={15} color={$.ac}/>
+                              <span style={{fontSize:13,fontWeight:800,color:$.t1}}>Ürün Bazlı Tahmin</span>
+                              <span style={{fontSize:11,color:$.t3,fontWeight:500}}>Top {sortedItems.length} itemid · forecast hacmine göre sıralı</span>
+                              {fcstResult.itemReconcile&&Math.abs(fcstResult.itemReconcile.scalingFactor-1)>0.02&&(
+                                <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',fontSize:10,padding:'3px 9px',borderRadius:6,background:$.orgB,color:'#92400e',fontWeight:700,fontFamily:$.mo}}>Reconcile {((fcstResult.itemReconcile.scalingFactor-1)*100).toFixed(1)}%</span>
+                              )}
+                            </div>
+                            <div style={{overflowX:'auto'}}>
+                              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                                <thead>
+                                  <tr style={{background:'#fafbfc',borderBottom:'2px solid '+$.bdL}}>
+                                    <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:36}}>#</th>
+                                    <th onClick={()=>sortClick('pid')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Itemid{sortIcon('pid')}</th>
+                                    <th onClick={()=>sortClick('last12')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Son 12 Ay{sortIcon('last12')}</th>
+                                    <th onClick={()=>sortClick('hAhead')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Tahmin {horizon} Ay{sortIcon('hAhead')}</th>
+                                    <th onClick={()=>sortClick('yoy')} style={{padding:'9px 10px',textAlign:'right',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>YoY %{sortIcon('yoy')}</th>
+                                    <th onClick={()=>sortClick('mape')} style={{padding:'9px 10px',textAlign:'left',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,cursor:'pointer',userSelect:'none'}}>Best Model{sortIcon('mape')}</th>
+                                    <th style={{padding:'9px 10px',textAlign:'center',fontWeight:700,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.4,width:90}}>Trend</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {sortedItems.map((it,idx)=>{
+                                    const sel=fcstChartView===it.pid;
+                                    const last12=it.last12||0;
+                                    const hAhead=it.hAheadAdjusted??it.hAhead;
+                                    const yoy=last12>0&&hAhead!=null?((hAhead-last12*horizon/12)/(last12*horizon/12)*100):null;
+                                    const bestModel=it.fit&&it.fit.bestId?FORECAST_MODELS.find(m=>m.id===it.fit.bestId):null;
+                                    const mape=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.mape;
+                                    const fc=it.fit?.results?.find(r=>r.id===it.fit?.bestId)?.forecast?.point;
+                                    return(
+                                      <tr key={it.pid} onClick={()=>setFcstChartView(it.pid)} style={{borderBottom:'1px solid '+$.bdL,cursor:'pointer',background:sel?$.bluB:'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                        <td style={{padding:'8px 10px',textAlign:'center',color:$.t3,fontFamily:$.mo,fontSize:11,fontWeight:600}}>{idx+1}</td>
+                                        <td style={{padding:'8px 10px'}}>
+                                          <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                                            <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:sel?$.blu:$.t1}}>{it.pid}</span>
+                                            {!it.isStable&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:700,letterSpacing:.3,textTransform:'uppercase'}}>Düzensiz</span>}
+                                            {sel&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.bluB,color:$.blu,fontWeight:700,letterSpacing:.3}}>● aktif</span>}
+                                          </div>
+                                        </td>
+                                        <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:600,color:$.t2}}>{fmtTon(last12)}</td>
+                                        <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:hAhead!=null?$.t1:$.t3}}>{hAhead!=null?fmtTon(hAhead):'—'}</td>
+                                        <td style={{padding:'8px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,fontWeight:700,color:yoy==null?$.t3:yoy>=0?'#0d6e4f':$.red}}>{yoy!=null?(yoy>=0?'+':'')+yoy.toFixed(1)+'%':'—'}</td>
+                                        <td style={{padding:'8px 10px',textAlign:'left'}}>
+                                          {bestModel?(
+                                            <div style={{display:'flex',alignItems:'center',gap:5}}>
+                                              <span style={{fontSize:11,fontWeight:600,color:$.t2}}>{bestModel.label}</span>
+                                              {mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,fontWeight:700,padding:'2px 6px',borderRadius:4,background:mape<10?$.grnB:mape<20?$.orgB:$.redB,color:mape<10?'#0d6e4f':mape<20?'#92400e':$.red}}>{mape.toFixed(1)}%</span>}
+                                            </div>
+                                          ):<span style={{color:$.t3,fontStyle:'italic',fontSize:11}}>—</span>}
+                                        </td>
+                                        <td style={{padding:'8px 10px',textAlign:'center'}}>
+                                          {it.qty&&it.qty.length>0&&fc&&fc.length>0?sparkline(it.qty.slice(-12),fc):<span style={{color:$.t3,fontSize:11}}>—</span>}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                  {tail&&tail.count>0&&(
+                                    <tr style={{borderBottom:'1px solid '+$.bdL,background:'#fafbfc'}}>
+                                      <td colSpan={2} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:600}}>+ Uzun kuyruk: {tail.count} itemid (top 30 dışı)</td>
+                                      <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{fmtTon(tail.last12||0)}</td>
+                                      <td style={{padding:'10px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:600}}>{tail.estimatedHAhead!=null?fmtTon(tail.estimatedHAhead):'—'}</td>
+                                      <td colSpan={3} style={{padding:'10px 10px',color:$.t3,fontStyle:'italic',fontSize:11}}>{tail.count>0?'MA-3 ortalaması (toplu)':''}</td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* ─── Model Sekmeleri (skipped gizli, MAPE düşükten yükseğe sıralı) ─── */}
+                      {/* Itemid view aktifken sekmelerin yerine breadcrumb + geri butonu */}
+                      {isItemView?(
+                        <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',marginBottom:14,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,flexWrap:'wrap'}}>
+                          <button onClick={()=>setFcstChartView('total')} style={{display:'flex',alignItems:'center',gap:5,padding:'6px 12px',background:'#fff',border:'1px solid '+$.bdL,borderRadius:8,fontSize:12,fontWeight:600,color:$.t2,cursor:'pointer',transition:'all .15s'}} onMouseEnter={e=>{e.currentTarget.style.background=$.bluB;e.currentTarget.style.color=$.blu;}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color=$.t2;}}>
+                            <ChevronLeft size={13}/>Trader Toplamına Dön
+                          </button>
+                          <span style={{fontSize:11,color:$.t3,fontWeight:500}}>Aktif görünüm:</span>
+                          <span style={{fontSize:13,fontFamily:$.mo,fontWeight:800,color:$.t1,letterSpacing:.2,padding:'3px 10px',background:'linear-gradient(135deg,rgba(59,130,246,.08),rgba(139,92,246,.08))',borderRadius:8,border:'1px solid rgba(59,130,246,.18)'}}>{activeItem?.pid}</span>
+                          {activeItem?.classification&&(
+                            <span style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:8,background:activeItem.classification.type==='smooth'?$.grnB:activeItem.classification.type==='intermittent'||activeItem.classification.type==='lumpy'?$.orgB:$.bg,color:activeItem.classification.type==='smooth'?'#0d6e4f':activeItem.classification.type==='intermittent'||activeItem.classification.type==='lumpy'?'#92400e':$.t3,textTransform:'uppercase',letterSpacing:.4}}>{activeItem.classification.type}</span>
+                          )}
+                          {activeItem?.fit?.bestId&&(
+                            <span style={{fontSize:11,fontWeight:600,color:$.t3,marginLeft:'auto'}}>Best Fit: <strong style={{color:$.blu,fontFamily:$.mo}}>{FORECAST_MODELS.find(m=>m.id===activeItem.fit.bestId)?.label}</strong></span>
+                          )}
+                        </div>
+                      ):(
                       <div style={{position:'relative',marginBottom:14}}>
                         <div style={{display:'flex',gap:0,padding:4,background:'#f0f1f3',borderRadius:11,overflowX:'auto',flexWrap:'nowrap'}}>
                           {FORECAST_MODELS.filter(m=>{const r=fit?.results?.find(x=>x.id===m.id);return !r||!r.skipped;}).slice().sort((a,b)=>{
@@ -3300,6 +3597,7 @@ export default function App(){
                           );
                         })()}
                       </div>
+                      )}{/* end model sekmeleri / itemid breadcrumb */}
 
                       {/* ─── Aktif Model Sonuç Paneli ─── */}
                       {activeResult&&!activeResult.skipped&&activeResult.forecast&&(()=>{
@@ -3344,6 +3642,53 @@ export default function App(){
                             <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
                               <BarChart3 size={15} color={$.ac}/>
                               <span>Tahmin Grafiği — {FORECAST_MODELS.find(m=>m.id===activeModelId)?.label}</span>
+                              {/* ─── Görünüm combobox: Trader Toplamı / Itemid lookup ─── */}
+                              {fcstResult?.itemForecasts&&fcstResult.itemForecasts.length>0&&(()=>{
+                                const items=fcstResult.itemForecasts;
+                                const filtered=fcstViewSearch?items.filter(it=>it.pid.toLowerCase().includes(fcstViewSearch.toLowerCase())):items;
+                                const showCount=Math.min(filtered.length,30);
+                                return(
+                                  <div style={{position:'relative',marginLeft:14}} onClick={e=>e.stopPropagation()}>
+                                    <button onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',fontSize:11,fontWeight:700,color:$.t2,background:isItemView?'linear-gradient(135deg,rgba(59,130,246,.10),rgba(139,92,246,.08))':'#f7f8fa',border:'1px solid '+(isItemView?'rgba(59,130,246,.30)':$.bdL),borderRadius:8,cursor:'pointer',transition:'all .15s'}}>
+                                      <Eye size={12}/>
+                                      <span style={{fontFamily:isItemView?$.mo:'inherit',fontSize:isItemView?11:11}}>{isItemView?activeItem?.pid:'Trader Toplamı'}</span>
+                                      <ChevronDown size={11} style={{opacity:.6,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
+                                    </button>
+                                    {fcstShowViewMenu&&(
+                                      <>
+                                        <div style={{position:'fixed',inset:0,zIndex:39}} onClick={()=>setFcstShowViewMenu(false)}/>
+                                        <div style={{position:'absolute',top:'calc(100% + 6px)',right:0,minWidth:340,maxWidth:420,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:11,boxShadow:'0 10px 30px rgba(0,0,0,.14)',zIndex:40,overflow:'hidden'}}>
+                                          {/* Trader Toplamı sabit üst seçenek */}
+                                          <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'10px 14px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',borderBottom:'1px solid '+$.bdL,background:!isItemView?$.bluB:'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(isItemView)e.currentTarget.style.background='#f7f8fa';}} onMouseLeave={e=>{if(isItemView)e.currentTarget.style.background='transparent';}}>
+                                            <BarChart3 size={13} color={$.blu}/>
+                                            <span style={{fontSize:12,fontWeight:!isItemView?800:600,color:!isItemView?$.blu:$.t1}}>Trader Toplamı</span>
+                                            {!isItemView&&<span style={{marginLeft:'auto',fontSize:10,fontWeight:700,color:$.blu}}>● aktif</span>}
+                                          </div>
+                                          {/* Search */}
+                                          <div style={{padding:'8px 10px',background:'#f7f8fa',borderBottom:'1px solid '+$.bdL}}>
+                                            <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Itemid ara…" autoFocus style={{width:'100%',padding:'5px 9px',fontSize:11,border:'1px solid '+$.bdL,borderRadius:6,background:$.bg2,outline:'none',color:$.t1}}/>
+                                          </div>
+                                          {/* Itemid list */}
+                                          <div style={{maxHeight:340,overflowY:'auto'}}>
+                                            <div style={{padding:'5px 12px',fontSize:9,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,background:'#fafbfc'}}>Top {showCount} Itemid (forecast hacmine göre)</div>
+                                            {filtered.slice(0,30).map(it=>{
+                                              const sel=fcstChartView===it.pid;
+                                              return(
+                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'8px 14px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:sel?$.bluB:'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#f7f8fa';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                                  <span style={{fontFamily:$.mo,fontSize:11,fontWeight:700,color:sel?$.blu:$.t2,minWidth:130,overflow:'hidden',textOverflow:'ellipsis'}}>{it.pid}</span>
+                                                  <span style={{marginLeft:'auto',fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600}}>{fmtTon(it.last12)}</span>
+                                                  {!it.isStable&&<span style={{fontSize:9,padding:'2px 6px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:700,letterSpacing:.3}}>DÜZENSİZ</span>}
+                                                </div>
+                                              );
+                                            })}
+                                            {filtered.length===0&&<div style={{padding:'14px 14px',fontSize:11,color:$.t3,textAlign:'center'}}>Eşleşme yok</div>}
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                               <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:11,color:$.t3,fontWeight:500}}>
                                 <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,background:$.blu,display:'inline-block',borderRadius:1}}/>Geçmiş</span>
                                 <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#0d6e4f 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Tahmin</span>

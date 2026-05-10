@@ -331,10 +331,18 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
       <attribute name="mserp_salesdataareaid" alias="co" groupby="true" />
       ${yFilter}
     </entity>`;
-    return [monthlyXml, productXml, accountXml, companyXml];
+    // 5. query — itemid × month (Phase 3: trader+itemid hiyerarşi için)
+    // Cardinality: yıl başına ~3K satır (200 itemid × 12 ay maks), 50K limit altında rahat
+    const itemmonthXml = `<entity name="${entityLogical}">
+      <attribute name="mserp_quantity" alias="qty" aggregate="sum" />
+      <attribute name="mserp_productid" alias="pid" groupby="true" />
+      <attribute name="mserp_shipdate" alias="ym" groupby="true" dategrouping="month" />
+      ${yFilter}
+    </entity>`;
+    return [monthlyXml, productXml, accountXml, companyXml, itemmonthXml];
   };
 
-  const totalQueries = years.length * 4;
+  const totalQueries = years.length * 5;
   let completedQueries = 0;
   if (opts.onProgress) opts.onProgress(0, totalQueries);
 
@@ -343,14 +351,15 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
     if (opts.onProgress) opts.onProgress(completedQueries, totalQueries);
   };
 
-  // Her yıl için 4 query — tümünü paralel başlat
+  // Her yıl için 5 query — tümünü paralel başlat
   const allPromises = years.flatMap(y => {
-    const [monthlyXml, productXml, accountXml, companyXml] = buildYearQueries(y);
+    const [monthlyXml, productXml, accountXml, companyXml, itemmonthXml] = buildYearQueries(y);
     return [
       fetchHistoricalAggregateXml(token, entity, monthlyXml).then(r => { tickProgress(); return { kind: 'monthly', y, rows: r }; }),
       fetchHistoricalAggregateXml(token, entity, productXml).then(r => { tickProgress(); return { kind: 'products', y, rows: r }; }),
       fetchHistoricalAggregateXml(token, entity, accountXml).then(r => { tickProgress(); return { kind: 'accounts', y, rows: r }; }),
       fetchHistoricalAggregateXml(token, entity, companyXml).then(r => { tickProgress(); return { kind: 'companies', y, rows: r }; }),
+      fetchHistoricalAggregateXml(token, entity, itemmonthXml).then(r => { tickProgress(); return { kind: 'itemmonth', y, rows: r }; }),
     ];
   });
 
@@ -358,6 +367,8 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
 
   // Merge: monthly — her satıra partition yılını inject et (query yıl-bazlı filter'lı)
   const monthly = results.filter(r => r.kind === 'monthly').flatMap(r => r.rows.map(row => ({ ...row, yy: r.y })));
+  // itemmonth — partition yılını ekle (her satırda pid + ym (1-12))
+  const itemmonth = results.filter(r => r.kind === 'itemmonth').flatMap(r => r.rows.map(row => ({ ...row, yy: r.y })));
   // Products/accounts/companies: yıllar arası aynı id varsa qty toplanır
   const mergeBy = (kind, idField) => {
     const m = new Map();
@@ -374,7 +385,7 @@ export async function fetchHistoricalAggregatesByTrader(account, traderCodes, op
   const accounts = mergeBy('accounts', 'aid');
   const companies = mergeBy('companies', 'co');
 
-  return { monthly, products, accounts, companies, fromDate, toDate, traderCodes: codes, queryCount: totalQueries };
+  return { monthly, products, accounts, companies, itemmonth, fromDate, toDate, traderCodes: codes, queryCount: totalQueries };
 }
 
 export async function fetchHistoricalSalesByTrader(account, traderCodes, opts = {}) {
