@@ -665,6 +665,8 @@ export default function App(){
   const [fcstChartView,setFcstChartView]=useState('total');  // 'total' | itemid string
   const [fcstViewSearch,setFcstViewSearch]=useState('');  // Görünüm combobox arama
   const [fcstShowViewMenu,setFcstShowViewMenu]=useState(false);  // Görünüm dropdown açık mı
+  const [fcstViewMenuPos,setFcstViewMenuPos]=useState(null);  // {x,y,w} dropdown pozisyonu (position:fixed)
+  const fcstViewBtnRef=useRef(null);
   const [fcstItemSortCol,setFcstItemSortCol]=useState('hAhead');  // ürün tablosu sort sütunu
   const [fcstItemSortDir,setFcstItemSortDir]=useState(-1);  // -1 desc, 1 asc
   const [fcstShowAllItems,setFcstShowAllItems]=useState(false);  // ürün tablosu top 10 vs hepsi
@@ -683,6 +685,23 @@ export default function App(){
     ro.observe(fcstChartRef.current);
     return()=>ro.disconnect();
   },[fcstResult,pg]);
+
+  // Görünüm dropdown pozisyon (position:fixed — kart overflow:hidden ile kırpılmasın)
+  useEffect(()=>{
+    if(!fcstShowViewMenu||!fcstViewBtnRef.current){setFcstViewMenuPos(null);return;}
+    const update=()=>{
+      if(!fcstViewBtnRef.current)return;
+      const r=fcstViewBtnRef.current.getBoundingClientRect();
+      const w=420;
+      // Sağa hizalı: trigger'ın sağ kenarına göre
+      const right=Math.max(8,window.innerWidth-r.right);
+      setFcstViewMenuPos({right,top:r.bottom+8,w});
+    };
+    update();
+    window.addEventListener('resize',update);
+    window.addEventListener('scroll',update,true);
+    return()=>{window.removeEventListener('resize',update);window.removeEventListener('scroll',update,true);};
+  },[fcstShowViewMenu]);
 
   // ─── Phase 3 Commit 2: Senaryo değişiminde 300ms debounce ile yeniden hesapla ───
   useEffect(()=>{
@@ -3370,8 +3389,8 @@ export default function App(){
                   const monthLbl=MONTHS_TR[+mm-1].slice(0,3)+" '"+yy.slice(2);
                   return `<tr><td style="padding:7px 10px;font-weight:700;color:#1a2332">${monthLbl}</td><td style="padding:7px 10px;text-align:right;font-family:Consolas,monospace;font-weight:700;color:#0d6e4f">${fmtMTon(forecastPts[i])}</td><td style="padding:7px 10px;text-align:right;font-family:Consolas,monospace;font-size:10px;color:#64748b">${fmtMTon(forecastLow[i])} – ${fmtMTon(forecastUp[i])}</td></tr>`;
                 }).join('');
-                // Top 10 ürün tablosu
-                const itemTopRows=fcstResult.itemForecasts?fcstResult.itemForecasts.slice(0,10).map((it,idx)=>{
+                // Top 30 ürün tablosu (sayfada gösterilen tüm ürünler)
+                const itemTopRows=fcstResult.itemForecasts?fcstResult.itemForecasts.slice(0,30).map((it,idx)=>{
                   const last12=it.last12||0;
                   const hAhead=it.hAheadAdjusted??it.hAhead;
                   const yoy=last12>0&&hAhead!=null?((hAhead-last12*horizon/12)/(last12*horizon/12)*100):null;
@@ -3384,8 +3403,66 @@ export default function App(){
                 const top3Dest=(profile.topDestinations||[]).slice(0,3).map((d,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;margin-bottom:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${['#fbbf24','#94a3b8','#cd7f32'][i]};color:#fff;text-align:center;line-height:14px;font-size:9px;font-weight:800">${i+1}</span><span style="font-weight:600;color:#1a2332;font-size:10px">${d.name}</span><span style="margin-left:auto;font-family:Consolas,monospace;font-weight:800;color:#8b5cf6">${d.pct.toFixed(1)}%</span></div>`).join('');
                 const trendColor=trendPct==null?'#64748b':trendPct>=0?'#0d6e4f':'#dc2626';
                 const mapeColor=mape==null?'#64748b':mape<10?'#0d6e4f':mape<20?'#f5a623':'#dc2626';
+                // ─── Trader Profile karakter + sub-stats ─────────────────────
+                const intIdx=profile.intermittenceIndex||0;
+                const character=intIdx>=0.85?'Stabil aylık akış':intIdx>=0.6?'Düzensiz akış':'Lumpy / fasılalı';
+                const charColor=intIdx>=0.85?'#0d6e4f':intIdx>=0.6?'#92400e':'#dc2626';
+                const charBg=intIdx>=0.85?'rgba(45,212,160,.12)':intIdx>=0.6?'rgba(245,166,35,.14)':'rgba(229,72,77,.14)';
+                const charBd=intIdx>=0.85?'rgba(13,110,79,.22)':intIdx>=0.6?'rgba(245,166,35,.30)':'rgba(229,72,77,.25)';
+                const lyTotals=profile.lastYearTotals||{qty:0,value:0};
+                const yoy=profile.yoy;
+                const yoyColor=yoy==null?'#64748b':yoy>=0?'#0d6e4f':'#dc2626';
+                const intColor=intIdx>=0.85?'#0d6e4f':intIdx>=0.6?'#92400e':'#dc2626';
+                // ─── Mevsim profili ──────────────────────────────────────────
+                const seasonality=[];
+                if(histArr&&histArr.length>=12){
+                  for(let m=0;m<12;m++){
+                    const monthVals=[];
+                    for(let i=0;i<histKeys.length;i++){
+                      const [,mm]=histKeys[i].split('-');
+                      if(+mm-1===m)monthVals.push(histArr[i]);
+                    }
+                    const monthMean=monthVals.length>0?monthVals.reduce((s,x)=>s+x,0)/monthVals.length:0;
+                    seasonality.push({i:m,m:monthMean});
+                  }
+                }
+                const overallMean=seasonality.length>0?seasonality.reduce((s,x)=>s+x.m,0)/seasonality.length:0;
+                const seasMaxM=Math.max(...seasonality.map(s=>s.m),1);
+                const seasonalityWithPct=seasonality.map(s=>({...s,pct:overallMean>0?((s.m-overallMean)/overallMean*100):0}));
+                const topMonths=[...seasonalityWithPct].sort((a,b)=>b.pct-a.pct).slice(0,3);
+                const lowMonths=[...seasonalityWithPct].sort((a,b)=>a.pct-b.pct).slice(0,3);
+                // ─── Trend (lineer regresyon r²) ─────────────────────────────
+                let trendDir='flat',r2=0,trendLabel='Yatay';
+                if(histArr&&histArr.length>=6){
+                  const nT=histArr.length;
+                  const xMean=(nT-1)/2;
+                  const yMeanT=histArr.reduce((s,x)=>s+x,0)/nT;
+                  let num=0,denX=0,denY=0;
+                  for(let i=0;i<nT;i++){
+                    const dx=i-xMean,dy=histArr[i]-yMeanT;
+                    num+=dx*dy;denX+=dx*dx;denY+=dy*dy;
+                  }
+                  const slope=denX>0?num/denX:0;
+                  r2=denX>0&&denY>0?(num*num)/(denX*denY):0;
+                  const slopePct=yMeanT>0?(slope/yMeanT*100):0;
+                  if(slopePct>0.5){trendDir='up';trendLabel='Artan';}
+                  else if(slopePct<-0.5){trendDir='down';trendLabel='Azalan';}
+                  else trendLabel='Yatay';
+                }
+                const trendIcon=trendDir==='up'?'▲':trendDir==='down'?'▼':'■';
+                const trendDirColor=trendDir==='up'?'#0d6e4f':trendDir==='down'?'#dc2626':'#64748b';
+                const r2Desc=r2>=0.7?'güçlü açıklama':r2>=0.3?'orta açıklama':'zayıf açıklama';
+                const r2BarColor=r2>=0.7?'#0d6e4f':r2>=0.3?'#f5a623':'#dc2626';
+                // ─── Tahmin Güveni ───────────────────────────────────────────
+                const confLabel=mape==null?'Belirsiz':mape<10?'YÜKSEK':mape<20?'ORTA':'DÜŞÜK';
+                const confColor=mape==null?'#64748b':mape<10?'#0d6e4f':mape<20?'#f5a623':'#dc2626';
+                const confBg=mape==null?'rgba(0,0,0,.04)':mape<10?'rgba(45,212,160,.12)':mape<20?'rgba(245,166,35,.14)':'rgba(229,72,77,.14)';
+                const confBd=mape==null?'rgba(0,0,0,.10)':mape<10?'rgba(13,110,79,.22)':mape<20?'rgba(245,166,35,.30)':'rgba(229,72,77,.25)';
+                const confDesc=confLabel==='YÜKSEK'?'Tahmin sapması düşük (<%10). Modelin geçmişteki başarısı yüksek; planlama için güvenle kullanılabilir.':confLabel==='ORTA'?'Orta sapma (%10-20). Tahmin yön gösterir ama kesin sayı için ±%20 marj bırakın.':confLabel==='DÜŞÜK'?'Yüksek sapma (>%20). Seri çok gürültülü veya yapısal kırılma var. Tahmin sadece referans olarak kullanın.':'MAPE hesaplanamadı.';
                 w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>TYRO STOCK — Satış Tahmini Raporu</title><style>@page{size:A4 landscape;margin:14mm}*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Arial,sans-serif;margin:0;padding:20px;color:#1a2332;font-size:12px}.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid #0d6e4f}.brand{display:flex;align-items:center;gap:12px}.brand-text{display:flex;flex-direction:column;gap:4px}.meta{text-align:right;font-size:11.5px;color:#475569;line-height:1.5}.sub{font-size:10.5px;color:#64748b;font-weight:600;letter-spacing:.3px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.kpi{background:#f4f9f7;border:1px solid #d4e8df;border-radius:8px;padding:11px 13px}.kpi-l{font-size:9.5px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.kpi-v{font-size:18px;font-weight:800;color:#0d6e4f;font-family:Consolas,monospace}.section{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}.card{background:#fff;border:1px solid #e2e7ee;border-radius:8px;padding:12px}.card-t{font-size:10.5px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eef1f6}.tbl{width:100%;border-collapse:collapse}.tbl th{text-align:left;padding:8px 10px;font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #0d6e4f;background:#f4f9f7;font-weight:800}.tbl td{font-size:11px;border-bottom:1px solid #eef1f6}.profile-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.ftr{margin-top:18px;padding-top:12px;border-top:2px solid #0d6e4f;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}.ftr-l{display:flex;flex-direction:column;gap:3px}.ftr-r{text-align:right;display:flex;flex-direction:column;gap:3px}.ftr-brand{font-size:12px;font-weight:800;color:#0d6e4f;letter-spacing:.4px}.ftr-sub{font-size:10px;color:#64748b;font-weight:600}.ftr-ts{font-size:10.5px;font-weight:700;color:#475569;font-family:Consolas,monospace}.ftr-cr{font-size:9.5px;color:#94a3b8}.scn-card{background:linear-gradient(135deg,rgba(245,166,35,.10),rgba(245,166,35,.02));border:1px solid rgba(245,166,35,.30);border-radius:8px;padding:11px 13px;margin-bottom:14px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>');
                 w.document.write('<div class="hdr"><div class="brand">'+tyroLogoSvg+'<div class="brand-text">'+tyroWordmark+'<div class="sub">TTECH Business Solutions · Satış Tahmin Raporu</div></div></div><div class="meta"><div style="font-size:14px;font-weight:700;color:#1a2332">'+tName+'</div><div style="font-size:10.5px;font-family:Consolas,monospace;color:#64748b">'+codesArr.join(' · ')+'</div><div>'+new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})+' · Horizon: '+horizonLbl+' · '+metricLbl+'</div></div></div>');
+                // Trader Profile özet (karakter rozeti + 3 sub-stat: Son12 / YoY / Aktivite)
+                w.document.write('<div style="background:linear-gradient(135deg,rgba(13,110,79,.04),rgba(59,130,246,.02));border:1px solid #d4e8df;border-radius:10px;padding:13px 16px;margin-bottom:14px"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:11px"><div style="flex:1;min-width:180px"><div style="font-size:13.5px;font-weight:800;color:#1a2332;letter-spacing:-.2px">'+tName+'</div><div style="font-size:10.5px;color:#64748b;font-weight:600;margin-top:2px;font-family:Consolas,monospace">'+codesArr.join(' · ')+(profile.mainGroup?' · '+profile.mainGroup:'')+'</div></div><div style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;background:'+charBg+';color:'+charColor+';border:1px solid '+charBd+';font-size:11px;font-weight:800;letter-spacing:.2px">'+character+'</div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding-top:11px;border-top:1px solid #d4e8df"><div><div style="font-size:9.5px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Son 12 Ay Toplam</div><div style="font-size:17px;font-weight:800;font-family:Consolas,monospace;color:#1a2332">'+fmtMTon(lyTotals.qty)+'</div>'+(lyTotals.value>0?'<div style="font-size:11px;color:#0d6e4f;font-weight:700;font-family:Consolas,monospace;margin-top:1px">$'+Math.round(lyTotals.value).toLocaleString('tr-TR')+'</div>':'')+'</div><div><div style="font-size:9.5px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">YoY Değişim</div><div style="font-size:17px;font-weight:800;font-family:Consolas,monospace;color:'+yoyColor+'">'+(yoy==null?'—':(yoy>=0?'+':'')+yoy.toFixed(1)+'%')+'</div><div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px">Önceki 12 ay vs son 12 ay</div></div><div><div style="font-size:9.5px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Aktivite</div><div style="font-size:17px;font-weight:800;font-family:Consolas,monospace;color:'+intColor+'">'+(intIdx*100).toFixed(0)+'%</div><div style="font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px">aylarda satış var</div></div></div></div>');
                 // KPI'lar
                 w.document.write('<div class="kpis"><div class="kpi"><div class="kpi-l">Aylık Ortalama</div><div class="kpi-v" style="color:#3b82f6">'+fmtMTon(monthlyAvg)+'</div></div><div class="kpi"><div class="kpi-l">'+horizon+' Ay Toplam</div><div class="kpi-v">'+fmtMTon(fcTotal)+'</div></div><div class="kpi"><div class="kpi-l">Trend (vs son 12 ay)</div><div class="kpi-v" style="color:'+trendColor+'">'+(trendPct==null?'—':(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%')+'</div></div><div class="kpi"><div class="kpi-l">Backtest MAPE</div><div class="kpi-v" style="color:'+mapeColor+'">'+(mape==null?'—':mape.toFixed(1)+'%')+'</div></div></div>');
                 // Senaryo aktifse özet kartı
@@ -3396,12 +3473,53 @@ export default function App(){
                 w.document.write('<div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:6px">Aktif Model: <strong style="color:#1a2332">'+activeModelLbl+'</strong> '+(fit.bestId===activeModelId?' · ⭐ Best Fit':' (Best Fit: '+bestModelLbl+')')+'</div>');
                 // Ana grafik
                 w.document.write('<div class="card" style="margin-bottom:14px;padding:14px"><div class="card-t">📈 Tahmin Grafiği — Son 12 Ay + '+horizon+' Ay İleri</div>'+miniChart+'<div style="display:flex;justify-content:center;gap:18px;font-size:10px;color:#64748b;margin-top:6px;font-weight:600"><span><span style="display:inline-block;width:12px;height:2px;background:#3b82f6;margin-right:4px;vertical-align:middle"></span>Geçmiş</span><span><span style="display:inline-block;width:12px;height:2px;background-image:linear-gradient(90deg,#0d6e4f 50%,transparent 50%);background-size:4px 2px;margin-right:4px;vertical-align:middle"></span>Tahmin</span></div></div>');
+                // Mevsim Profili / Trend Analizi / Tahmin Güveni — 3 mini kart
+                if(seasonality.length>=12||histArr&&histArr.length>=6){
+                  const seasonalityBars=seasonality.length>=12?seasonality.map(s=>{
+                    const norm=(s.m/seasMaxM)*100;
+                    const barColor=s.pct>=10?'#0d6e4f':s.pct>=-10?'#3b82f6':'#cbd5e1';
+                    return `<div title="${MONTHS_TR[s.i]}: ${s.pct>=0?'+':''}${s.pct.toFixed(0)}%" style="flex:1;height:${Math.max(norm,4)}%;background:${barColor};border-radius:2px 2px 0 0"></div>`;
+                  }).join(''):'<div style="font-size:10px;color:#94a3b8;font-style:italic">Yetersiz veri</div>';
+                  const monthLetters=MONTHS_TR.map((m)=>`<span>${m.slice(0,1)}</span>`).join('');
+                  const topMonthsTxt=topMonths.length>0?topMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', '):'—';
+                  const lowMonthsTxt=lowMonths.length>0?lowMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', '):'—';
+                  w.document.write('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">');
+                  // Mevsim Profili kartı
+                  w.document.write('<div class="card" style="padding:12px 14px"><div class="card-t" style="margin-bottom:10px">📅 Mevsim Profili</div><div style="display:flex;gap:2px;height:42px;align-items:flex-end;margin-bottom:6px">'+seasonalityBars+'</div><div style="display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8;font-family:Consolas,monospace;font-weight:700;margin-bottom:8px">'+monthLetters+'</div>'+(seasonality.length>=12?'<div style="font-size:10px;color:#1a2332;line-height:1.5"><strong style="color:#0d6e4f">Pik aylar:</strong> '+topMonthsTxt+'</div><div style="font-size:10px;color:#1a2332;line-height:1.5;margin-top:2px"><strong style="color:#dc2626">Düşük:</strong> '+lowMonthsTxt+'</div>':'')+'</div>');
+                  // Trend Analizi kartı
+                  w.document.write('<div class="card" style="padding:12px 14px"><div class="card-t" style="margin-bottom:10px">📈 Trend Analizi</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-size:22px;color:'+trendDirColor+';font-weight:800;font-family:Consolas,monospace;line-height:1">'+trendIcon+'</div><div><div style="font-size:16px;font-weight:800;color:'+trendDirColor+';font-family:Consolas,monospace;letter-spacing:-.2px">'+trendLabel+'</div><div style="font-size:9.5px;color:#64748b;font-weight:600;font-family:Consolas,monospace">R² = '+r2.toFixed(2)+' · '+r2Desc+'</div></div></div><div style="height:6px;border-radius:3px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:'+Math.min(r2*100,100).toFixed(0)+'%;background:'+r2BarColor+'"></div></div></div>');
+                  // Tahmin Güveni kartı
+                  w.document.write('<div class="card" style="padding:12px 14px"><div class="card-t" style="margin-bottom:10px">✓ Tahmin Güveni</div><div style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:'+confBg+';color:'+confColor+';border:1px solid '+confBd+';font-size:11px;font-weight:800;letter-spacing:.4px;margin-bottom:8px">'+confLabel+'</div><div style="font-size:10px;color:#1a2332;line-height:1.55;font-weight:500">'+confDesc+'</div>'+(mape!=null?'<div style="font-size:10px;color:#64748b;font-family:Consolas,monospace;font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid #eef1f6">Backtest MAPE: <strong style="color:'+confColor+';font-size:12px">'+mape.toFixed(1)+'%</strong></div>':'')+'</div>');
+                  w.document.write('</div>');
+                }
                 // Profile (3 kolon)
                 w.document.write('<div class="section"><div class="card"><div class="card-t">📅 Aylık Tahmin Detayı</div><table class="tbl"><thead><tr><th>Ay</th><th style="text-align:right">Tahmin</th><th style="text-align:right">Aralık (Alt - Üst)</th></tr></thead><tbody>'+monthRows+'</tbody></table></div>');
                 w.document.write('<div><div class="card" style="margin-bottom:10px"><div class="card-t">🏭 Top 3 Şirket</div>'+(top3Comp||'<div style="font-size:10.5px;color:#94a3b8;font-style:italic">Veri yok</div>')+'</div><div class="card" style="margin-bottom:10px"><div class="card-t">📦 Top 3 Ürün</div>'+(top3Prod||'<div style="font-size:10.5px;color:#94a3b8;font-style:italic">Veri yok</div>')+'</div><div class="card"><div class="card-t">🚛 Top 3 Müşteri</div>'+(top3Dest||'<div style="font-size:10.5px;color:#94a3b8;font-style:italic">Veri yok</div>')+'</div></div></div>');
-                // Top 10 ürün tablosu
+                // Top 30 ürün tablosu — sayfa ile bire bir
                 if(itemTopRows){
-                  w.document.write('<div class="card" style="margin-bottom:14px"><div class="card-t">📦 Top 10 Ürün Tahmini</div><table class="tbl"><thead><tr><th style="text-align:center;width:30px">#</th><th>Ürün Kodu</th><th style="text-align:right">Son 12 Ay</th><th style="text-align:right">Tahmin '+horizon+' Ay</th><th style="text-align:right">YoY %</th><th>Best Model</th></tr></thead><tbody>'+itemTopRows+'</tbody></table></div>');
+                  const itemCount=Math.min(fcstResult.itemForecasts?.length||0,30);
+                  w.document.write('<div class="card" style="margin-bottom:14px"><div class="card-t">📦 Ürün Bazlı Tahmin · Top '+itemCount+'</div><table class="tbl"><thead><tr><th style="text-align:center;width:30px">#</th><th>Ürün Kodu</th><th style="text-align:right">Son 12 Ay</th><th style="text-align:right">Tahmin '+horizon+' Ay</th><th style="text-align:right">YoY %</th><th>Best Model</th></tr></thead><tbody>'+itemTopRows+'</tbody></table></div>');
+                }
+                // Model Karşılaştırma — tüm modellerin MAPE'si
+                if(fit.results&&fit.results.length>0){
+                  const sortedModels=[...fit.results].sort((a,b)=>{
+                    if(a.skipped&&!b.skipped)return 1;
+                    if(!a.skipped&&b.skipped)return -1;
+                    if(a.mape==null&&b.mape==null)return 0;
+                    if(a.mape==null)return 1;
+                    if(b.mape==null)return -1;
+                    return a.mape-b.mape;
+                  });
+                  const modelRows=sortedModels.map(r=>{
+                    const m=FORECAST_MODELS.find(mm=>mm.id===r.id);
+                    const isBest=fit.bestId===r.id;
+                    const mapeC=r.mape==null?'#64748b':r.mape<10?'#0d6e4f':r.mape<20?'#f5a623':'#dc2626';
+                    const mapeBg=r.mape==null?'#f1f5f9':r.mape<10?'rgba(45,212,160,.10)':r.mape<20?'rgba(245,166,35,.10)':'rgba(229,72,77,.10)';
+                    const mapeTxt=r.skipped?'—':r.mape!=null?r.mape.toFixed(1)+'%':'—';
+                    const status=r.skipped?'<span style="font-size:10px;color:#94a3b8;font-style:italic">'+(r.reason||'Atlandı')+'</span>':isBest?'<span style="display:inline-block;font-size:10px;font-weight:800;color:#fff;padding:2px 8px;border-radius:4px;background:linear-gradient(135deg,#fbbf24,#f59e0b);letter-spacing:.4px">⭐ BEST FIT</span>':'<span style="font-size:10px;color:#64748b;font-weight:600">OK</span>';
+                    return '<tr><td style="padding:7px 10px;font-weight:'+(isBest?800:700)+';color:#1a2332">'+(m?.label||r.id)+'</td><td style="padding:7px 10px;font-size:10px;color:#64748b">'+(m?.short||'')+'</td><td style="padding:7px 10px;text-align:right"><span style="display:inline-block;font-family:Consolas,monospace;font-weight:800;padding:3px 9px;border-radius:5px;background:'+mapeBg+';color:'+mapeC+';font-size:11px">'+mapeTxt+'</span></td><td style="padding:7px 10px;text-align:left">'+status+'</td></tr>';
+                  }).join('');
+                  w.document.write('<div class="card" style="margin-bottom:14px"><div class="card-t">🏆 Model Karşılaştırma · Backtest MAPE (düşük = daha doğru)</div><table class="tbl"><thead><tr><th>Model</th><th>Açıklama</th><th style="text-align:right">MAPE</th><th>Durum</th></tr></thead><tbody>'+modelRows+'</tbody></table><div style="font-size:9.5px;color:#64748b;margin-top:8px;line-height:1.5"><strong>%0-10 mükemmel</strong> · <strong>%10-20 kabul edilebilir</strong> · <strong>%20+ gürültülü</strong> · MAPE = Mean Absolute Percentage Error (geçmiş holdout doğrulaması)</div></div>');
                 }
                 // Footer
                 w.document.write('<div class="ftr"><div class="ftr-l"><div class="ftr-brand">TTECH Business Solutions</div><div class="ftr-sub">TYRO Stock Management Agent · Satış Tahmin Modülü · '+activeModelLbl+'</div></div><div class="ftr-r"><div class="ftr-ts">Rapor: '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'</div><div class="ftr-cr">© '+new Date().getFullYear()+' Tiryaki Agro · Tüm hakları saklıdır</div></div></div>');
@@ -3499,7 +3617,7 @@ export default function App(){
                           <HugeiconsIcon icon={Download01Icon} size={14} strokeWidth={2}/>Excel
                         </button>}
                         {fcstResult&&<button onClick={exportPDF} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:13,fontWeight:600,color:'#dc2626',background:'#fff',border:'1.5px solid rgba(220,38,38,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(220,38,38,.06), rgba(239,68,68,.04))';e.currentTarget.style.borderColor='rgba(220,38,38,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(220,38,38,.30)';}}>
-                          <HugeiconsIcon icon={Download04Icon} size={14} strokeWidth={2}/>PDF İndir
+                          <HugeiconsIcon icon={Download04Icon} size={14} strokeWidth={2}/>PDF
                         </button>}
                       </div>
                     </div>
@@ -3889,21 +4007,21 @@ export default function App(){
                                 const showCount=Math.min(filtered.length,30);
                                 return(
                                   <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
-                                    <button onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 16px',fontSize:13,fontWeight:600,color:isItemView?'#fff':$.blu,background:isItemView?'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)':'#fff',border:'1.5px solid '+(isItemView?'rgba(59,130,246,.55)':'rgba(59,130,246,.35)'),borderRadius:10,cursor:'pointer',transition:'all .2s ease-out',height:40,boxShadow:isItemView?'0 4px 14px rgba(59,130,246,.30), 0 1px 3px rgba(59,130,246,.20)':'0 1px 3px rgba(59,130,246,.08)',letterSpacing:.1}} onMouseEnter={e=>{if(!isItemView){e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.06), rgba(99,102,241,.04))';e.currentTarget.style.borderColor='rgba(59,130,246,.55)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(59,130,246,.16)';}else{e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(!isItemView){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(59,130,246,.35)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(59,130,246,.08)';}else{e.currentTarget.style.transform='translateY(0)';}}}>
+                                    <button ref={fcstViewBtnRef} onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 16px',fontSize:13,fontWeight:600,color:isItemView?'#fff':$.blu,background:isItemView?'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)':'#fff',border:'1.5px solid '+(isItemView?'rgba(59,130,246,.55)':'rgba(59,130,246,.35)'),borderRadius:10,cursor:'pointer',transition:'all .2s ease-out',height:40,boxShadow:isItemView?'0 4px 14px rgba(59,130,246,.30), 0 1px 3px rgba(59,130,246,.20)':'0 1px 3px rgba(59,130,246,.08)',letterSpacing:.1}} onMouseEnter={e=>{if(!isItemView){e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.06), rgba(99,102,241,.04))';e.currentTarget.style.borderColor='rgba(59,130,246,.55)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(59,130,246,.16)';}else{e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(!isItemView){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(59,130,246,.35)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(59,130,246,.08)';}else{e.currentTarget.style.transform='translateY(0)';}}}>
                                       <HugeiconsIcon icon={FilterEditIcon} size={15} strokeWidth={1.8}/>
                                       <span>Gelişmiş Filtre</span>
                                       {isItemView&&<span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:5,background:'rgba(255,255,255,.25)',backdropFilter:'blur(4px)',color:'#fff',fontSize:10,fontWeight:800,fontFamily:$.mo,marginLeft:2,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{activeItem?.pid}</span>}
                                       <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.2} style={{opacity:.85,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
                                     </button>
-                                    {fcstShowViewMenu&&(()=>{
+                                    {fcstShowViewMenu&&fcstViewMenuPos&&(()=>{
                                       // Trader scope bilgisi (outer fcstResult IIFE'sindeki headerName/displayCodes/lookupList)
                                       const tCount=displayCodes.length;
                                       const tLabel=tCount===1?(traderInfo?.name||displayCodes[0]):`${tCount} ${isAnaScope?'Ana Trader':'Trader'} Birleşik`;
                                       const tCode=tCount===1?displayCodes[0]:`${tCount} kod`;
                                       return(
                                       <>
-                                        <div style={{position:'fixed',inset:0,zIndex:39}} onClick={()=>setFcstShowViewMenu(false)}/>
-                                        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:420,maxWidth:'calc(100vw - 24px)',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:13,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:40,overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:'min(640px, calc(100vh - 100px))'}}>
+                                        <div style={{position:'fixed',inset:0,zIndex:9998}} onClick={()=>setFcstShowViewMenu(false)}/>
+                                        <div style={{position:'fixed',right:fcstViewMenuPos.right,top:fcstViewMenuPos.top,width:fcstViewMenuPos.w,maxWidth:'calc(100vw - 24px)',background:$.bg2,border:'1px solid '+$.bdL,borderRadius:13,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:9999,overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:'min(640px, calc(100vh - '+(fcstViewMenuPos.top+20)+'px))'}}>
                                           {/* Üst gradient şerit */}
                                           <div style={{height:3,background:'linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6)',flexShrink:0}}/>
                                           {/* Header (sabit) */}
