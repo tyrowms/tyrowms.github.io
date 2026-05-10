@@ -20,6 +20,7 @@ import {
   AiBrain04Icon, CloudDownloadIcon, AiBrain03Icon,
   // Phase 5 — Polish
   Pdf02Icon, Download04Icon, ChartUpIcon, ChartDownIcon, TrendingUpDownIcon,
+  TradeUpIcon, TradeDownIcon,
   UserAccountIcon, User03Icon, UserGroup02Icon, AiIdeaIcon,
   CalendarAnalysisIcon, ChartScatterIcon, CheckmarkBadge02Icon, ChartIncreaseIcon,
   Flowchart02Icon, MagicWand02Icon, Hexagon01Icon, LineIcon,
@@ -4287,7 +4288,7 @@ export default function App(){
                                   </div>
                                   <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
                                     <div style={{width:50,height:50,borderRadius:12,background:trendDir==='up'?'linear-gradient(135deg, rgba(45,212,160,.15), rgba(13,110,79,.08))':trendDir==='down'?'linear-gradient(135deg, rgba(229,72,77,.15), rgba(229,72,77,.08))':'linear-gradient(135deg, rgba(0,0,0,.05), rgba(0,0,0,.02))',display:'flex',alignItems:'center',justifyContent:'center',color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t3,border:'1.5px solid '+(trendDir==='up'?'rgba(13,110,79,.20)':trendDir==='down'?'rgba(229,72,77,.20)':$.bdL),flexShrink:0}}>
-                                      <HugeiconsIcon icon={trendDir==='up'?ChartUpIcon:trendDir==='down'?ChartDownIcon:TrendingUpDownIcon} size={26} strokeWidth={2}/>
+                                      <HugeiconsIcon icon={trendDir==='up'?TradeUpIcon:trendDir==='down'?TradeDownIcon:TrendingUpDownIcon} size={26} strokeWidth={1.8}/>
                                     </div>
                                     <div>
                                       <div style={{fontSize:18,fontWeight:800,color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t1,fontFamily:$.mo,letterSpacing:-.3}}>{trendLabel}</div>
