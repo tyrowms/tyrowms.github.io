@@ -18,6 +18,11 @@ import {
   ArrowUpRight01Icon, ArrowDownRight01Icon, PercentSquareIcon,
   BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon, AiAudioIcon,
   AiBrain04Icon, CloudDownloadIcon, AiBrain03Icon,
+  // Phase 5 — Polish
+  Pdf02Icon, UserAccountIcon, User03Icon, UserGroup02Icon, AiIdeaIcon,
+  CalendarAnalysisIcon, ChartScatterIcon, CheckmarkBadge02Icon, ChartIncreaseIcon,
+  Flowchart02Icon, MagicWand02Icon, Hexagon01Icon, LineIcon,
+  ChartHistogramIcon, ArrowReloadVerticalIcon, ChartAverageIcon,
 } from '@hugeicons/core-free-icons';
 
 const INIT=[];
@@ -3004,6 +3009,17 @@ export default function App(){
 
             {/* ===== SATIŞ TAHMİNİ (fcst) ===== */}
             {pg==='fcst'&&(()=>{
+              // Per-model HugeIcons mapping (Phase 5) — best fit dışında her modele görsel kimlik
+              const MODEL_ICON_MAP={
+                hw:Flowchart02Icon,           // Holt-Winters: trend + mevsim akışı
+                stlOut:MagicWand02Icon,       // Outlier STL+ETS: outlier temizleme = sihir
+                theta:Hexagon01Icon,          // Theta: matematiksel θ sembolü
+                holtLin:LineIcon,             // Holt's Linear: düz trend çizgisi
+                stl:ChartHistogramIcon,       // STL+ETS: bar dağılım
+                snaive:ArrowReloadVerticalIcon,// Seasonal Naive: yıllık tekrar
+                croston:ChartScatterIcon,     // Croston: intermittent saçılım
+                ma3:ChartAverageIcon,         // Moving Avg: ortalama eğri
+              };
               // ─── activeView: 'total' (trader toplamı) | itemid string ───
               // fcstChartView state'i tüm chart/KPI/tablo render'larını bağlar.
               // Itemid view'da: o itemid'in seri+fit'i kullanılır; trader-total fit gizlenir,
@@ -3258,6 +3274,94 @@ export default function App(){
                 if(window.XLSX)doIt();
                 else{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=doIt;document.head.appendChild(sc);}
               };
+              // ─── PDF Export (Phase 5) — window.print pattern (Stok Raporu reuse) ───
+              const exportPDF=()=>{
+                if(!fcstResult||!fit)return;
+                const w=window.open('','_blank');
+                if(!w)return;
+                const isAnaXl=fcstResult.filterScope==='ana';
+                const fetchedCodesXl=fcstResult.traderCodes||[fcstResult.traderCode];
+                const codesArr=fcstResult.displayCodes||fetchedCodesXl;
+                const lookupListXl=isAnaXl?fcstAnaTraderList:fcstTraderList;
+                const tName=codesArr.length===1?(lookupListXl.find(t=>t.code===codesArr[0])?.name||codesArr[0]):`${codesArr.length} ${isAnaXl?'ana trader':'trader'} birleşik`;
+                const metricLbl=fcstMetric==='value'?'Tutar (USD)':'Miktar (kg)';
+                const horizonLbl=horizon+' ay';
+                const bestModelLbl=FORECAST_MODELS.find(m=>m.id===fit.bestId)?.label||fit.bestId;
+                const activeModelLbl=FORECAST_MODELS.find(m=>m.id===activeModelId)?.label||activeModelId||'-';
+                const histTotal=histArr?sumArr(histArr.slice(-12)):0;
+                const fcTotal=sumArr(forecastPts);
+                const monthlyAvg=fcTotal/horizon;
+                const trendPct=histTotal>0?((fcTotal-histTotal*horizon/12)/(histTotal*horizon/12)*100):null;
+                const mape=activeResult?.mape;
+                const fmtMTon=v=>v==null?'—':(fcstMetric==='value'?'$'+Math.round(v).toLocaleString('tr-TR'):Math.round(v).toLocaleString('tr-TR')+' kg');
+                // TYRO logo (Stok Raporu pattern aynen)
+                const tyroLogoSvg='<svg width="44" height="44" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="pdf-tyro-sg" x1="61.29" y1="116.53" x2="14.04" y2="47.15" gradientTransform="translate(0 150.55) scale(1 -1)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2dd4a0"/><stop offset="1" stop-color="#0d6e4f"/></linearGradient><linearGradient id="pdf-tyro-au" x1="60" y1="10" x2="130" y2="140" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3b82f6"/><stop offset=".5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="url(#pdf-tyro-sg)"/><path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="#6366f1"/><path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="url(#pdf-tyro-au)"/><path d="M84.52,91.98s5.52-3.31,13.25-7.87v-8.28c-9.11,5.25-16.43,9.66-16.43,9.66,0,0-20.29,10.35-22.92,45.14v1.1c7.32-30.23,26.09-39.76,26.09-39.76Z" fill="#4338ca"/></svg>';
+                const tyroWordmark='<svg width="180" height="32" viewBox="0 0 180 32" xmlns="http://www.w3.org/2000/svg" style="overflow:visible"><defs><linearGradient id="pdf-stk-grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2dd4a0"/><stop offset=".5" stop-color="#3b82f6"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><text y="24" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="26" font-weight="800" letter-spacing=".3"><tspan x="0" fill="#1a2332">tyro</tspan><tspan fill="url(#pdf-stk-grad)">stock</tspan></text></svg>';
+                // Mini chart SVG (history son 12 ay + forecast h ay)
+                const histLastN=histArr?histArr.slice(-12):[];
+                const histKeysLastN=histKeys.slice(-12);
+                const allValsChart=[...histLastN,...forecastPts];
+                const maxC=Math.max(...allValsChart.filter(v=>v!=null&&!isNaN(v)),1)*1.15;
+                const chartW=900,chartH=180,padCL=42,padCR=12,padCT=10,padCB=22;
+                const innerCW=chartW-padCL-padCR,innerCH=chartH-padCT-padCB;
+                const xC=i=>padCL+(allValsChart.length>1?i*innerCW/(allValsChart.length-1):innerCW/2);
+                const yC=v=>padCT+innerCH-((v||0)/maxC)*innerCH;
+                const histPathSvg=histLastN.length>1?'M '+histLastN.map((v,i)=>`${xC(i).toFixed(1)},${yC(v).toFixed(1)}`).join(' L '):'';
+                const fcStartIdx=histLastN.length;
+                const fcPathSvg=forecastPts.length>0?'M '+(fcStartIdx>0?`${xC(fcStartIdx-1).toFixed(1)},${yC(histLastN[fcStartIdx-1]||0).toFixed(1)} L `:'')+forecastPts.map((v,i)=>`${xC(fcStartIdx+i).toFixed(1)},${yC(v).toFixed(1)}`).join(' L '):'';
+                const sepX=fcStartIdx>0?xC(fcStartIdx-1):0;
+                const allKeysChart=[...histKeysLastN,...forecastKeys];
+                const xLabelsSvg=allKeysChart.map((k,i)=>{
+                  const [yy,mm]=k.split('-');
+                  const lbl=MONTHS_TR[+mm-1].slice(0,3)+" '"+yy.slice(2);
+                  return i%2===0?`<text x="${xC(i).toFixed(1)}" y="${(chartH-6).toFixed(1)}" font-size="9" fill="#64748b" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-weight="600">${lbl}</text>`:'';
+                }).join('');
+                const miniChart=`<svg width="${chartW}" height="${chartH}" viewBox="0 0 ${chartW} ${chartH}" style="display:block;width:100%;height:auto"><defs><linearGradient id="pdf-fc-grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0d6e4f"/><stop offset="1" stop-color="#2dd4a0"/></linearGradient></defs>${histPathSvg?`<path d="${histPathSvg}" fill="none" stroke="#3b82f6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`:''}${fcPathSvg?`<path d="${fcPathSvg}" fill="none" stroke="url(#pdf-fc-grad)" stroke-width="2.6" stroke-dasharray="6 4" stroke-linecap="round" stroke-linejoin="round"/>`:''}${fcStartIdx>0?`<line x1="${sepX.toFixed(1)}" y1="${padCT}" x2="${sepX.toFixed(1)}" y2="${chartH-padCB}" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" opacity=".6"/>`:''}${xLabelsSvg}</svg>`;
+                // Aylık tahmin tablosu
+                const monthRows=forecastKeys.map((k,i)=>{
+                  const [yy,mm]=k.split('-');
+                  const monthLbl=MONTHS_TR[+mm-1].slice(0,3)+" '"+yy.slice(2);
+                  return `<tr><td style="padding:7px 10px;font-weight:700;color:#1a2332">${monthLbl}</td><td style="padding:7px 10px;text-align:right;font-family:Consolas,monospace;font-weight:700;color:#0d6e4f">${fmtMTon(forecastPts[i])}</td><td style="padding:7px 10px;text-align:right;font-family:Consolas,monospace;font-size:10px;color:#64748b">${fmtMTon(forecastLow[i])} – ${fmtMTon(forecastUp[i])}</td></tr>`;
+                }).join('');
+                // Top 10 ürün tablosu
+                const itemTopRows=fcstResult.itemForecasts?fcstResult.itemForecasts.slice(0,10).map((it,idx)=>{
+                  const last12=it.last12||0;
+                  const hAhead=it.hAheadAdjusted??it.hAhead;
+                  const yoy=last12>0&&hAhead!=null?((hAhead-last12*horizon/12)/(last12*horizon/12)*100):null;
+                  const bm=it.fit&&it.fit.bestId?FORECAST_MODELS.find(m=>m.id===it.fit.bestId):null;
+                  return `<tr><td style="padding:6px 10px;text-align:center;color:#64748b;font-family:Consolas,monospace;font-weight:700">${idx+1}</td><td style="padding:6px 10px;font-family:Consolas,monospace;font-weight:700;color:#1a2332;font-size:10.5px">${it.pid}</td><td style="padding:6px 10px;text-align:right;font-family:Consolas,monospace;font-weight:700;color:#475569">${fmtMTon(last12)}</td><td style="padding:6px 10px;text-align:right;font-family:Consolas,monospace;font-weight:800;color:#0d6e4f">${fmtMTon(hAhead)}</td><td style="padding:6px 10px;text-align:right;font-family:Consolas,monospace;font-weight:700;color:${yoy==null?'#64748b':yoy>=0?'#0d6e4f':'#dc2626'}">${yoy==null?'—':(yoy>=0?'+':'')+yoy.toFixed(1)+'%'}</td><td style="padding:6px 10px;color:#475569;font-size:10.5px">${bm?bm.label:'—'}</td></tr>`;
+                }).join(''):'';
+                // Top 3 her dimension için
+                const top3Comp=(profile.topCompanies||[]).slice(0,3).map((c,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;margin-bottom:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${['#fbbf24','#94a3b8','#cd7f32'][i]};color:#fff;text-align:center;line-height:14px;font-size:9px;font-weight:800">${i+1}</span><span style="font-family:Consolas,monospace;font-weight:700;color:#1a2332">${c.name}</span><span style="margin-left:auto;font-family:Consolas,monospace;font-weight:800;color:#0d6e4f">${c.pct.toFixed(1)}%</span></div>`).join('');
+                const top3Prod=(profile.topProducts||[]).slice(0,3).map((p,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;margin-bottom:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${['#fbbf24','#94a3b8','#cd7f32'][i]};color:#fff;text-align:center;line-height:14px;font-size:9px;font-weight:800">${i+1}</span><span style="font-family:Consolas,monospace;font-weight:700;color:#1a2332;font-size:10px">${p.name}</span><span style="margin-left:auto;font-family:Consolas,monospace;font-weight:800;color:#3b82f6">${p.pct.toFixed(1)}%</span></div>`).join('');
+                const top3Dest=(profile.topDestinations||[]).slice(0,3).map((d,i)=>`<div style="display:flex;align-items:center;gap:6px;font-size:10.5px;margin-bottom:3px"><span style="display:inline-block;width:14px;height:14px;border-radius:4px;background:${['#fbbf24','#94a3b8','#cd7f32'][i]};color:#fff;text-align:center;line-height:14px;font-size:9px;font-weight:800">${i+1}</span><span style="font-weight:600;color:#1a2332;font-size:10px">${d.name}</span><span style="margin-left:auto;font-family:Consolas,monospace;font-weight:800;color:#8b5cf6">${d.pct.toFixed(1)}%</span></div>`).join('');
+                const trendColor=trendPct==null?'#64748b':trendPct>=0?'#0d6e4f':'#dc2626';
+                const mapeColor=mape==null?'#64748b':mape<10?'#0d6e4f':mape<20?'#f5a623':'#dc2626';
+                w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>TYRO STOCK — Satış Tahmini Raporu</title><style>@page{size:A4 landscape;margin:14mm}*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Arial,sans-serif;margin:0;padding:20px;color:#1a2332;font-size:12px}.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid #0d6e4f}.brand{display:flex;align-items:center;gap:12px}.brand-text{display:flex;flex-direction:column;gap:4px}.meta{text-align:right;font-size:11.5px;color:#475569;line-height:1.5}.sub{font-size:10.5px;color:#64748b;font-weight:600;letter-spacing:.3px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.kpi{background:#f4f9f7;border:1px solid #d4e8df;border-radius:8px;padding:11px 13px}.kpi-l{font-size:9.5px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}.kpi-v{font-size:18px;font-weight:800;color:#0d6e4f;font-family:Consolas,monospace}.section{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}.card{background:#fff;border:1px solid #e2e7ee;border-radius:8px;padding:12px}.card-t{font-size:10.5px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eef1f6}.tbl{width:100%;border-collapse:collapse}.tbl th{text-align:left;padding:8px 10px;font-size:10px;color:#475569;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #0d6e4f;background:#f4f9f7;font-weight:800}.tbl td{font-size:11px;border-bottom:1px solid #eef1f6}.profile-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.ftr{margin-top:18px;padding-top:12px;border-top:2px solid #0d6e4f;display:flex;justify-content:space-between;align-items:flex-end;gap:20px}.ftr-l{display:flex;flex-direction:column;gap:3px}.ftr-r{text-align:right;display:flex;flex-direction:column;gap:3px}.ftr-brand{font-size:12px;font-weight:800;color:#0d6e4f;letter-spacing:.4px}.ftr-sub{font-size:10px;color:#64748b;font-weight:600}.ftr-ts{font-size:10.5px;font-weight:700;color:#475569;font-family:Consolas,monospace}.ftr-cr{font-size:9.5px;color:#94a3b8}.scn-card{background:linear-gradient(135deg,rgba(245,166,35,.10),rgba(245,166,35,.02));border:1px solid rgba(245,166,35,.30);border-radius:8px;padding:11px 13px;margin-bottom:14px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>');
+                w.document.write('<div class="hdr"><div class="brand">'+tyroLogoSvg+'<div class="brand-text">'+tyroWordmark+'<div class="sub">TTECH Business Solutions · Satış Tahmin Raporu</div></div></div><div class="meta"><div style="font-size:14px;font-weight:700;color:#1a2332">'+tName+'</div><div style="font-size:10.5px;font-family:Consolas,monospace;color:#64748b">'+codesArr.join(' · ')+'</div><div>'+new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'})+' · Horizon: '+horizonLbl+' · '+metricLbl+'</div></div></div>');
+                // KPI'lar
+                w.document.write('<div class="kpis"><div class="kpi"><div class="kpi-l">Aylık Ortalama</div><div class="kpi-v" style="color:#3b82f6">'+fmtMTon(monthlyAvg)+'</div></div><div class="kpi"><div class="kpi-l">'+horizon+' Ay Toplam</div><div class="kpi-v">'+fmtMTon(fcTotal)+'</div></div><div class="kpi"><div class="kpi-l">Trend (vs son 12 ay)</div><div class="kpi-v" style="color:'+trendColor+'">'+(trendPct==null?'—':(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%')+'</div></div><div class="kpi"><div class="kpi-l">Backtest MAPE</div><div class="kpi-v" style="color:'+mapeColor+'">'+(mape==null?'—':mape.toFixed(1)+'%')+'</div></div></div>');
+                // Senaryo aktifse özet kartı
+                if(fcstScenarioResult&&fcstScenarioResult.isActive){
+                  w.document.write('<div class="scn-card"><div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:9.5px;color:#92400e;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🎯 Senaryo Etkisi</div><div style="font-size:11px;color:#1a2332"><strong>Baseline:</strong> '+fmtMTon(fcstScenarioResult.baselineTotal)+' → <strong>Senaryo:</strong> <span style="color:#92400e;font-weight:800">'+fmtMTon(fcstScenarioResult.adjustedTotal)+'</span></div></div><div style="font-size:14px;font-weight:900;color:'+(fcstScenarioResult.deltaPct>=0?'#0d6e4f':'#dc2626')+';font-family:Consolas,monospace">Δ '+(fcstScenarioResult.deltaPct>=0?'+':'')+fcstScenarioResult.deltaPct.toFixed(1)+'%</div></div></div>');
+                }
+                // Aktif model
+                w.document.write('<div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:6px">Aktif Model: <strong style="color:#1a2332">'+activeModelLbl+'</strong> '+(fit.bestId===activeModelId?' · ⭐ Best Fit':' (Best Fit: '+bestModelLbl+')')+'</div>');
+                // Ana grafik
+                w.document.write('<div class="card" style="margin-bottom:14px;padding:14px"><div class="card-t">📈 Tahmin Grafiği — Son 12 Ay + '+horizon+' Ay İleri</div>'+miniChart+'<div style="display:flex;justify-content:center;gap:18px;font-size:10px;color:#64748b;margin-top:6px;font-weight:600"><span><span style="display:inline-block;width:12px;height:2px;background:#3b82f6;margin-right:4px;vertical-align:middle"></span>Geçmiş</span><span><span style="display:inline-block;width:12px;height:2px;background-image:linear-gradient(90deg,#0d6e4f 50%,transparent 50%);background-size:4px 2px;margin-right:4px;vertical-align:middle"></span>Tahmin</span></div></div>');
+                // Profile (3 kolon)
+                w.document.write('<div class="section"><div class="card"><div class="card-t">📅 Aylık Tahmin Detayı</div><table class="tbl"><thead><tr><th>Ay</th><th style="text-align:right">Tahmin</th><th style="text-align:right">Aralık (Alt - Üst)</th></tr></thead><tbody>'+monthRows+'</tbody></table></div>');
+                w.document.write('<div><div class="card" style="margin-bottom:10px"><div class="card-t">🏭 Top 3 Şirket</div>'+(top3Comp||'<div style="font-size:10.5px;color:#94a3b8;font-style:italic">Veri yok</div>')+'</div><div class="card" style="margin-bottom:10px"><div class="card-t">📦 Top 3 Ürün</div>'+(top3Prod||'<div style="font-size:10.5px;color:#94a3b8;font-style:italic">Veri yok</div>')+'</div><div class="card"><div class="card-t">🚛 Top 3 Müşteri</div>'+(top3Dest||'<div style="font-size:10.5px;color:#94a3b8;font-style:italic">Veri yok</div>')+'</div></div></div>');
+                // Top 10 ürün tablosu
+                if(itemTopRows){
+                  w.document.write('<div class="card" style="margin-bottom:14px"><div class="card-t">📦 Top 10 Ürün Tahmini</div><table class="tbl"><thead><tr><th style="text-align:center;width:30px">#</th><th>Ürün Kodu</th><th style="text-align:right">Son 12 Ay</th><th style="text-align:right">Tahmin '+horizon+' Ay</th><th style="text-align:right">YoY %</th><th>Best Model</th></tr></thead><tbody>'+itemTopRows+'</tbody></table></div>');
+                }
+                // Footer
+                w.document.write('<div class="ftr"><div class="ftr-l"><div class="ftr-brand">TTECH Business Solutions</div><div class="ftr-sub">TYRO Stock Management Agent · Satış Tahmin Modülü · '+activeModelLbl+'</div></div><div class="ftr-r"><div class="ftr-ts">Rapor: '+new Date().toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'</div><div class="ftr-cr">© '+new Date().getFullYear()+' Tiryaki Agro · Tüm hakları saklıdır</div></div></div>');
+                w.document.write('</body></html>');
+                w.document.close();
+                setTimeout(()=>{try{w.focus();w.print();}catch(_){}},400);
+              };
               return(
                 <div>
                   {/* ─── Filtre Paneli (Premium Aurora-Emerald) ─── */}
@@ -3282,8 +3386,8 @@ export default function App(){
                       {/* Ana Trader dropdown */}
                       <div style={{minWidth:240,flex:'1 1 240px'}}>
                         <div style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                          <HugeiconsIcon icon={RankingIcon} size={11} color={$.t3} strokeWidth={2}/>
-                          Ana Trader <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>(opsiyonel)</span>
+                          <HugeiconsIcon icon={User03Icon} size={11} color={$.t3} strokeWidth={2}/>
+                          Ana Trader
                           <InfoTip title="Ana Trader" desc="Bir veya birkaç ana trader seçerek altındaki tüm trader'ların satışlarını birleşik tahminleyebilirsiniz. Tek tek alt trader seçmenize gerek yok." detail="Ana trader seçildiğinde Trader combobox o ana trader'a bağlı alt trader'larla daraltılır. Trader hiç seçilmezse tahmin doğrudan ana trader satış verisi üzerinden yapılır." iconSize={10}><span/></InfoTip>
                         </div>
                         <SearchableSelect
@@ -3299,8 +3403,9 @@ export default function App(){
                       {/* Trader dropdown */}
                       <div style={{minWidth:280,flex:'1 1 280px'}}>
                         <div style={{fontSize:10,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.6,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
-                          <HugeiconsIcon icon={Building03Icon} size={11} color={$.t3} strokeWidth={2}/>
-                          Trader <span style={{fontWeight:600,color:fcstAnaTrader.length>0?$.blu:$.red,letterSpacing:.2,textTransform:'none'}}>{fcstAnaTrader.length>0?'(ana traderdan filtrelenmiş)':'(zorunlu — çoklu)'}</span>
+                          <HugeiconsIcon icon={UserGroup02Icon} size={11} color={$.t3} strokeWidth={2}/>
+                          Trader
+                          {fcstAnaTrader.length>0&&<span style={{fontWeight:500,color:$.blu,letterSpacing:.2,textTransform:'none',fontSize:9.5,padding:'1px 6px',borderRadius:4,background:$.bluB,marginLeft:2}}>ana trader filtreli</span>}
                         </div>
                         <SearchableSelect
                           multi
@@ -3346,6 +3451,9 @@ export default function App(){
                         {fcstResult&&<button onClick={exportXLSX} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:13,fontWeight:600,color:$.ac,background:'#fff',border:'1.5px solid rgba(13,110,79,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.04))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';}}>
                           <HugeiconsIcon icon={Download01Icon} size={14} strokeWidth={2}/>Excel
                         </button>}
+                        {fcstResult&&<button onClick={exportPDF} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'11px 18px',fontSize:13,fontWeight:600,color:'#dc2626',background:'#fff',border:'1.5px solid rgba(220,38,38,.30)',borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(220,38,38,.06), rgba(239,68,68,.04))';e.currentTarget.style.borderColor='rgba(220,38,38,.50)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(220,38,38,.30)';}}>
+                          <HugeiconsIcon icon={Pdf02Icon} size={14} strokeWidth={2}/>PDF
+                        </button>}
                       </div>
                     </div>
                   </div>
@@ -3383,7 +3491,7 @@ export default function App(){
                       })():(useAnaScope?`${selectedAnaTraders.length} ana trader → alt traderları çözümleniyor, Dataverse historical sales sorgulanıyor`:'Dataverse historical sales sorgulanıyor')},
                       {n:2,l:'Aylık Aggregate',d:sd.aggregate?`${sd.aggregate.records?.toLocaleString('tr-TR')||0} satır → ${sd.aggregate.months} aylık seriye dönüştürüldü`:'Satırlar yıl-ay bazında toplanıyor'},
                       {n:3,l:'Trader Toplam Modelleri',d:sd.modelsRunning?`${sd.modelsRunning} koşturuluyor...`:'8 model trader toplamı için paralel hazırlanıyor (HW, Theta, Holt\'s Linear, STL+ETS, Outlier STL+ETS, Seasonal Naive, Croston, MA-3)'},
-                      {n:4,l:'Ürün Bazlı Tahminler',d:sd.itemBatch?(sd.itemBatch.processed>=sd.itemBatch.total?`${sd.itemBatch.total} itemid taraması tamamlandı, top 30 forecast hazır`:`${sd.itemBatch.processed||0} / ${Math.min(30,sd.itemBatch.total||0)} itemid${sd.itemBatch.currentPid?' — '+sd.itemBatch.currentPid:''}`):'En çok satışı olan top 30 itemid için ayrı forecast koşturuluyor'},
+                      {n:4,l:'Ürün Bazlı Tahminler',d:sd.itemBatch?(sd.itemBatch.processed>=sd.itemBatch.total?`${sd.itemBatch.total} ürün taraması tamamlandı, top 30 tahmin hazır`:`${sd.itemBatch.processed||0} / ${Math.min(30,sd.itemBatch.total||0)} ürün${sd.itemBatch.currentPid?' — '+sd.itemBatch.currentPid:''}`):'En çok satışı olan top 30 ürün için ayrı tahmin koşturuluyor'},
                       {n:5,l:'Backtest MAPE',d:sd.backtest?`${sd.backtest.models} model ile holdout testi tamamlandı`:'Son 6 ay tutulup geri kalanla tahmin doğrulanıyor'},
                       {n:6,l:'Best Fit Seçimi',d:sd.bestFit?`${FORECAST_MODELS.find(m=>m.id===sd.bestFit.id)?.label} kazandı (MAPE ${sd.bestFit.mape?.toFixed(1)}%)`:'En düşük hata oranlı model seçiliyor'},
                     ];
@@ -3490,11 +3598,8 @@ export default function App(){
                         <div style={{height:3,background:'linear-gradient(90deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)'}}/>
                         {/* HERO HEADER (glassmorphism) */}
                         <div style={{padding:'16px 20px',background:'linear-gradient(135deg, rgba(13,110,79,.05) 0%, rgba(59,130,246,.04) 50%, rgba(139,92,246,.04) 100%)',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
-                          <div style={{position:'relative',width:48,height:48,borderRadius:12,background:'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:isMulti?15:14,letterSpacing:.4,boxShadow:'0 4px 14px rgba(13,110,79,.28), 0 1px 3px rgba(13,110,79,.20), inset 0 1px 0 rgba(255,255,255,.18)'}}>
-                            {headerInitials}
-                            <div style={{position:'absolute',top:-3,right:-3,width:16,height:16,borderRadius:'50%',background:'#fff',border:'1.5px solid '+$.bg2,boxShadow:'0 1px 3px rgba(0,0,0,.10)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                              <HugeiconsIcon icon={RankingIcon} size={9} color={$.ac} strokeWidth={2.5}/>
-                            </div>
+                          <div style={{width:48,height:48,borderRadius:12,background:'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 50%, #3b82f6 100%)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',boxShadow:'0 4px 14px rgba(13,110,79,.28), 0 1px 3px rgba(13,110,79,.20), inset 0 1px 0 rgba(255,255,255,.18)',flexShrink:0}}>
+                            <HugeiconsIcon icon={UserAccountIcon} size={24} strokeWidth={1.8}/>
                           </div>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:16,fontWeight:800,color:$.t1,letterSpacing:-.3,lineHeight:1.2}}>{headerName}</div>
@@ -3608,7 +3713,7 @@ export default function App(){
                             const isActive=activeModelId===m.id;
                             return(
                               <div key={m.id} onClick={()=>setFcstActiveModel(m.id)} onMouseEnter={()=>setFcstHoverModel(m.id)} onMouseLeave={()=>setFcstHoverModel(null)} style={{padding:'8px 14px',borderRadius:8,fontSize:12,fontWeight:isActive?700:500,cursor:'pointer',background:isActive?'#fff':'transparent',color:isActive?$.t1:$.t3,boxShadow:isActive?'0 1px 3px rgba(0,0,0,.08)':'none',transition:'all .15s',userSelect:'none',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:6,position:'relative'}}>
-                                {isBest&&<span style={{fontSize:11}}>⭐</span>}
+                                {isBest?<span style={{fontSize:11}}>⭐</span>:MODEL_ICON_MAP[m.id]?<HugeiconsIcon icon={MODEL_ICON_MAP[m.id]} size={12} strokeWidth={1.8} color={isActive?$.blu:$.t3}/>:null}
                                 {m.label}
                                 {r&&r.mape!=null&&<span style={{fontSize:10,fontFamily:$.mo,color:isActive?$.blu:$.t3,fontWeight:600}}>{r.mape.toFixed(1)}%</span>}
                                 <Info size={11} style={{opacity:.4,marginLeft:2}}/>
@@ -3726,9 +3831,9 @@ export default function App(){
                               @keyframes scnPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.45)}50%{box-shadow:0 0 0 6px rgba(245,166,35,0)}}
                               .scn-active-btn{animation:scnPulse 2s ease-in-out infinite}
                             `}</style>
-                            <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.025), rgba(59,130,246,.015))'}}>
-                              <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',boxShadow:'0 2px 6px rgba(13,110,79,.20)'}}>
-                                <HugeiconsIcon icon={ChartBarLineIcon} size={15} strokeWidth={2}/>
+                            <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(139,92,246,.04), rgba(99,102,241,.02))'}}>
+                              <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #8b5cf6, #6366f1)',color:'#fff',boxShadow:'0 2px 6px rgba(139,92,246,.22)'}}>
+                                <HugeiconsIcon icon={AiIdeaIcon} size={15} strokeWidth={2}/>
                               </div>
                               <div style={{minWidth:0,flex:'0 1 auto'}}>
                                 <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Tahmin Grafiği</div>
@@ -3758,13 +3863,13 @@ export default function App(){
                                           </div>
                                           {/* Search */}
                                           <div style={{padding:'10px 12px',background:'#fafbfc',borderBottom:'1px solid '+$.bdL}}>
-                                            <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Itemid ara…" autoFocus style={{width:'100%',padding:'7px 11px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:7,background:$.bg2,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600}}/>
+                                            <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Ürün kodu ara…" autoFocus style={{width:'100%',padding:'7px 11px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:7,background:$.bg2,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600}}/>
                                           </div>
                                           {/* Itemid list */}
                                           <div style={{maxHeight:360,overflowY:'auto'}}>
                                             <div style={{padding:'7px 14px',fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,background:'#fafbfc',display:'flex',alignItems:'center',gap:5}}>
                                               <HugeiconsIcon icon={PackageIcon} size={11} color={$.t3} strokeWidth={2}/>
-                                              Top {showCount} Itemid <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· hacme göre</span>
+                                              Top {showCount} Ürün <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· hacme göre</span>
                                             </div>
                                             {filtered.slice(0,30).map(it=>{
                                               const sel=fcstChartView===it.pid;
@@ -4088,57 +4193,69 @@ export default function App(){
                             const confDesc=confidence==='high'?'Tahmin sapması düşük (<%10). Modelin geçmişteki başarısı yüksek; planlama için güvenle kullanılabilir.':confidence==='medium'?'Orta sapma (%10-20). Tahmin yön gösterir ama kesin sayı için ±%20 marj bırakın.':'Yüksek sapma (>%20). Seri çok gürültülü veya yapısal kırılma var. Tahmin sadece referans olarak kullanın.';
                             return(
                               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:10,marginBottom:14}}>
-                                {/* Mevsim profili */}
-                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,padding:'14px 16px'}}>
-                                  <div style={{fontSize:11,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
-                                    Mevsim Profili
+                                {/* Mevsim Profili — Premium teal header */}
+                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',padding:'16px 18px',transition:'all .25s'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)';}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
+                                    <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #14b8a6, #0d9488)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(20,184,166,.25)'}}>
+                                      <HugeiconsIcon icon={CalendarAnalysisIcon} size={15} strokeWidth={2}/>
+                                    </div>
+                                    <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5,flex:1}}>Mevsim Profili</span>
                                     <InfoTip title="Mevsim Profili" desc="Her takvim ayının tarihsel ortalamasının, genel ortalamaya göre yüzde sapması. Trader'ın hangi aylarda yoğun, hangilerinde düşük çalıştığını gösterir." detail="Pikler agro hasat dönemleri (ayçiçeği yaz, nohut sonbahar) veya tüketici takvimi (Ramazan, bayram) ile ilişkili olabilir." iconSize={10}><span/></InfoTip>
                                   </div>
-                                  <div style={{display:'flex',gap:1,marginBottom:8,height:50,alignItems:'flex-end'}}>
+                                  <div style={{display:'flex',gap:2,marginBottom:8,height:54,alignItems:'flex-end'}}>
                                     {seasonality.map(s=>{
                                       const norm=(s.m/Math.max(...monthMeans,1))*100;
-                                      return(<div key={s.i} title={`${MONTHS_TR[s.i]}: ${s.pct>=0?'+':''}${s.pct.toFixed(0)}%`} style={{flex:1,height:Math.max(norm,4)+'%',background:s.pct>=10?'#0d6e4f':s.pct>=-10?'#3b82f6':$.bdL,borderRadius:'2px 2px 0 0',transition:'all .15s'}}/>);
+                                      return(<div key={s.i} title={`${MONTHS_TR[s.i]}: ${s.pct>=0?'+':''}${s.pct.toFixed(0)}%`} style={{flex:1,height:Math.max(norm,4)+'%',background:s.pct>=10?'linear-gradient(180deg, #2dd4a0, #0d6e4f)':s.pct>=-10?'linear-gradient(180deg, #60a5fa, #3b82f6)':'#e2e7ee',borderRadius:'3px 3px 0 0',transition:'all .15s'}}/>);
                                     })}
                                   </div>
-                                  <div style={{display:'flex',justifyContent:'space-between',fontSize:9,color:$.t3,fontFamily:$.mo,fontWeight:600,marginBottom:8}}>
-                                    {[0,2,4,6,8,10].map(i=><span key={i}>{MONTHS_TR[i].slice(0,1)}</span>)}
+                                  <div style={{display:'flex',justifyContent:'space-between',fontSize:9.5,color:$.t3,fontFamily:$.mo,fontWeight:700,marginBottom:10}}>
+                                    {MONTHS_TR.map((m,i)=><span key={i}>{m.slice(0,1)}</span>)}
                                   </div>
-                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.5}}>
-                                    <strong style={{color:'#0d6e4f'}}>Pik aylar:</strong> {topMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3}}>(+%{topMonths[0].pct.toFixed(0)} ortalamada)</span>
+                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.55}}>
+                                    <strong style={{color:'#0d6e4f',fontWeight:700}}>Pik aylar:</strong> {topMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3,fontWeight:500}}>(+%{topMonths[0].pct.toFixed(0)} ortalamadan)</span>
                                   </div>
-                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.5,marginTop:3}}>
-                                    <strong style={{color:$.red}}>Düşük aylar:</strong> {lowMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3}}>(%{lowMonths[0].pct.toFixed(0)} ortalamadan)</span>
+                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.55,marginTop:3}}>
+                                    <strong style={{color:$.red,fontWeight:700}}>Düşük aylar:</strong> {lowMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', ')} <span style={{color:$.t3,fontWeight:500}}>(%{lowMonths[0].pct.toFixed(0)} ortalamadan)</span>
                                   </div>
                                 </div>
-                                {/* Trend gücü */}
-                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,padding:'14px 16px'}}>
-                                  <div style={{fontSize:11,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
-                                    Trend Analizi
+                                {/* Trend Analizi — Premium purple header */}
+                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',padding:'16px 18px',transition:'all .25s'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)';}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
+                                    <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #8b5cf6, #a855f7)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(139,92,246,.25)'}}>
+                                      <HugeiconsIcon icon={ChartIncreaseIcon} size={15} strokeWidth={2}/>
+                                    </div>
+                                    <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5,flex:1}}>Trend Analizi</span>
                                     <InfoTip title="Trend Yönü ve Gücü" desc="Geçmiş veriye lineer regresyon uygulanarak hesaplanır. R² (determinasyon katsayısı) trend'in serideki varyansı ne kadar açıkladığını gösterir." detail="R² > 0.7 → güçlü trend · 0.3-0.7 → orta · < 0.3 → trend yok/zayıf, mevsimsellik ya da gürültü baskın." formula="R² = SSR / SST" iconSize={10}><span/></InfoTip>
                                   </div>
-                                  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
-                                    <div style={{width:48,height:48,borderRadius:12,background:trendDir==='up'?$.grnB:trendDir==='down'?$.redB:$.bdL,display:'flex',alignItems:'center',justifyContent:'center',color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t3,fontSize:22}}>
-                                      {trendDir==='up'?'↗':trendDir==='down'?'↘':'→'}
+                                  <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+                                    <div style={{width:50,height:50,borderRadius:12,background:trendDir==='up'?'linear-gradient(135deg, rgba(45,212,160,.15), rgba(13,110,79,.08))':trendDir==='down'?'linear-gradient(135deg, rgba(229,72,77,.15), rgba(229,72,77,.08))':'linear-gradient(135deg, rgba(0,0,0,.05), rgba(0,0,0,.02))',display:'flex',alignItems:'center',justifyContent:'center',color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t3,border:'1.5px solid '+(trendDir==='up'?'rgba(13,110,79,.20)':trendDir==='down'?'rgba(229,72,77,.20)':$.bdL),flexShrink:0}}>
+                                      <HugeiconsIcon icon={trendDir==='up'?ArrowUpRight01Icon:trendDir==='down'?ArrowDownRight01Icon:ChartLineData01Icon} size={22} strokeWidth={2.2}/>
                                     </div>
                                     <div>
-                                      <div style={{fontSize:18,fontWeight:800,color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t1,fontFamily:$.mo}}>{trendLabel}</div>
-                                      <div style={{fontSize:10.5,color:$.t3,fontWeight:600,marginTop:1}}>R² = {r2.toFixed(2)} · {r2>=0.7?'güçlü':r2>=0.3?'orta':'zayıf'} açıklama gücü</div>
+                                      <div style={{fontSize:18,fontWeight:800,color:trendDir==='up'?'#0d6e4f':trendDir==='down'?$.red:$.t1,fontFamily:$.mo,letterSpacing:-.3}}>{trendLabel}</div>
+                                      <div style={{fontSize:10.5,color:$.t3,fontWeight:600,marginTop:2,fontFamily:$.mo,fontVariantNumeric:'tabular-nums'}}>R² = {r2.toFixed(2)} · <span style={{fontWeight:700,color:r2>=0.7?'#0d6e4f':r2>=0.3?'#92400e':$.red}}>{r2>=0.7?'güçlü':r2>=0.3?'orta':'zayıf'}</span> açıklama</div>
                                     </div>
                                   </div>
-                                  <div style={{height:6,borderRadius:3,background:$.bdL,overflow:'hidden',marginBottom:6}}>
-                                    <div style={{height:'100%',width:Math.min(r2*100,100)+'%',background:r2>=0.7?'#0d6e4f':r2>=0.3?$.org:$.red,transition:'width .4s'}}/>
+                                  <div style={{height:7,borderRadius:4,background:$.bg,overflow:'hidden',marginBottom:8,border:'1px solid '+$.bdL}}>
+                                    <div style={{height:'100%',width:Math.min(r2*100,100)+'%',background:r2>=0.7?'linear-gradient(90deg, #2dd4a0, #0d6e4f)':r2>=0.3?'linear-gradient(90deg, #fbbf24, #f59e0b)':'linear-gradient(90deg, #fb7185, #e5484d)',transition:'width .5s cubic-bezier(.4,0,.2,1)',borderRadius:3}}/>
                                   </div>
-                                  <div style={{fontSize:10.5,color:$.t3,lineHeight:1.5}}>{r2>=0.7?'Modeller bu trader\'da güvenle çalışır.':r2>=0.3?'Trend var ama varyans yüksek; tahmin koridor şeklinde yorumlanmalı.':'Trend belirsiz; mevsim veya gürültü baskın. Seasonal Naive sık kazanabilir.'}</div>
+                                  <div style={{fontSize:10.5,color:$.t3,lineHeight:1.55,fontWeight:500}}>{r2>=0.7?'Modeller bu trader\'da güvenle çalışır.':r2>=0.3?'Trend var ama varyans yüksek; tahmin koridor şeklinde yorumlanmalı.':'Trend belirsiz; mevsim veya gürültü baskın. Seasonal Naive sık kazanabilir.'}</div>
                                 </div>
-                                {/* Güven seviyesi */}
-                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,padding:'14px 16px'}}>
-                                  <div style={{fontSize:11,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:10,display:'flex',alignItems:'center',gap:5}}>
-                                    Tahmin Güveni
+                                {/* Tahmin Güveni — Premium cyan header */}
+                                <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',padding:'16px 18px',transition:'all .25s'}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 4px 8px rgba(0,0,0,.05), 0 12px 28px rgba(0,0,0,.08)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)';}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:12}}>
+                                    <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #06b6d4, #0891b2)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(6,182,212,.25)'}}>
+                                      <HugeiconsIcon icon={CheckmarkBadge02Icon} size={15} strokeWidth={2}/>
+                                    </div>
+                                    <span style={{fontSize:11,fontWeight:800,color:$.t1,textTransform:'uppercase',letterSpacing:.5,flex:1}}>Tahmin Güveni</span>
                                     <InfoTip title="Tahmin Güven Seviyesi" desc="Aktif modelin backtest MAPE değerine göre belirlenir. Geçmişte ne kadar başarılıysa, gelecek tahmininin de o kadar güvenilir olması beklenir." detail="High (<%10) · Medium (%10-20) · Low (>%20). Düşük güvende sayıları nokta tahmin değil koridor olarak yorumlayın." iconSize={10}><span/></InfoTip>
                                   </div>
-                                  <div style={{display:'inline-block',padding:'5px 11px',borderRadius:7,background:confBg,fontSize:11,fontWeight:800,color:confColor,letterSpacing:.5,marginBottom:10}}>{confLabel}</div>
-                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.55}}>{confDesc}</div>
-                                  {mape!=null&&<div style={{fontSize:10.5,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:8,paddingTop:8,borderTop:'1px solid '+$.bdL}}>Backtest MAPE: <strong style={{color:confColor}}>{mape.toFixed(1)}%</strong></div>}
+                                  <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 13px',borderRadius:9,background:confidence==='high'?'linear-gradient(135deg, rgba(45,212,160,.14), rgba(13,110,79,.06))':confidence==='medium'?'linear-gradient(135deg, rgba(245,166,35,.14), rgba(234,88,12,.06))':'linear-gradient(135deg, rgba(229,72,77,.14), rgba(229,72,77,.06))',border:'1px solid '+(confidence==='high'?'rgba(13,110,79,.22)':confidence==='medium'?'rgba(245,166,35,.30)':'rgba(229,72,77,.25)'),fontSize:12,fontWeight:800,color:confColor,letterSpacing:.3,marginBottom:12,boxShadow:'0 1px 3px rgba(0,0,0,.04)'}}>
+                                    <HugeiconsIcon icon={CheckmarkBadge02Icon} size={13} strokeWidth={2.2}/>
+                                    {confLabel}
+                                  </div>
+                                  <div style={{fontSize:11,color:$.t2,lineHeight:1.55,fontWeight:500}}>{confDesc}</div>
+                                  {mape!=null&&<div style={{fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,marginTop:10,paddingTop:10,borderTop:'1px solid '+$.bdL,fontVariantNumeric:'tabular-nums'}}>Backtest MAPE: <strong style={{color:confColor,fontWeight:800,fontSize:13}}>{mape.toFixed(1)}%</strong></div>}
                                 </div>
                               </div>
                             );
@@ -4195,13 +4312,13 @@ export default function App(){
                             };
                             return(
                               <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:14,overflow:'hidden'}}>
-                                <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(13,110,79,.04), rgba(45,212,160,.02))'}}>
-                                  <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(13,110,79,.20)'}}>
+                                <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(59,130,246,.04), rgba(6,182,212,.02))'}}>
+                                  <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #3b82f6, #06b6d4)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(59,130,246,.22)'}}>
                                     <HugeiconsIcon icon={PackageIcon} size={15} strokeWidth={2}/>
                                   </div>
                                   <div style={{minWidth:0}}>
                                     <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Ürün Bazlı Tahmin</div>
-                                    <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>{fcstShowAllItems?`Top ${sortedItems.length} itemid`:`İlk 10 itemid`} <span style={{fontWeight:500,color:$.t3}}>· forecast hacmine göre</span></div>
+                                    <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>{fcstShowAllItems?`Top ${sortedItems.length} ürün`:`İlk 10 ürün`} <span style={{fontWeight:500,color:$.t3}}>· tahmin hacmine göre</span></div>
                                   </div>
                                   {fcstResult.itemReconcile&&Math.abs(fcstResult.itemReconcile.scalingFactor-1)>0.02&&(
                                     <span title={`Σ itemid ≠ trader toplamı: scaling factor ${fcstResult.itemReconcile.scalingFactor.toFixed(3)}`} style={{marginLeft:'auto',display:'inline-flex',alignItems:'center',gap:5,fontSize:10.5,padding:'4px 10px',borderRadius:7,background:'rgba(245,166,35,.10)',color:'#92400e',fontWeight:800,fontFamily:$.mo,border:'1px solid rgba(245,166,35,.25)'}}>
@@ -4215,7 +4332,7 @@ export default function App(){
                                     <thead>
                                       <tr style={{background:'linear-gradient(180deg, #fafbfc, #f5f7fa)',borderBottom:'2px solid '+$.bd}}>
                                         <th style={{padding:'10px 10px',textAlign:'center',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,width:38,position:'sticky',top:0}}>#</th>
-                                        <th onClick={()=>sortClick('pid')} style={{padding:'10px 12px',textAlign:'left',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Itemid{sortIcon('pid')}</th>
+                                        <th onClick={()=>sortClick('pid')} style={{padding:'10px 12px',textAlign:'left',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Ürün Kodu{sortIcon('pid')}</th>
                                         <th onClick={()=>sortClick('last12')} style={{padding:'10px 10px',textAlign:'right',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Son 12 Ay{sortIcon('last12')}</th>
                                         <th onClick={()=>sortClick('hAhead')} style={{padding:'10px 10px',textAlign:'right',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>Tahmin {horizon} Ay{sortIcon('hAhead')}</th>
                                         <th onClick={()=>sortClick('yoy')} style={{padding:'10px 10px',textAlign:'right',fontWeight:800,color:$.t3,fontSize:10,textTransform:'uppercase',letterSpacing:.5,cursor:'pointer',userSelect:'none'}}>YoY %{sortIcon('yoy')}</th>
@@ -4274,9 +4391,9 @@ export default function App(){
                                       })}
                                       {tail&&tail.count>0&&fcstShowAllItems&&(
                                         <tr style={{borderBottom:'1px solid '+$.bdL,background:'linear-gradient(180deg, #fafbfc, #f5f7fa)'}}>
-                                          <td colSpan={2} style={{padding:'12px 12px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:6}}>
+                                          <td colSpan={2} style={{padding:'12px 12px',color:$.t3,fontStyle:'italic',fontSize:11,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>
                                             <HugeiconsIcon icon={PackageIcon} size={11} color={$.t3} strokeWidth={2}/>
-                                            + Uzun kuyruk: <strong style={{color:$.t2}}>{tail.count} itemid</strong> (top 30 dışı)
+                                            + Uzun kuyruk: <strong style={{color:$.t2,fontWeight:700}}>{tail.count} ürün</strong> (top 30 dışı)
                                           </td>
                                           <td style={{padding:'12px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:700}}>{fmtTon(tail.last12||0)}</td>
                                           <td style={{padding:'12px 10px',textAlign:'right',fontFamily:$.mo,fontSize:11,color:$.t3,fontWeight:700}}>{tail.estimatedHAhead!=null?fmtTon(tail.estimatedHAhead):'—'}</td>
@@ -4289,11 +4406,11 @@ export default function App(){
                                 {/* Daha fazla göster / daha az göster toggle */}
                                 {sortedItems.length>10&&(
                                   <div style={{padding:'12px 14px',borderTop:'1px solid '+$.bdL,background:'linear-gradient(180deg, #fafbfc, #f5f7fa)',display:'flex',justifyContent:'center'}}>
-                                    <button onClick={()=>setFcstShowAllItems(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'8px 16px',background:'#fff',border:'1.5px solid rgba(59,130,246,.25)',borderRadius:9,fontSize:11.5,fontWeight:800,color:$.blu,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.2,boxShadow:'0 1px 3px rgba(59,130,246,.08)'}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.06), rgba(139,92,246,.03))';e.currentTarget.style.borderColor='rgba(59,130,246,.45)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(59,130,246,.15)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(59,130,246,.25)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(59,130,246,.08)';}}>
+                                    <button onClick={()=>setFcstShowAllItems(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:7,padding:'8px 16px',background:'#fff',border:'1.5px solid rgba(59,130,246,.25)',borderRadius:9,fontSize:12,fontWeight:600,color:$.blu,cursor:'pointer',transition:'all .2s ease-out',letterSpacing:.1,boxShadow:'0 1px 3px rgba(59,130,246,.08)'}} onMouseEnter={e=>{e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.06), rgba(139,92,246,.03))';e.currentTarget.style.borderColor='rgba(59,130,246,.45)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(59,130,246,.15)';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(59,130,246,.25)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(59,130,246,.08)';}}>
                                       {fcstShowAllItems?(
-                                        <><HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4} style={{transform:'rotate(180deg)'}}/>İlk 10'a Geri Dön</>
+                                        <><HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.2} style={{transform:'rotate(180deg)'}}/>Sadece İlk 10 Ürünü Göster</>
                                       ):(
-                                        <><HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4}/>+ {hiddenCount} itemid daha göster <span style={{fontWeight:600,color:$.t3,fontFamily:$.mo,fontSize:10.5}}>(toplam {sortedItems.length})</span></>
+                                        <><HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.2}/>+ {hiddenCount} ürün daha göster <span style={{fontWeight:500,color:$.t3,fontFamily:$.mo,fontSize:10.5}}>(toplam {sortedItems.length})</span></>
                                       )}
                                     </button>
                                   </div>
@@ -4302,10 +4419,16 @@ export default function App(){
                             );
                           })()}
 
-                          {/* Aylık tahmin tablosu */}
-                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,marginBottom:14,overflow:'hidden'}}>
-                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:8}}>
-                              <Layers size={14} color={$.ac}/>Aylık Tahmin Detayı ({horizon} ay)
+                          {/* Aylık tahmin tablosu — premium teal header */}
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',marginBottom:14,overflow:'hidden'}}>
+                            <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(6,182,212,.04), rgba(20,184,166,.02))'}}>
+                              <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #06b6d4, #14b8a6)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(6,182,212,.22)'}}>
+                                <HugeiconsIcon icon={CalendarAnalysisIcon} size={15} strokeWidth={2}/>
+                              </div>
+                              <div style={{minWidth:0}}>
+                                <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Aylık Tahmin Detayı</div>
+                                <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>{horizon} ay ileri · ay-ay tahmin değerleri ve güven aralıkları</div>
+                              </div>
                             </div>
                             <div style={{overflowX:'auto'}}>
                               <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
@@ -4344,13 +4467,16 @@ export default function App(){
                             </div>
                           </div>
 
-                          {/* Model karşılaştırma — genişletilmiş kart görünümü */}
-                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:$.rL,boxShadow:$.sh,overflow:'hidden'}}>
-                            <div style={{padding:'13px 18px',borderBottom:'1px solid '+$.bdL,fontSize:13,fontWeight:700,color:$.t1,display:'flex',alignItems:'center',gap:8}}>
-                              <ShieldAlert size={14} color={$.org}/>Model Karşılaştırma (Backtest MAPE)
-                              <span style={{marginLeft:'auto',fontSize:10,color:$.t3,fontWeight:500,fontFamily:$.mo}}>
-                                {Math.min(6,Math.floor(histKeys.length/6))} ay holdout · düşük MAPE = daha iyi
-                              </span>
+                          {/* Model karşılaştırma — premium rose header */}
+                          <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05)',overflow:'hidden'}}>
+                            <div style={{padding:'14px 18px',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:11,flexWrap:'wrap',background:'linear-gradient(135deg, rgba(244,63,94,.04), rgba(236,72,153,.02))'}}>
+                              <div style={{width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #f43f5e, #ec4899)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 6px rgba(244,63,94,.22)'}}>
+                                <HugeiconsIcon icon={ChartScatterIcon} size={15} strokeWidth={2}/>
+                              </div>
+                              <div style={{minWidth:0,flex:1}}>
+                                <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Model Karşılaştırma</div>
+                                <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>Backtest MAPE · {Math.min(6,Math.floor(histKeys.length/6))} ay holdout · düşük MAPE = daha doğru</div>
+                              </div>
                             </div>
                             <div style={{padding:'14px 18px 16px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:10}}>
                               {[...fit.results].sort((a,b)=>{
@@ -4369,7 +4495,15 @@ export default function App(){
                                 return(
                                   <div key={r.id} onClick={()=>{if(!r.skipped)setFcstActiveModel(r.id);}} style={{padding:'12px 14px',borderRadius:10,border:'1px solid '+(isBest?'rgba(13,110,79,.3)':$.bdL),background:isBest?'linear-gradient(135deg,rgba(45,212,160,.06),rgba(59,130,246,.04))':r.skipped?'rgba(0,0,0,.02)':$.bg,cursor:r.skipped?'not-allowed':'pointer',opacity:r.skipped?.55:1,boxShadow:isBest?'0 2px 8px rgba(13,110,79,.08)':'none',transition:'all .15s'}} className={r.skipped?'':'rh'}>
                                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-                                      {isBest&&<span style={{fontSize:11,padding:'2px 7px',borderRadius:5,background:'linear-gradient(135deg,#fbbf24,#f59e0b)',color:'#fff',fontWeight:800,letterSpacing:.4}}>⭐ BEST</span>}
+                                      {isBest?(
+                                        <span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,padding:'3px 8px',borderRadius:5,background:'linear-gradient(135deg,#fbbf24,#f59e0b)',color:'#fff',fontWeight:800,letterSpacing:.4,boxShadow:'0 1px 3px rgba(251,191,36,.30)'}}>
+                                          <HugeiconsIcon icon={BookmarkIcon} size={11} strokeWidth={2.4}/>BEST
+                                        </span>
+                                      ):MODEL_ICON_MAP[r.id]?(
+                                        <div style={{width:24,height:24,borderRadius:6,background:r.skipped?$.bg:'rgba(59,130,246,.08)',color:r.skipped?$.bdL:$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                          <HugeiconsIcon icon={MODEL_ICON_MAP[r.id]} size={13} strokeWidth={1.8}/>
+                                        </div>
+                                      ):null}
                                       <div style={{fontSize:13,fontWeight:isBest?800:700,color:r.skipped?$.bdL:$.t1,flex:1,minWidth:0}}>{m?.label||r.id}</div>
                                       <div style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:mapeColor,padding:'3px 8px',borderRadius:5,background:mapeBg}}>
                                         {r.skipped?'—':r.mape!=null?'MAPE '+r.mape.toFixed(1)+'%':'MAPE —'}
@@ -4663,11 +4797,11 @@ export default function App(){
 
                               {/* Footer (sticky glass) */}
                               <div style={{padding:'14px 22px',borderTop:'1px solid '+$.bdL,display:'flex',gap:10,background:'rgba(255,255,255,.85)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',flexShrink:0,boxShadow:'0 -2px 8px rgba(0,0,0,.04)'}}>
-                                <button onClick={reset} disabled={!scActive} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 16px',background:scActive?'#fff':'#fafbfc',border:'1.5px solid '+(scActive?'rgba(13,110,79,.30)':$.bdL),borderRadius:10,fontSize:12.5,fontWeight:800,color:scActive?$.ac:$.t3,cursor:scActive?'pointer':'not-allowed',opacity:scActive?1:.5,transition:'all .2s ease-out',letterSpacing:.2,boxShadow:scActive?'0 1px 3px rgba(13,110,79,.06)':'none'}} onMouseEnter={e=>{if(scActive){e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.03))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(scActive){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';e.currentTarget.style.transform='translateY(0)';}}}>
-                                  <HugeiconsIcon icon={RefreshIcon} size={13} strokeWidth={2.2}/>Sıfırla
+                                <button onClick={reset} disabled={!scActive} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 16px',background:scActive?'#fff':'#fafbfc',border:'1.5px solid '+(scActive?'rgba(13,110,79,.30)':$.bdL),borderRadius:10,fontSize:13,fontWeight:600,color:scActive?$.ac:$.t3,cursor:scActive?'pointer':'not-allowed',opacity:scActive?1:.5,transition:'all .2s ease-out',letterSpacing:.1,boxShadow:scActive?'0 1px 3px rgba(13,110,79,.06)':'none'}} onMouseEnter={e=>{if(scActive){e.currentTarget.style.background='linear-gradient(135deg, rgba(13,110,79,.06), rgba(45,212,160,.03))';e.currentTarget.style.borderColor='rgba(13,110,79,.50)';e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(scActive){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(13,110,79,.30)';e.currentTarget.style.transform='translateY(0)';}}}>
+                                  <HugeiconsIcon icon={RefreshIcon} size={14} strokeWidth={1.8}/>Sıfırla
                                 </button>
-                                <button onClick={close} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 16px',background:'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 100%)',border:'none',borderRadius:10,fontSize:12.5,fontWeight:800,color:'#fff',cursor:'pointer',boxShadow:'0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)',transition:'all .2s ease-out',letterSpacing:.2}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 18px rgba(13,110,79,.36), 0 2px 5px rgba(13,110,79,.24)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)';}}>
-                                  <HugeiconsIcon icon={Cancel01Icon} size={13} strokeWidth={2.2}/>Kapat
+                                <button onClick={close} style={{flex:1,display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7,padding:'11px 16px',background:'linear-gradient(135deg, #0d6e4f 0%, #2dd4a0 100%)',border:'none',borderRadius:10,fontSize:13,fontWeight:600,color:'#fff',cursor:'pointer',boxShadow:'0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)',transition:'all .2s ease-out',letterSpacing:.1}} onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 6px 18px rgba(13,110,79,.36), 0 2px 5px rgba(13,110,79,.24)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 4px 14px rgba(13,110,79,.30), 0 1px 3px rgba(13,110,79,.20)';}}>
+                                  <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={1.8}/>Kapat
                                 </button>
                               </div>
                             </div>
