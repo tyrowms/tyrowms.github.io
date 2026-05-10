@@ -751,7 +751,9 @@ export default function App(){
       // displayCodes: kullanıcının seçtiği orijinal kodlar (header için).
       // traderCodes: gerçekten fetch edilen kodlar (ana trader scope'ta resolved alt trader'lar).
       const displayCodes=useAnaTrader?anaTraders:fetchCodes;
-      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:displayCodes.length===1?displayCodes[0]:displayCodes.join('+'),traderCodes:fetchCodes,displayCodes,resolvedSubCount:fetchCodes.length,filterScope:useAnaTrader?'ana':'trader',horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
+      // subTraders: ana scope'ta hangi alt trader'ların dahil olduğunu UI'da göstermek için kod+isim.
+      const subTraders=useAnaTrader?fetchCodes.map(c=>{const t=fcstTraderList.find(x=>x.code===c);return{code:c,name:t?.name||c};}):null;
+      setFcstResult({series:seriesQty,profile,fitQty,fitValue,valueAvailable,traderCode:displayCodes.length===1?displayCodes[0]:displayCodes.join('+'),traderCodes:fetchCodes,displayCodes,resolvedSubCount:fetchCodes.length,subTraders,filterScope:useAnaTrader?'ana':'trader',horizon:fcstHorizon,fetchedAt:Date.now(),fromCache,recordCount});
       setFcstActiveModel(null);
       await wait(300);
       setFcstStep(0);
@@ -2934,6 +2936,12 @@ export default function App(){
                     ['Horizon',`${horizon} ay`],
                     ['Hesaplanma',new Date(fcstResult.fetchedAt).toLocaleString('tr-TR')],
                     ['Aktif Model',FORECAST_MODELS.find(m=>m.id===activeModelId)?.label||activeModelId||'-'],
+                    ...(isAnaXl&&Array.isArray(fcstResult.subTraders)&&fcstResult.subTraders.length>0?[
+                      [],
+                      [`Dahil Edilen Alt Trader'lar (${fcstResult.subTraders.length})`],
+                      ['Kod','İsim'],
+                      ...fcstResult.subTraders.map(st=>[st.code,st.name]),
+                    ]:[]),
                     [],
                     ['Model Karşılaştırma (Backtest MAPE)'],
                     ['Model','MAPE %','Durum'],
@@ -3165,6 +3173,20 @@ export default function App(){
                             {profile.character}
                           </div>
                         </div>
+                        {/* Ana scope: dahil edilen alt trader chip'leri */}
+                        {isAnaScope&&Array.isArray(fcstResult.subTraders)&&fcstResult.subTraders.length>0&&(
+                          <div style={{padding:'10px 18px',background:'rgba(59,130,246,.03)',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'flex-start',gap:8,flexWrap:'wrap'}}>
+                            <div style={{fontSize:10,fontWeight:800,color:$.t3,letterSpacing:.5,textTransform:'uppercase',padding:'4px 0',marginRight:4,whiteSpace:'nowrap'}}>Dahil edilen alt trader{fcstResult.subTraders.length>1?'lar':''} ({fcstResult.subTraders.length}):</div>
+                            <div style={{display:'flex',flexWrap:'wrap',gap:6,flex:1,minWidth:0}}>
+                              {fcstResult.subTraders.map(st=>(
+                                <div key={st.code} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'3px 9px',borderRadius:14,background:'#fff',border:'1px solid '+$.bdL,fontSize:11,boxShadow:'0 1px 2px rgba(0,0,0,.03)'}}>
+                                  <span style={{fontFamily:$.mo,fontWeight:700,color:$.blu,fontSize:10}}>{st.code}</span>
+                                  <span style={{color:$.t2,fontWeight:600}}>{st.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div style={{padding:'14px 18px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14}}>
                           <div>
                             <div style={{fontSize:10,fontWeight:700,color:$.t3,textTransform:'uppercase',letterSpacing:.5,marginBottom:6,display:'flex',alignItems:'center',gap:5}}>
