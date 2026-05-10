@@ -346,18 +346,41 @@ const SearchableSelect=({value,onChange,items,placeholder='Seçin...',disabled,e
 
 // Premium hover tooltip — terim açıklamaları için. Çocuk üzerine gelince koyu kart açılır.
 const InfoTip=({title,desc,detail,formula,children,placement='top',iconSize=11,inline=false})=>{
-  const [open,setOpen]=useState(false);
+  // Position:fixed — overflow:hidden olan ata kartlardan kurtulur, viewport bazında konumlanır
+  const [pos,setPos]=useState(null);  // {x, y, anchor: 'top'|'bottom'} | null
+  const triggerRef=useRef(null);
+  const TIP_W=320;  // tahmini tooltip genişlik (clamp için)
+  const TIP_H=detail||formula?160:90;  // tahmini yükseklik
+  const show=()=>{
+    if(!triggerRef.current)return;
+    const r=triggerRef.current.getBoundingClientRect();
+    const vw=window.innerWidth,vh=window.innerHeight;
+    // Yatay merkez — viewport'a sığacak şekilde clamp
+    let x=r.left+r.width/2;
+    if(x-TIP_W/2<10)x=10+TIP_W/2;
+    if(x+TIP_W/2>vw-10)x=vw-10-TIP_W/2;
+    // Dikey: yukarı sığarsa yukarı, sığmazsa aşağı
+    let y,anchor;
+    const wantTop=placement==='top';
+    const fitsTop=r.top-TIP_H-12>0;
+    const fitsBottom=r.bottom+TIP_H+12<vh;
+    if(wantTop&&fitsTop){y=r.top-8;anchor='top';}
+    else if(fitsBottom){y=r.bottom+8;anchor='bottom';}
+    else if(fitsTop){y=r.top-8;anchor='top';}
+    else{y=Math.max(10,r.top-8);anchor='top';}
+    setPos({x,y,anchor});
+  };
+  const hide=()=>setPos(null);
   return(
-    <span style={{position:'relative',display:inline?'inline-flex':'inline-flex',alignItems:'center',gap:5}} onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}>
+    <span ref={triggerRef} style={{display:inline?'inline-flex':'inline-flex',alignItems:'center',gap:5}} onMouseEnter={show} onMouseLeave={hide}>
       {children}
       <Info size={iconSize} style={{opacity:.45,cursor:'help',flexShrink:0}}/>
-      {open&&(
-        <div style={{position:'absolute',[placement==='top'?'bottom':'top']:'calc(100% + 8px)',left:'50%',transform:'translateX(-50%)',zIndex:200,minWidth:240,maxWidth:340,background:'#1a2332',color:'#fff',borderRadius:10,padding:'12px 14px',boxShadow:'0 12px 32px rgba(0,0,0,.25)',pointerEvents:'none',animation:'stepFade .15s ease-out'}}>
+      {pos&&(
+        <div style={{position:'fixed',left:pos.x,top:pos.y,transform:'translateX(-50%)'+(pos.anchor==='top'?' translateY(-100%)':''),zIndex:9999,minWidth:240,maxWidth:TIP_W,background:'#1a2332',color:'#fff',borderRadius:10,padding:'12px 14px',boxShadow:'0 12px 32px rgba(0,0,0,.25)',pointerEvents:'none',animation:'stepFade .15s ease-out'}}>
           <div style={{fontSize:12.5,fontWeight:800,color:'#fff',marginBottom:5}}>{title}</div>
           <div style={{fontSize:11,color:'#cbd5e1',lineHeight:1.55}}>{desc}</div>
           {detail&&<div style={{fontSize:10.5,color:'#94a3b8',marginTop:6,paddingTop:6,borderTop:'1px solid rgba(255,255,255,.08)',lineHeight:1.55}}>{detail}</div>}
           {formula&&<div style={{fontSize:10.5,fontFamily:'Consolas,monospace',color:'#94a3b8',marginTop:6,padding:'5px 8px',background:'rgba(255,255,255,.04)',borderRadius:5}}>{formula}</div>}
-          <div style={{position:'absolute',[placement==='top'?'bottom':'top']:-5,left:'50%',transform:'translateX(-50%) rotate(45deg)',width:10,height:10,background:'#1a2332'}}/>
         </div>
       )}
     </span>
@@ -3825,7 +3848,7 @@ export default function App(){
                             );
                           })()}
 
-                          {/* Çizgi grafik (Premium header — Görünüm + Senaryolar) */}
+                          {/* Çizgi grafik — Premium header (sağda CTA butonlar, legend chart altında) */}
                           <div style={{background:$.bg2,border:'1px solid '+$.bdL,borderRadius:14,boxShadow:'0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05)',marginBottom:14,overflow:'hidden'}}>
                             <style>{`
                               @keyframes scnPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.45)}50%{box-shadow:0 0 0 6px rgba(245,166,35,0)}}
@@ -3835,46 +3858,72 @@ export default function App(){
                               <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:30,height:30,borderRadius:8,background:'linear-gradient(135deg, #8b5cf6, #6366f1)',color:'#fff',boxShadow:'0 2px 6px rgba(139,92,246,.22)'}}>
                                 <HugeiconsIcon icon={AiIdeaIcon} size={15} strokeWidth={2}/>
                               </div>
-                              <div style={{minWidth:0,flex:'0 1 auto'}}>
+                              <div style={{minWidth:0,flex:1}}>
                                 <div style={{fontSize:13.5,fontWeight:800,color:$.t1,letterSpacing:-.2}}>Tahmin Grafiği</div>
-                                <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1,fontFamily:$.mo}}>{FORECAST_MODELS.find(m=>m.id===activeModelId)?.label||'—'}</div>
+                                <div style={{fontSize:11,color:$.t3,fontWeight:600,marginTop:1}}>Aktif Model: <span style={{fontFamily:$.mo,color:$.t2,fontWeight:700}}>{FORECAST_MODELS.find(m=>m.id===activeModelId)?.label||'—'}</span> {isItemView&&<span style={{padding:'1px 7px',borderRadius:4,background:$.bluB,color:$.blu,fontFamily:$.mo,fontWeight:800,marginLeft:4,fontSize:10}}>{activeItem?.pid}</span>}</div>
                               </div>
-                              {/* ─── Görünüm combobox (Premium Aurora outline) ─── */}
+                              {/* ─── Sağa yaslı 2 PREMIUM CTA buton ─── */}
+                              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                              {/* ─── Gelişmiş Filtre butonu (Aurora blue gradient) ─── */}
                               {fcstResult?.itemForecasts&&fcstResult.itemForecasts.length>0&&(()=>{
                                 const items=fcstResult.itemForecasts;
                                 const filtered=fcstViewSearch?items.filter(it=>it.pid.toLowerCase().includes(fcstViewSearch.toLowerCase())):items;
                                 const showCount=Math.min(filtered.length,30);
                                 return(
-                                  <div style={{position:'relative',marginLeft:'auto'}} onClick={e=>e.stopPropagation()}>
-                                    <button onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'8px 13px',fontSize:12,fontWeight:700,color:isItemView?$.blu:$.t2,background:isItemView?'linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.06))':'#fff',border:'1.5px solid '+(isItemView?'rgba(59,130,246,.40)':$.bdL),borderRadius:9,cursor:'pointer',transition:'all .18s',height:36,boxShadow:isItemView?'0 0 0 3px rgba(59,130,246,.08), 0 1px 3px rgba(59,130,246,.10)':'0 1px 2px rgba(0,0,0,.03)'}} onMouseEnter={e=>{if(!isItemView){e.currentTarget.style.borderColor='rgba(59,130,246,.30)';e.currentTarget.style.background='rgba(59,130,246,.03)';}}} onMouseLeave={e=>{if(!isItemView){e.currentTarget.style.borderColor=$.bdL;e.currentTarget.style.background='#fff';}}}>
-                                      <HugeiconsIcon icon={EyeIcon} size={13} strokeWidth={2}/>
-                                      <span style={{fontFamily:isItemView?$.mo:'inherit',maxWidth:isItemView?180:'none',overflow:'hidden',textOverflow:'ellipsis'}}>{isItemView?activeItem?.pid:'Trader Toplamı'}</span>
-                                      <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.4} style={{opacity:.7,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
+                                  <div style={{position:'relative'}} onClick={e=>e.stopPropagation()}>
+                                    <button onClick={()=>setFcstShowViewMenu(v=>!v)} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 16px',fontSize:13,fontWeight:600,color:isItemView?'#fff':$.blu,background:isItemView?'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)':'#fff',border:'1.5px solid '+(isItemView?'rgba(59,130,246,.55)':'rgba(59,130,246,.35)'),borderRadius:10,cursor:'pointer',transition:'all .2s ease-out',height:40,boxShadow:isItemView?'0 4px 14px rgba(59,130,246,.30), 0 1px 3px rgba(59,130,246,.20)':'0 1px 3px rgba(59,130,246,.08)',letterSpacing:.1}} onMouseEnter={e=>{if(!isItemView){e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.06), rgba(99,102,241,.04))';e.currentTarget.style.borderColor='rgba(59,130,246,.55)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(59,130,246,.16)';}else{e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(!isItemView){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(59,130,246,.35)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(59,130,246,.08)';}else{e.currentTarget.style.transform='translateY(0)';}}}>
+                                      <HugeiconsIcon icon={FilterEditIcon} size={15} strokeWidth={1.8}/>
+                                      <span>Gelişmiş Filtre</span>
+                                      {isItemView&&<span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:5,background:'rgba(255,255,255,.25)',backdropFilter:'blur(4px)',color:'#fff',fontSize:10,fontWeight:800,fontFamily:$.mo,marginLeft:2,maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{activeItem?.pid}</span>}
+                                      <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2.2} style={{opacity:.85,transform:fcstShowViewMenu?'rotate(180deg)':'none',transition:'transform .15s'}}/>
                                     </button>
                                     {fcstShowViewMenu&&(
                                       <>
                                         <div style={{position:'fixed',inset:0,zIndex:39}} onClick={()=>setFcstShowViewMenu(false)}/>
-                                        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,minWidth:360,maxWidth:440,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:12,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:40,overflow:'hidden'}}>
-                                          {/* Trader Toplamı sabit üst seçenek */}
-                                          <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'12px 16px',display:'flex',alignItems:'center',gap:9,cursor:'pointer',borderBottom:'1px solid '+$.bdL,background:!isItemView?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',transition:'background .12s'}} onMouseEnter={e=>{if(isItemView)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(isItemView)e.currentTarget.style.background='transparent';}}>
-                                            <HugeiconsIcon icon={ChartBarLineIcon} size={14} color={$.blu} strokeWidth={2}/>
-                                            <span style={{fontSize:12.5,fontWeight:!isItemView?800:600,color:!isItemView?$.blu:$.t1}}>Trader Toplamı</span>
-                                            {!isItemView&&<span style={{marginLeft:'auto',fontSize:10,fontWeight:800,color:$.blu,padding:'2px 8px',borderRadius:4,background:'rgba(59,130,246,.10)',letterSpacing:.5}}>● AKTİF</span>}
+                                        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,minWidth:380,maxWidth:460,background:$.bg2,border:'1px solid '+$.bdL,borderRadius:13,boxShadow:'0 12px 36px rgba(0,0,0,.14), 0 4px 12px rgba(0,0,0,.06)',zIndex:40,overflow:'hidden'}}>
+                                          {/* Üst gradient şerit */}
+                                          <div style={{height:3,background:'linear-gradient(90deg, #3b82f6, #6366f1, #8b5cf6)'}}/>
+                                          {/* Header — başlık + kapat */}
+                                          <div style={{padding:'12px 14px',background:'linear-gradient(135deg, rgba(59,130,246,.05), rgba(99,102,241,.02))',borderBottom:'1px solid '+$.bdL,display:'flex',alignItems:'center',gap:9}}>
+                                            <div style={{width:26,height:26,borderRadius:7,background:'linear-gradient(135deg, #3b82f6, #6366f1)',color:'#fff',display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 5px rgba(59,130,246,.20)'}}>
+                                              <HugeiconsIcon icon={FilterEditIcon} size={13} strokeWidth={2}/>
+                                            </div>
+                                            <div style={{flex:1,minWidth:0}}>
+                                              <div style={{fontSize:12.5,fontWeight:800,color:$.t1,letterSpacing:-.1}}>Gelişmiş Filtre</div>
+                                              <div style={{fontSize:10.5,color:$.t3,fontWeight:600,marginTop:1}}>Görüntüleme kapsamını seçin</div>
+                                            </div>
+                                          </div>
+                                          {/* Trader Toplamı — büyük prominent en üst seçenek */}
+                                          <div onClick={()=>{setFcstChartView('total');setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'14px 16px',display:'flex',alignItems:'center',gap:11,cursor:'pointer',borderBottom:'1px solid '+$.bdL,background:!isItemView?'linear-gradient(135deg, rgba(59,130,246,.10), rgba(139,92,246,.05))':'#fafbfc',transition:'background .15s',position:'relative'}} onMouseEnter={e=>{if(isItemView)e.currentTarget.style.background='linear-gradient(135deg, rgba(59,130,246,.05), rgba(139,92,246,.02))';}} onMouseLeave={e=>{if(isItemView)e.currentTarget.style.background='#fafbfc';}}>
+                                            {!isItemView&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg, #3b82f6, #6366f1)'}}/>}
+                                            <div style={{width:36,height:36,borderRadius:9,background:!isItemView?'linear-gradient(135deg, #3b82f6, #6366f1)':'rgba(59,130,246,.10)',color:!isItemView?'#fff':$.blu,display:'inline-flex',alignItems:'center',justifyContent:'center',boxShadow:!isItemView?'0 2px 6px rgba(59,130,246,.25)':'none',transition:'all .15s'}}>
+                                              <HugeiconsIcon icon={ChartBarLineIcon} size={17} strokeWidth={2}/>
+                                            </div>
+                                            <div style={{flex:1,minWidth:0}}>
+                                              <div style={{fontSize:13.5,fontWeight:800,color:!isItemView?$.blu:$.t1,letterSpacing:-.1}}>Trader Toplamı</div>
+                                              <div style={{fontSize:11,color:$.t3,fontWeight:500,marginTop:1}}>Tüm ürünlerin birleşik tahmini</div>
+                                            </div>
+                                            {!isItemView&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9.5,fontWeight:800,color:'#fff',padding:'3px 9px',borderRadius:5,background:'linear-gradient(135deg, #0d6e4f, #2dd4a0)',letterSpacing:.5,boxShadow:'0 1px 3px rgba(13,110,79,.20)'}}>● AKTİF</span>}
                                           </div>
                                           {/* Search */}
                                           <div style={{padding:'10px 12px',background:'#fafbfc',borderBottom:'1px solid '+$.bdL}}>
-                                            <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Ürün kodu ara…" autoFocus style={{width:'100%',padding:'7px 11px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:7,background:$.bg2,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600}}/>
+                                            <div style={{position:'relative'}}>
+                                              <HugeiconsIcon icon={EyeIcon} size={12} color={$.t3} strokeWidth={2} style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}}/>
+                                              <input type="text" value={fcstViewSearch} onChange={e=>setFcstViewSearch(e.target.value)} placeholder="Ürün kodu ara…" autoFocus style={{width:'100%',padding:'8px 11px 8px 30px',fontSize:11.5,border:'1px solid '+$.bdL,borderRadius:8,background:$.bg2,outline:'none',color:$.t1,fontFamily:$.mo,fontWeight:600}}/>
+                                            </div>
                                           </div>
-                                          {/* Itemid list */}
-                                          <div style={{maxHeight:360,overflowY:'auto'}}>
-                                            <div style={{padding:'7px 14px',fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,background:'#fafbfc',display:'flex',alignItems:'center',gap:5}}>
+                                          {/* Itemid list — tek seçim (multi-select sonraki sürümde) */}
+                                          <div style={{maxHeight:340,overflowY:'auto'}}>
+                                            <div style={{padding:'8px 14px',fontSize:9.5,fontWeight:800,color:$.t3,textTransform:'uppercase',letterSpacing:.7,background:'#fafbfc',display:'flex',alignItems:'center',gap:5,borderBottom:'1px solid '+$.bdL}}>
                                               <HugeiconsIcon icon={PackageIcon} size={11} color={$.t3} strokeWidth={2}/>
-                                              Top {showCount} Ürün <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· hacme göre</span>
+                                              Tek Ürün Seç <span style={{fontWeight:600,color:$.t3,letterSpacing:.2,textTransform:'none'}}>· Top {showCount} (hacme göre)</span>
                                             </div>
                                             {filtered.slice(0,30).map(it=>{
                                               const sel=fcstChartView===it.pid;
                                               return(
-                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'9px 14px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:sel?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                                <div key={it.pid} onClick={()=>{setFcstChartView(it.pid);setFcstShowViewMenu(false);setFcstViewSearch('');}} style={{padding:'10px 14px',display:'flex',alignItems:'center',gap:9,cursor:'pointer',background:sel?'linear-gradient(135deg, rgba(59,130,246,.08), rgba(139,92,246,.04))':'transparent',borderBottom:'1px solid '+$.bdL,transition:'background .12s',position:'relative'}} onMouseEnter={e=>{if(!sel)e.currentTarget.style.background='#fafbfc';}} onMouseLeave={e=>{if(!sel)e.currentTarget.style.background='transparent';}}>
+                                                  {sel&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg, #3b82f6, #6366f1)'}}/>}
+                                                  <div style={{width:7,height:7,borderRadius:'50%',background:sel?'linear-gradient(135deg, #3b82f6, #6366f1)':'#cbd5e1',boxShadow:sel?'0 0 0 3px rgba(59,130,246,.15)':'none',flexShrink:0,transition:'all .15s'}}/>
                                                   <span style={{fontFamily:$.mo,fontSize:11.5,fontWeight:800,color:sel?$.blu:$.t1,minWidth:130,overflow:'hidden',textOverflow:'ellipsis'}}>{it.pid}</span>
                                                   <span style={{marginLeft:'auto',fontSize:11,color:$.t3,fontFamily:$.mo,fontWeight:600,fontVariantNumeric:'tabular-nums'}}>{fmtTon(it.last12)}</span>
                                                   {!it.isStable&&<span style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:9,padding:'2px 7px',borderRadius:4,background:$.orgB,color:'#92400e',fontWeight:800,letterSpacing:.4}}><HugeiconsIcon icon={Alert02Icon} size={9} strokeWidth={2.5}/>DÜZENSİZ</span>}
@@ -3889,30 +3938,30 @@ export default function App(){
                                   </div>
                                 );
                               })()}
-                              {/* ─── Senaryolar butonu (Premium turuncu glassmorphism) ─── */}
+                              {/* ─── Senaryo Simülasyonu butonu (Premium turuncu CTA) ─── */}
                               {(()=>{
                                 const scenarioActive=fcstScenarioResult&&fcstScenarioResult.isActive;
                                 return(
-                                  <button onClick={()=>setFcstShowScenarios(true)} className={scenarioActive?'scn-active-btn':''} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'8px 14px',fontSize:12,fontWeight:scenarioActive?800:700,color:scenarioActive?'#fff':$.t1,background:scenarioActive?'linear-gradient(135deg, #f5a623 0%, #ea580c 100%)':'#fff',border:'1.5px solid '+(scenarioActive?'rgba(245,166,35,.55)':'rgba(245,166,35,.30)'),borderRadius:9,cursor:'pointer',transition:'all .2s ease-out',position:'relative',height:36,boxShadow:scenarioActive?'0 4px 14px rgba(245,166,35,.30), 0 1px 3px rgba(245,166,35,.20)':'0 1px 3px rgba(245,166,35,.08)',letterSpacing:.3,textTransform:'uppercase'}} onMouseEnter={e=>{if(!scenarioActive){e.currentTarget.style.background='linear-gradient(135deg, rgba(245,166,35,.10), rgba(234,88,12,.06))';e.currentTarget.style.borderColor='rgba(245,166,35,.50)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(245,166,35,.18)';}else{e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(!scenarioActive){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(245,166,35,.30)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(245,166,35,.08)';}else{e.currentTarget.style.transform='translateY(0)';}}}>
-                                    <HugeiconsIcon icon={Target02Icon} size={14} strokeWidth={2.2}/>
-                                    <span>Senaryolar</span>
+                                  <button onClick={()=>setFcstShowScenarios(true)} className={scenarioActive?'scn-active-btn':''} style={{display:'inline-flex',alignItems:'center',gap:8,padding:'10px 16px',fontSize:13,fontWeight:600,color:scenarioActive?'#fff':'#92400e',background:scenarioActive?'linear-gradient(135deg, #f5a623 0%, #ea580c 100%)':'#fff',border:'1.5px solid '+(scenarioActive?'rgba(245,166,35,.55)':'rgba(245,166,35,.35)'),borderRadius:10,cursor:'pointer',transition:'all .2s ease-out',position:'relative',height:40,boxShadow:scenarioActive?'0 4px 14px rgba(245,166,35,.30), 0 1px 3px rgba(245,166,35,.20)':'0 1px 3px rgba(245,166,35,.08)',letterSpacing:.1}} onMouseEnter={e=>{if(!scenarioActive){e.currentTarget.style.background='linear-gradient(135deg, rgba(245,166,35,.08), rgba(234,88,12,.04))';e.currentTarget.style.borderColor='rgba(245,166,35,.55)';e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 3px 10px rgba(245,166,35,.18)';}else{e.currentTarget.style.transform='translateY(-1px)';}}} onMouseLeave={e=>{if(!scenarioActive){e.currentTarget.style.background='#fff';e.currentTarget.style.borderColor='rgba(245,166,35,.35)';e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 1px 3px rgba(245,166,35,.08)';}else{e.currentTarget.style.transform='translateY(0)';}}}>
+                                    <HugeiconsIcon icon={Target02Icon} size={15} strokeWidth={1.8}/>
+                                    <span>Senaryo Simülasyonu</span>
                                     {scenarioActive&&(
-                                      <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:5,background:'rgba(255,255,255,.25)',backdropFilter:'blur(4px)',color:'#fff',fontSize:10,fontWeight:900,letterSpacing:.5,marginLeft:2,fontFamily:$.mo,fontVariantNumeric:'tabular-nums'}}>
+                                      <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 8px',borderRadius:5,background:'rgba(255,255,255,.25)',backdropFilter:'blur(4px)',color:'#fff',fontSize:10,fontWeight:900,letterSpacing:.5,marginLeft:2,fontFamily:$.mo,fontVariantNumeric:'tabular-nums'}}>
                                         <HugeiconsIcon icon={FlashIcon} size={9} strokeWidth={2.5}/>{fcstScenarioResult.deltaPct>=0?'+':''}{fcstScenarioResult.deltaPct.toFixed(1)}%
                                       </span>
                                     )}
                                   </button>
                                 );
                               })()}
-                              <div style={{marginLeft:'auto',display:'flex',gap:14,fontSize:11,color:$.t3,fontWeight:500,flexWrap:'wrap'}}>
-                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,background:$.blu,display:'inline-block',borderRadius:1}}/>Geçmiş</span>
-                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#0d6e4f 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Tahmin</span>
-                                <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(13,110,79,.18)',display:'inline-block',borderRadius:2}}/>Güven Bandı</span>
+                              </div>
+                              {/* Legend — chart altına taşındı (alt-sağ) */}
+                              {/* placeholder — eski legend bloğunu kapatmak için boş wrapper kalıntısı */}
+                              <div style={{display:'none'}}>
                                 {fcstScenarioResult&&fcstScenarioResult.isActive&&(
                                   <>
-                                    <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#f5a623 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Senaryo</span>
+                                    <span/>
                                     {fcstScenario.showMC&&fcstScenarioResult.mcBands?.p10&&(
-                                      <span style={{display:'flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(245,166,35,.18)',display:'inline-block',borderRadius:2}}/>MC P10-P90</span>
+                                      <span/>
                                     )}
                                   </>
                                 )}
@@ -4155,6 +4204,20 @@ export default function App(){
                                 </div>
                               );
                             })()}
+                            {/* Legend — Chart altı, sağa yaslı */}
+                            <div style={{padding:'8px 18px 12px',display:'flex',justifyContent:'flex-end',gap:14,fontSize:11,color:$.t3,fontWeight:600,flexWrap:'wrap',borderTop:'1px solid '+$.bdL,background:'#fafbfc'}}>
+                              <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,background:$.blu,display:'inline-block',borderRadius:1}}/>Geçmiş</span>
+                              <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#0d6e4f 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Tahmin</span>
+                              <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(13,110,79,.18)',display:'inline-block',borderRadius:2}}/>Güven Bandı</span>
+                              {fcstScenarioResult&&fcstScenarioResult.isActive&&(
+                                <>
+                                  <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:14,height:2.5,backgroundImage:'linear-gradient(90deg,#f5a623 50%,transparent 50%)',backgroundSize:'4px 2.5px',display:'inline-block'}}/>Senaryo</span>
+                                  {fcstScenario.showMC&&fcstScenarioResult.mcBands?.p10&&(
+                                    <span style={{display:'inline-flex',alignItems:'center',gap:5}}><span style={{width:14,height:8,background:'rgba(245,166,35,.18)',display:'inline-block',borderRadius:2}}/>MC P10-P90</span>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {/* ─── Mevsim & Trend Analizi ─── */}
