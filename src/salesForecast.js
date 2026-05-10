@@ -125,9 +125,31 @@ export function aggregateFromServer(monthly) {
   return map;
 }
 
+// Şirket kodu alias mapping (kullanıcı tanımlı birleştirmeler)
+// DTHY → DANE: DTHY satışlarını DANE altında değerlendir (kullanıcı kararı)
+export const COMPANY_ALIAS = {
+  'DTHY': 'DANE',
+};
+export function aliasCompany(code) {
+  const k = String(code || '').toUpperCase().trim();
+  return COMPANY_ALIAS[k] || k;
+}
+// companies array'inde alias'ları birleştirir (DTHY+DANE → DANE)
+export function mergeCompanyAliases(companies) {
+  const m = new Map();
+  for (const r of companies || []) {
+    const k = aliasCompany(r.co);
+    if (!m.has(k)) m.set(k, { co: k, qty: 0 });
+    m.get(k).qty += Number(r.qty) || 0;
+  }
+  return [...m.values()];
+}
+
 // Server-side aggregate'lerden trader profili kur (raw rows iterate etmek yok)
 // products/accounts/companies: [{pid|aid|co: '...', qty: number}, ...]
 export function buildTraderProfileFromAggregates(monthlyMap, products, accounts, companies, gGrpFn) {
+  // Şirket alias birleştirmesi (DTHY → DANE)
+  companies = mergeCompanyAliases(companies);
   const grpCounts = {};
   let totalQty = 0;
   for (const c of companies || []) {
@@ -724,7 +746,8 @@ export function buildTraderProfile(rows, gGrpFn, monthlyAgg) {
   let totalQty = 0, totalValue = 0, totalCount = 0;
 
   for (const r of rows) {
-    const co = String(r.mserp_salesdataareaid || '').toUpperCase().trim();
+    // Şirket alias birleştirmesi (DTHY → DANE)
+    const co = aliasCompany(r.mserp_salesdataareaid);
     const grp = gGrpFn ? gGrpFn(co) : 'Diğer';
     grpCounts[grp] = (grpCounts[grp] || 0) + (Number(r.mserp_quantity) || 0);
     compCounts[co] = (compCounts[co] || 0) + (Number(r.mserp_quantity) || 0);

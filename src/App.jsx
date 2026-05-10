@@ -3474,18 +3474,19 @@ export default function App(){
                 // Ana grafik
                 w.document.write('<div class="card" style="margin-bottom:14px;padding:14px"><div class="card-t">📈 Tahmin Grafiği — Son 12 Ay + '+horizon+' Ay İleri</div>'+miniChart+'<div style="display:flex;justify-content:center;gap:18px;font-size:10px;color:#64748b;margin-top:6px;font-weight:600"><span><span style="display:inline-block;width:12px;height:2px;background:#3b82f6;margin-right:4px;vertical-align:middle"></span>Geçmiş</span><span><span style="display:inline-block;width:12px;height:2px;background-image:linear-gradient(90deg,#0d6e4f 50%,transparent 50%);background-size:4px 2px;margin-right:4px;vertical-align:middle"></span>Tahmin</span></div></div>');
                 // Mevsim Profili / Trend Analizi / Tahmin Güveni — 3 mini kart
-                if(seasonality.length>=12||histArr&&histArr.length>=6){
-                  const seasonalityBars=seasonality.length>=12?seasonality.map(s=>{
+                if(seasonalityWithPct.length>=12||histArr&&histArr.length>=6){
+                  const seasonalityBars=seasonalityWithPct.length>=12?seasonalityWithPct.map(s=>{
                     const norm=(s.m/seasMaxM)*100;
-                    const barColor=s.pct>=10?'#0d6e4f':s.pct>=-10?'#3b82f6':'#cbd5e1';
-                    return `<div title="${MONTHS_TR[s.i]}: ${s.pct>=0?'+':''}${s.pct.toFixed(0)}%" style="flex:1;height:${Math.max(norm,4)}%;background:${barColor};border-radius:2px 2px 0 0"></div>`;
+                    const pct=Number.isFinite(s.pct)?s.pct:0;
+                    const barColor=pct>=10?'#0d6e4f':pct>=-10?'#3b82f6':'#cbd5e1';
+                    return `<div title="${MONTHS_TR[s.i]}: ${pct>=0?'+':''}${pct.toFixed(0)}%" style="flex:1;height:${Math.max(norm,4)}%;background:${barColor};border-radius:2px 2px 0 0"></div>`;
                   }).join(''):'<div style="font-size:10px;color:#94a3b8;font-style:italic">Yetersiz veri</div>';
                   const monthLetters=MONTHS_TR.map((m)=>`<span>${m.slice(0,1)}</span>`).join('');
                   const topMonthsTxt=topMonths.length>0?topMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', '):'—';
                   const lowMonthsTxt=lowMonths.length>0?lowMonths.map(m=>MONTHS_TR[m.i].slice(0,3)).join(', '):'—';
                   w.document.write('<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">');
                   // Mevsim Profili kartı
-                  w.document.write('<div class="card" style="padding:12px 14px"><div class="card-t" style="margin-bottom:10px">📅 Mevsim Profili</div><div style="display:flex;gap:2px;height:42px;align-items:flex-end;margin-bottom:6px">'+seasonalityBars+'</div><div style="display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8;font-family:Consolas,monospace;font-weight:700;margin-bottom:8px">'+monthLetters+'</div>'+(seasonality.length>=12?'<div style="font-size:10px;color:#1a2332;line-height:1.5"><strong style="color:#0d6e4f">Pik aylar:</strong> '+topMonthsTxt+'</div><div style="font-size:10px;color:#1a2332;line-height:1.5;margin-top:2px"><strong style="color:#dc2626">Düşük:</strong> '+lowMonthsTxt+'</div>':'')+'</div>');
+                  w.document.write('<div class="card" style="padding:12px 14px"><div class="card-t" style="margin-bottom:10px">📅 Mevsim Profili</div><div style="display:flex;gap:2px;height:42px;align-items:flex-end;margin-bottom:6px">'+seasonalityBars+'</div><div style="display:flex;justify-content:space-between;font-size:8.5px;color:#94a3b8;font-family:Consolas,monospace;font-weight:700;margin-bottom:8px">'+monthLetters+'</div>'+(seasonalityWithPct.length>=12?'<div style="font-size:10px;color:#1a2332;line-height:1.5"><strong style="color:#0d6e4f">Pik aylar:</strong> '+topMonthsTxt+'</div><div style="font-size:10px;color:#1a2332;line-height:1.5;margin-top:2px"><strong style="color:#dc2626">Düşük:</strong> '+lowMonthsTxt+'</div>':'')+'</div>');
                   // Trend Analizi kartı
                   w.document.write('<div class="card" style="padding:12px 14px"><div class="card-t" style="margin-bottom:10px">📈 Trend Analizi</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-size:22px;color:'+trendDirColor+';font-weight:800;font-family:Consolas,monospace;line-height:1">'+trendIcon+'</div><div><div style="font-size:16px;font-weight:800;color:'+trendDirColor+';font-family:Consolas,monospace;letter-spacing:-.2px">'+trendLabel+'</div><div style="font-size:9.5px;color:#64748b;font-weight:600;font-family:Consolas,monospace">R² = '+r2.toFixed(2)+' · '+r2Desc+'</div></div></div><div style="height:6px;border-radius:3px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:'+Math.min(r2*100,100).toFixed(0)+'%;background:'+r2BarColor+'"></div></div></div>');
                   // Tahmin Güveni kartı
