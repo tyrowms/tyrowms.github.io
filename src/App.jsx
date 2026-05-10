@@ -1489,8 +1489,8 @@ export default function App(){
                 {erpError&&<div style={{padding:'3px 7px',borderRadius:7,background:$.redB,fontSize:10,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
               </div>}
             </div>
-            {/* Mobile: Row 2 — Search + filter */}
-            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+            {/* Mobile: Row 2 — Search + filter (Simülasyon ve Sistem sayfalarında gizli) */}
+            {pg!=='fcst'&&pg!=='set'&&<div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
             <div style={{position:'relative',flex:1}}>
               <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
               <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'9px 32px 9px 34px',borderRadius:12,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:14,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
@@ -1559,7 +1559,7 @@ export default function App(){
                 <div style={{fontSize:12,fontWeight:500,letterSpacing:'-0.01em',background:'linear-gradient(90deg,#2dd4a0,#3b82f6,#8b5cf6)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>{{'dash':'Genel Bakış','ana':'Stok Analizi ve Risk Değerlendirmesi','yon':'AI Destekli Stok Yaşlandırma İçgörüleri','raw':'ERP İşlem Kayıtları','rep':'Stok Yaşlandırma Kırılım Analizleri','sto':'Şirket / Tesis / Ambar Bazlı Stok Dökümü','fcst':'Trader Bazlı Aylık Satış Tahminleme','erp':'D365 ERP Ham Veri Görüntüleme','set':'Uygulama Tercihleri'}[pg]}</div>
               </div>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:6,flex:1,maxWidth:400,margin:'0 auto',position:'relative'}}>
+            {pg!=='fcst'&&pg!=='set'&&<div style={{display:'flex',alignItems:'center',gap:6,flex:1,maxWidth:400,margin:'0 auto',position:'relative'}}>
               <div style={{position:'relative',flex:1}}>
                 <Search size={16} strokeWidth={2.5} color={$.ac} style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',zIndex:1}}/>
                 <input value={gSearch} onChange={e=>{setGSearch(e.target.value);setGSearchFocus(true);setSel(null);setDrillFac(null);setDrillWh(null);setAnaDetail(null);setYonDetail(null);setEmSel(null);setEmDrillFac(null);setEmDrillWh(null);setEmDrillL2(null);}} placeholder="Ürün, tesis, seviye ara..." style={{width:'100%',boxSizing:'border-box',padding:'7px 32px 7px 34px',borderRadius:11,border:'1px solid '+(gSearch?'rgba(13,110,79,.35)':'rgba(0,0,0,.1)'),background:gSearch?'rgba(13,110,79,.04)':'rgba(255,255,255,.85)',backdropFilter:'blur(16px)',WebkitBackdropFilter:'blur(16px)',fontSize:13,fontFamily:"'Plus Jakarta Sans',sans-serif",fontWeight:500,color:'#1a1a1a',outline:'none',transition:'all .25s ease',boxShadow:gSearch?'0 0 0 3px rgba(13,110,79,.08)':'0 1px 4px rgba(0,0,0,.06)'}} onFocus={e=>{setGSearchFocus(true);e.target.style.borderColor='rgba(13,110,79,.45)';e.target.style.boxShadow='0 0 0 3px rgba(13,110,79,.1)';e.target.style.background='rgba(255,255,255,.95)';}} onBlur={e=>{setTimeout(()=>setGSearchFocus(false),200);if(!gSearch){e.target.style.borderColor='rgba(0,0,0,.1)';e.target.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';e.target.style.background='rgba(255,255,255,.85)';}}}/>
@@ -1619,21 +1619,21 @@ export default function App(){
                 </div>
                 {gFilterCount>0&&<div style={{marginTop:12,padding:'6px 10px',borderRadius:8,background:'rgba(13,110,79,.05)',fontSize:11,fontWeight:600,color:$.ac,textAlign:'center'}}>{fN(gRows.length)} / {fN(calcRows.length)} kayıt filtrelendi</div>}
               </div></>}
-            </div></div>
-            {(gSearch||gFilterCount>0)&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
+            </div></div>}
+            {pg!=='fcst'&&pg!=='set'&&(gSearch||gFilterCount>0)&&rows.length>0&&<div style={{padding:'3px 9px',borderRadius:7,background:'rgba(13,110,79,.08)',fontSize:12,fontWeight:600,color:$.ac,whiteSpace:'nowrap'}}>{fN(gRows.length)}/{fN(calcRows.length)}</div>}
             {erpStatus&&<div style={{padding:'3px 9px',borderRadius:7,background:$.grnB,fontSize:11,fontWeight:600,color:'#0d6e4f',display:'flex',alignItems:'center',gap:5}}>{erpLoading&&<span style={{display:'inline-block',width:10,height:10,border:'2px solid #0d6e4f',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>}{erpStatus}</div>}
             {erpError&&<div style={{padding:'3px 9px',borderRadius:7,background:$.redB,fontSize:11,fontWeight:600,color:$.red,cursor:'pointer'}} onClick={()=>setErpError('')}>{erpError} x</div>}
             <div style={{fontSize:11,fontFamily:$.mo,fontWeight:500,color:'#6e6e73'}}>{new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'})}</div>
-            {MSAL_ENABLED&&msalAccount&&(
+            {pg!=='fcst'&&pg!=='set'&&MSAL_ENABLED&&msalAccount&&(
               <button className="tb-b pr" onClick={handleErpFetch} disabled={erpLoading} style={{gap:5,fontSize:11,padding:'6px 12px',borderRadius:8}}>
                 {erpLoading?<span style={{display:'inline-block',width:12,height:12,border:'2px solid #fff',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .6s linear infinite'}}/>:<Database size={13}/>}
                 {erpLoading?'Güncelleniyor...':'Verileri Güncelle'}
               </button>
             )}
-            <button className="tb-b" onClick={()=>setChatOpen(true)} style={{gap:5,fontSize:11,padding:'6px 12px',borderRadius:8,background:'linear-gradient(135deg,#2dd4a0,#3b82f6)',color:'#fff',border:'none'}}>
+            {pg!=='fcst'&&pg!=='set'&&<button className="tb-b" onClick={()=>setChatOpen(true)} style={{gap:5,fontSize:11,padding:'6px 12px',borderRadius:8,background:'linear-gradient(135deg,#2dd4a0,#3b82f6)',color:'#fff',border:'none'}}>
               <svg width="13" height="13" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><path d="M14.52,68.93v33.41s-.28,6.49,3.59,4.28c10.49-6.21,21.95-12.7,26.51-15.05,9.39-4.69,8.01-10.49,8.01-10.49V48.77c0-8.42-5.8-4.69-5.8-4.69l-28.16,16.15s-4.14,2.35-4.14,8.7Z" fill="rgba(255,255,255,.8)"/><path d="M97.77,70.17v40.31s1.52,10.91-7.45,15.88l-25.68,15.19s-6.9,3.31-6.49-2.76l1.66-48.73,37.96-19.88Z" fill="rgba(255,255,255,.6)"/><path d="M58.15,137.95V66.72s-1.52-13.67,18.5-24.99l54.94-31.61s5.8-3.59,5.8,4.69V47.12s1.52,5.8-8.01,10.49c-9.53,4.69-47.9,27.61-47.9,27.61,0,0-23.33,11.87-23.33,52.74Z" fill="#fff"/></svg>
               TYRO'ya Sor
-            </button>
+            </button>}
           </>}
         </div>
         <div style={{flex:1,overflow:'auto',display:'flex'}}>
