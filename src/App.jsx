@@ -13,7 +13,7 @@ import {
   AnalyticsUpIcon, PackageIcon, Building03Icon, GlobalIcon, Target02Icon,
   Clock01Icon, Activity03Icon, EyeIcon, ArrowDown01Icon,
   Download01Icon, RefreshIcon, Cancel01Icon, Alert02Icon,
-  ArrowLeft01Icon, InformationCircleIcon, FilterIcon,
+  ArrowLeft01Icon, InformationCircleIcon, FilterIcon, FilterEditIcon,
   RankingIcon, FactoryIcon, DeliveryTruck01Icon, CalendarIcon, FlashIcon,
   ArrowUpRight01Icon, ArrowDownRight01Icon, PercentSquareIcon,
   BookmarkIcon, ChartLineData01Icon, ChartBarLineIcon, AiAudioIcon,
